@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus { HOLD CONFIRMED MODIFIED CANCELLED NO_SHOW }
+enum PaymentMode { PAY_NOW PAY_AT_HOTEL }
+enum RoomStatus { READY OCCUPIED CLEANING MAINTENANCE OUT_OF_SERVICE }
+
+model Hotel {
+  id          String      @id @default(cuid())
+  name        String
+  city        String
+  country     String
+  verified    Boolean     @default(false)
+  commission  Decimal     @db.Decimal(5,2)
+  roomTypes   RoomType[]
+  bookings    Booking[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model RoomType {
+  id            String          @id @default(cuid())
+  hotelId       String
+  hotel         Hotel           @relation(fields:[hotelId], references:[id])
+  name          String
+  capacity      Int
+  physicalRooms PhysicalRoom[]
+  ratePlans     RatePlan[]
+  inventory     InventoryDay[]
+}
+
+model PhysicalRoom {
+  id          String      @id @default(cuid())
+  roomTypeId  String
+  roomType    RoomType    @relation(fields:[roomTypeId], references:[id])
+  roomNumber  String
+  status      RoomStatus  @default(READY)
+  outOfOrder  Boolean     @default(false)
+  @@unique([roomTypeId, roomNumber])
+}
+
+model RatePlan {
+  id          String      @id @default(cuid())
+  roomTypeId  String
+  roomType    RoomType    @relation(fields:[roomTypeId], references:[id])
+  name        String
+  refundable  Boolean
+  mealPlan    String?
+  rates       DailyRate[]
+}
+
+model DailyRate {
+  id          String    @id @default(cuid())
+  ratePlanId  String
+  ratePlan    RatePlan  @relation(fields:[ratePlanId], references:[id])
+  date        DateTime
+  baseRate    Decimal   @db.Decimal(12,2)
+  minStay     Int       @default(1)
+  maxStay     Int?
+  closed      Boolean   @default(false)
+  stopSell    Boolean   @default(false)
+  @@unique([ratePlanId, date])
+}
+
+model InventoryDay {
+  id                String    @id @default(cuid())
+  roomTypeId        String
+  roomType          RoomType  @relation(fields:[roomTypeId], references:[id])
+  date              DateTime
+  available         Int
+  overbookingLimit  Int       @default(0)
+  @@unique([roomTypeId, date])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  reference       String        @unique
+  hotelId         String
+  hotel           Hotel         @relation(fields:[hotelId], references:[id])
+  guestName       String
+  guestEmail      String
+  arrival         DateTime
+  departure       DateTime
+  status          BookingStatus @default(HOLD)
+  paymentMode     PaymentMode
+  baseAmount      Decimal       @db.Decimal(12,2)
+  serviceAmount   Decimal       @db.Decimal(12,2)
+  taxAmount       Decimal       @db.Decimal(12,2)
+  totalAmount     Decimal       @db.Decimal(12,2)
+  idempotencyKey  String        @unique
+  holdExpiresAt   DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
