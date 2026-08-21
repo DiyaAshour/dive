@@ -2,12 +2,6 @@ import { z } from "zod";
 
 const nullableText = (max: number) => z.string().trim().max(max).nullable();
 
-export const hotelPhotoInputSchema = z.object({
-  url: z.string().url().max(2000),
-  alt: nullableText(180).default(null),
-  sortOrder: z.number().int().min(0).max(1000).default(0),
-});
-
 export const hotelAmenityInputSchema = z.object({
   code: z.string().trim().min(1).max(50).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()),
   name: z.string().trim().min(2).max(80),
@@ -22,7 +16,6 @@ export const updateHotelPublicContentSchema = z.object({
   longitude: z.number().finite().min(-180).max(180).nullable().default(null),
   checkInTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
   checkOutTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
-  photos: z.array(hotelPhotoInputSchema).max(30).default([]),
   amenities: z.array(hotelAmenityInputSchema).max(60).default([]),
 }).superRefine((value, ctx) => {
   if ((value.latitude === null) !== (value.longitude === null)) {

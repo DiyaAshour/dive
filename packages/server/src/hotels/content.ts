@@ -17,7 +17,6 @@ export async function getHotelPublicContentForManagement(actorUserId: string, ho
       longitude: true,
       checkInTime: true,
       checkOutTime: true,
-      photos: {select: {id: true, url: true, alt: true, sortOrder: true}, orderBy: {sortOrder: "asc"}},
       amenities: {select: {id: true, code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
     },
   });
@@ -47,15 +46,11 @@ export async function updateHotelPublicContent(actorUserId: string, hotelId: str
       },
       select: {id: true},
     });
-    await tx.hotelPhoto.deleteMany({where: {hotelId}});
     await tx.hotelAmenity.deleteMany({where: {hotelId}});
-    if (input.photos.length) {
-      await tx.hotelPhoto.createMany({data: input.photos.map((photo) => ({hotelId, url: photo.url, alt: photo.alt, sortOrder: photo.sortOrder}))});
-    }
     if (input.amenities.length) {
       await tx.hotelAmenity.createMany({data: input.amenities.map((amenity) => ({hotelId, code: amenity.code, name: amenity.name, category: amenity.category}))});
     }
-    await recordPublishMutation(tx, hotelId, actorUserId, "public content updated");
+    await recordPublishMutation(tx, hotelId, actorUserId, "public hotel content updated");
     await tx.auditLog.create({
       data: {
         hotelId,
@@ -79,7 +74,6 @@ function auditValue(value: {
   longitude?: number | null;
   checkInTime?: string | null;
   checkOutTime?: string | null;
-  photos: Array<{url: string; alt?: string | null; sortOrder: number}>;
   amenities: Array<{code: string; name: string; category?: string | null}>;
 }) {
   return {
@@ -90,7 +84,6 @@ function auditValue(value: {
     longitude: value.longitude ?? null,
     checkInTime: value.checkInTime ?? null,
     checkOutTime: value.checkOutTime ?? null,
-    photos: value.photos.map((photo) => ({url: photo.url, alt: photo.alt ?? null, sortOrder: photo.sortOrder})),
     amenities: value.amenities.map((amenity) => ({code: amenity.code, name: amenity.name, category: amenity.category ?? null})),
   };
 }

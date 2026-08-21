@@ -16,8 +16,8 @@ A change is not considered complete unless it is:
 - tested or designed so it can be tested in isolation;
 - backward-conscious for public API contracts;
 - secure by default;
-- auditable for booking, inventory, permission, publishing, review, and financial mutations;
-- free of duplicated pricing, permission, payment, publishing, and booking rules.
+- auditable for booking, inventory, permission, publishing, media, review, and financial mutations;
+- free of duplicated pricing, permission, payment, publishing, media, and booking rules.
 
 **No quick patch is allowed to become production architecture.** If an emergency hotfix is ever required in production, it must be followed by a root-cause fix before normal feature development continues.
 
@@ -38,7 +38,7 @@ packages/
   server/              backend application services, authorization and provider boundaries
 ```
 
-Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, or booking rules.
+Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, or booking rules.
 
 ## Phase 2 foundation
 
@@ -119,6 +119,24 @@ Financial history is append-only. Confirmations create financial events; modific
 
 A property must never become `ACTIVE + verified` through a UI flag, direct client request, or ordinary hotel edit. Activation only occurs through the platform-admin review service after readiness and revision checks pass.
 
+## Phase 7 secure media and verification documents
+
+- One storage-backed `MediaObject` lifecycle for public hotel images and private verification documents
+- Direct client-to-storage presigned uploads; raw file bytes do not pass through JSON or the platform database
+- Provider-neutral object-storage boundary with an S3-compatible AWS Signature V4 adapter
+- Exact storage size and MIME verification plus JPEG/PNG/WebP/PDF magic-byte checks before a file becomes `READY`
+- Manual external hotel-photo URLs removed from the content contract and dashboard
+- Discovery reads only completed media-backed public photos
+- Private verification documents use short-lived admin-only signed downloads
+- Document approval/rejection is persisted and audit logged
+- Commercial Registration and Business License must be approved before property Go-Live
+- Expired pending upload intents are cleaned by the background worker
+- Media and document changes participate in the same `publishRevision` stale-review protection as the rest of the property
+
+### Media invariant
+
+A filename, extension, browser-supplied MIME type, or successful PUT is never enough to publish a file. The server must verify storage metadata and the actual file signature before marking media `READY`. Verification documents never receive public URLs.
+
 ## Current pricing default
 
 - base room rate × **1.156** = final guest price;
@@ -133,11 +151,11 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 2. Start PostgreSQL: `docker compose up -d postgres`.
 3. Install dependencies: `npm install`.
 4. Generate Prisma Client: `npm run db:generate`.
-5. Create/apply the database migration: `npm run db:migrate -- --name phase6_publishing_verification`.
+5. Create/apply the database migration: `npm run db:migrate -- --name phase7_media_documents`.
 6. Run the web app: `npm run dev`.
-7. In a separate process, run hold expiry: `npm run worker:holds`.
+7. In a separate process, run the background worker: `npm run worker:holds`.
 
-`PAYMENT_PROVIDER=none` is the safe default. Pay-now remains unavailable until a real adapter is registered and configured.
+`PAYMENT_PROVIDER=none` and `STORAGE_PROVIDER=none` are safe defaults. Pay-now and media uploads remain unavailable until real providers are configured; the platform never simulates success.
 
 ## Architecture documents
 
@@ -148,7 +166,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 - `docs/PHASE4.md`
 - `docs/PHASE5.md`
 - `docs/PHASE6.md`
+- `docs/PHASE7.md`
 
 ## Deferred by design
 
-A concrete launch payment gateway adapter, signed payment webhooks, chargebacks/disputes, Channel Manager, PMS integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary success flags or duplicated business logic.
+A concrete launch payment gateway adapter, signed payment webhooks, malware-scanning provider, OCR, chargebacks/disputes, Channel Manager, PMS integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary success flags or duplicated business logic.

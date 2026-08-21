@@ -12,6 +12,7 @@ import { notFound } from "../errors";
 
 type StayInput = Readonly<{arrival: string; departure: string; adults: number; children: number}>;
 type PublicPhoto = Readonly<{url: string; alt: string | null; sortOrder: number}>;
+type StoredPhoto = Readonly<{alt: string | null; sortOrder: number; mediaObject: Readonly<{publicUrl: string | null}>}>;
 type PublicAmenity = Readonly<{code: string; name: string; category: string | null}>;
 type InventoryRow = Readonly<{date: Date; available: number; overbookingLimit: number}>;
 type RateRow = Readonly<{date: Date; baseRate: unknown; minStay: number; maxStay: number | null; closed: boolean; stopSell: boolean}>;
@@ -63,6 +64,12 @@ type HotelRow = Readonly<{
   roomTypes: RoomRow[];
 }>;
 
+const livePhotoQuery = {
+  where: {mediaObject: {state: "READY" as const}},
+  select: {alt: true, sortOrder: true, mediaObject: {select: {publicUrl: true}}},
+  orderBy: {sortOrder: "asc" as const},
+};
+
 export async function listFeaturedHotels(limit = 6) {
   const hotels = await database().hotel.findMany({
     where: {status: "ACTIVE", verified: true},
@@ -75,13 +82,16 @@ export async function listFeaturedHotels(limit = 6) {
       area: true,
       starRating: true,
       description: true,
-      photos: {select: {url: true, alt: true, sortOrder: true}, orderBy: {sortOrder: "asc"}, take: 1},
+      photos: {...livePhotoQuery, take: 1},
       amenities: {select: {code: true, name: true, category: true}, orderBy: {name: "asc"}, take: 6},
     },
     orderBy: [{verified: "desc"}, {updatedAt: "desc"}],
     take: Math.max(1, Math.min(limit, 24)),
   });
-  return hotels.map((hotel) => ({...hotel, coverPhoto: hotel.photos[0] ?? null, photos: undefined}));
+  return hotels.map((hotel) => {
+    const photos = publicPhotos(hotel.photos);
+    return {...hotel, coverPhoto: photos[0] ?? null, photos: undefined};
+  });
 }
 
 export async function searchHotels(input: DiscoverySearchInput) {
@@ -102,7 +112,7 @@ export async function searchHotels(input: DiscoverySearchInput) {
       ],
     },
     include: {
-      photos: {select: {url: true, alt: true, sortOrder: true}, orderBy: {sortOrder: "asc"}},
+      photos: livePhotoQuery,
       amenities: {select: {code: true, name: true, category: true}, orderBy: {name: "asc"}},
       roomTypes: {
         where: {active: true, maxAdults: {gte: input.adults}, maxChildren: {gte: input.children}},
@@ -122,7 +132,8 @@ export async function searchHotels(input: DiscoverySearchInput) {
   });
 
   const requestedAmenities = new Set(input.amenities);
-  const results = hotels.flatMap((hotel) => {
+  const results = hotels.flatMap((rawHotel) => {
+    const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
     if (requestedAmenities.size && ![...requestedAmenities].every((code) => hotel.amenities.some((amenity) => amenity.code === code))) return [];
     const offers = buildOffers(hotel, stay, input).filter((offer) => {
       if (input.freeCancellation && !offer.freeCancellationNow) return false;
@@ -156,10 +167,10 @@ export async function searchHotels(input: DiscoverySearchInput) {
 export async function getPublicHotelDetails(hotelId: string, stayInput: StayInput) {
   const stay = buildStayDates(stayInput.arrival, stayInput.departure);
   const dates = stay.nights.map(parseDateOnly);
-  const hotel = await database().hotel.findFirst({
+  const rawHotel = await database().hotel.findFirst({
     where: {id: hotelId, status: "ACTIVE", verified: true},
     include: {
-      photos: {select: {url: true, alt: true, sortOrder: true}, orderBy: {sortOrder: "asc"}},
+      photos: livePhotoQuery,
       amenities: {select: {code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
       roomTypes: {
         where: {active: true, maxAdults: {gte: stayInput.adults}, maxChildren: {gte: stayInput.children}},
@@ -176,7 +187,8 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
       },
     },
   });
-  if (!hotel) notFound("Hotel");
+  if (!rawHotel) notFound("Hotel");
+  const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
   const offers = buildOffers(hotel, stay, stayInput).sort((a, b) => a.total - b.total);
   return {
     id: hotel.id,
@@ -254,6 +266,10 @@ function policySnapshot(policy: PolicyRow): CancellationPolicySnapshot {
       penaltyValue: rule.penaltyValue === null ? null : Number(rule.penaltyValue),
     })),
   };
+}
+
+function publicPhotos(photos: readonly StoredPhoto[]): PublicPhoto[] {
+  return photos.flatMap((photo) => photo.mediaObject.publicUrl ? [{url: photo.mediaObject.publicUrl, alt: photo.alt, sortOrder: photo.sortOrder}] : []);
 }
 
 function compareResults(a: {name: string; starRating: number | null; from: {total: number}}, b: {name: string; starRating: number | null; from: {total: number}}, sort: DiscoverySearchInput["sort"]) {
