@@ -3,6 +3,7 @@ import type { CreateHotelRequest, CreateRatePlanRequest, CreateRoomTypeRequest, 
 import { database } from "@platform/database";
 import { badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "./authorization";
+import { recordPublishMutation } from "./publishing-revision";
 
 function slugPart(value: string): string {
   return value.normalize("NFKD").replace(/[^a-zA-Z0-9\s-]/g, "").trim().toLowerCase().replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 70) || "hotel";
@@ -14,7 +15,7 @@ export async function createHotel(ownerUserId: string, input: CreateHotelRequest
   return db.$transaction(async (tx) => {
     const hotel = await tx.hotel.create({data: {name: input.name.trim(), slug, city: input.city.trim(), countryCode: input.countryCode, address: input.address.trim(), timezone: input.timezone, currency: input.currency, memberships: {create: {userId: ownerUserId, role: "OWNER"}}}});
     await tx.user.updateMany({where: {id: ownerUserId, platformRole: "GUEST"}, data: {platformRole: "HOTEL_USER"}});
-    await tx.auditLog.create({data: {hotelId: hotel.id, actorUserId: ownerUserId, action: "HOTEL_CREATED", entityType: "Hotel", entityId: hotel.id, after: {status: hotel.status}}});
+    await tx.auditLog.create({data: {hotelId: hotel.id, actorUserId: ownerUserId, action: "HOTEL_CREATED", entityType: "Hotel", entityId: hotel.id, after: {status: hotel.status, publishRevision: hotel.publishRevision}}});
     return hotel;
   });
 }
@@ -23,6 +24,7 @@ export async function createRoomType(actorUserId: string, hotelId: string, input
   await requireHotelPermission(actorUserId, hotelId, "rooms:manage");
   return database().$transaction(async (tx) => {
     const roomType = await tx.roomType.create({data: {hotelId, name: input.name, code: input.code, maxAdults: input.maxAdults, maxChildren: input.maxChildren}});
+    await recordPublishMutation(tx, hotelId, actorUserId, "room type created");
     await tx.auditLog.create({data: {hotelId, actorUserId, action: "ROOM_TYPE_CREATED", entityType: "RoomType", entityId: roomType.id, after: {name: roomType.name, code: roomType.code}}});
     return roomType;
   });
@@ -44,6 +46,7 @@ export async function createRatePlan(actorUserId: string, hotelId: string, input
       allowPayAtHotel: input.allowPayAtHotel,
       cancellationPolicy: {create: {name: policy.name, noShowPenaltyType: policy.noShowPenaltyType, noShowPenaltyValue: policy.noShowPenaltyValue, rules: {create: policy.rules}}},
     }, include: {cancellationPolicy: {include: {rules: true}}}});
+    await recordPublishMutation(tx, hotelId, actorUserId, "rate plan created");
     await tx.auditLog.create({data: {hotelId, actorUserId, action: "RATE_PLAN_CREATED", entityType: "RatePlan", entityId: ratePlan.id, after: {name: ratePlan.name, code: ratePlan.code, allowPayNow: ratePlan.allowPayNow, allowPayAtHotel: ratePlan.allowPayAtHotel}}});
     return ratePlan;
   });
@@ -76,6 +79,7 @@ export async function updateRatePlanCancellationPolicy(actorUserId: string, hote
     }
     const updated = await tx.cancellationPolicy.findUnique({where: {ratePlanId}, include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}});
     const after = updated ? policyAuditValue(updated) : {};
+    await recordPublishMutation(tx, hotelId, actorUserId, "cancellation policy updated");
     await tx.auditLog.create({data: {hotelId, actorUserId, action: "CANCELLATION_POLICY_UPDATED", entityType: "RatePlan", entityId: ratePlanId, before, after}});
     return updated;
   });
@@ -103,6 +107,7 @@ export async function upsertCalendar(actorUserId: string, hotelId: string, input
       await tx.dailyRate.upsert({where: {ratePlanId_date: {ratePlanId: entry.ratePlanId, date}}, create: {ratePlanId: entry.ratePlanId, date, baseRate: entry.baseRate, minStay: entry.minStay, maxStay: entry.maxStay, closed: entry.closed, stopSell: entry.stopSell}, update: {baseRate: entry.baseRate, minStay: entry.minStay, maxStay: entry.maxStay, closed: entry.closed, stopSell: entry.stopSell}});
       await tx.inventoryDay.upsert({where: {roomTypeId_date: {roomTypeId: entry.roomTypeId, date}}, create: {roomTypeId: entry.roomTypeId, date, available: entry.available, overbookingLimit: entry.overbookingLimit}, update: {available: entry.available, overbookingLimit: entry.overbookingLimit}});
     }
+    await recordPublishMutation(tx, hotelId, actorUserId, "calendar rates or inventory updated");
     await tx.auditLog.create({data: {hotelId, actorUserId, action: "CALENDAR_UPSERTED", entityType: "Calendar", after: {entries: input.entries.length}}});
   });
   return {updated: input.entries.length};
@@ -116,10 +121,10 @@ export async function getHotelWorkspace(actorUserId: string, hotelId: string) {
 }
 
 export async function listUserHotels(userId: string) {
-  const user = await database().user.findUnique({where: {id: userId}, select: {platformRole: true, hotelMemberships: {where: {status: "ACTIVE"}, select: {role: true, hotel: {select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true}}}, orderBy: {createdAt: "asc"}}}});
+  const user = await database().user.findUnique({where: {id: userId}, select: {platformRole: true, hotelMemberships: {where: {status: "ACTIVE"}, select: {role: true, hotel: {select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true, publishRevision: true, publishedRevision: true}}}, orderBy: {createdAt: "asc"}}}});
   if (!user) notFound("User");
   if (user.platformRole === "PLATFORM_ADMIN") {
-    const hotels = await database().hotel.findMany({select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true}, orderBy: {createdAt: "desc"}, take: 200});
+    const hotels = await database().hotel.findMany({select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true, publishRevision: true, publishedRevision: true}, orderBy: {createdAt: "desc"}, take: 200});
     return hotels.map((hotel) => ({...hotel, role: "PLATFORM_ADMIN" as const}));
   }
   return user.hotelMemberships.map((membership) => ({...membership.hotel, role: membership.role}));
@@ -131,6 +136,7 @@ export async function updateHotelPricingPolicy(actorUserId: string, hotelId: str
     const before = await tx.hotel.findUnique({where: {id: hotelId}, select: {serviceRate: true, taxRate: true}});
     if (!before) notFound("Hotel");
     const hotel = await tx.hotel.update({where: {id: hotelId}, data: {serviceRate: input.serviceRate, taxRate: input.taxRate}, select: {id: true, serviceRate: true, taxRate: true}});
+    await recordPublishMutation(tx, hotelId, actorUserId, "pricing policy updated");
     await tx.auditLog.create({data: {hotelId, actorUserId, action: "PRICING_POLICY_UPDATED", entityType: "Hotel", entityId: hotelId, before: {serviceRate: before.serviceRate.toString(), taxRate: before.taxRate.toString()}, after: {serviceRate: hotel.serviceRate.toString(), taxRate: hotel.taxRate.toString()}}});
     return hotel;
   });

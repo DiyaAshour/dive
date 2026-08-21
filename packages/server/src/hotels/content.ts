@@ -2,6 +2,7 @@ import type { UpdateHotelPublicContentInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { notFound } from "../errors";
 import { requireHotelPermission } from "./authorization";
+import { recordPublishMutation } from "./publishing-revision";
 
 export async function getHotelPublicContentForManagement(actorUserId: string, hotelId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
@@ -54,6 +55,7 @@ export async function updateHotelPublicContent(actorUserId: string, hotelId: str
     if (input.amenities.length) {
       await tx.hotelAmenity.createMany({data: input.amenities.map((amenity) => ({hotelId, code: amenity.code, name: amenity.name, category: amenity.category}))});
     }
+    await recordPublishMutation(tx, hotelId, actorUserId, "public content updated");
     await tx.auditLog.create({
       data: {
         hotelId,
