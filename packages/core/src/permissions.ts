@@ -13,16 +13,17 @@ export const HOTEL_PERMISSIONS = [
   "bookings:view",
   "bookings:manage",
   "finance:view",
+  "finance:manage",
   "members:manage",
 ] as const;
 export type HotelPermission = (typeof HOTEL_PERMISSIONS)[number];
 
 const permissionsByRole: Readonly<Record<HotelRole, ReadonlySet<HotelPermission>>> = {
   OWNER: new Set(HOTEL_PERMISSIONS),
-  MANAGER: new Set(["hotel:view", "hotel:edit", "rooms:manage", "rates:manage", "inventory:manage", "bookings:view", "bookings:manage", "finance:view", "members:manage"]),
+  MANAGER: new Set(["hotel:view", "hotel:edit", "rooms:manage", "rates:manage", "inventory:manage", "bookings:view", "bookings:manage", "finance:view", "finance:manage", "members:manage"]),
   REVENUE: new Set(["hotel:view", "rooms:manage", "rates:manage", "inventory:manage", "bookings:view", "finance:view"]),
   FRONT_DESK: new Set(["hotel:view", "bookings:view", "bookings:manage"]),
-  FINANCE: new Set(["hotel:view", "bookings:view", "finance:view"]),
+  FINANCE: new Set(["hotel:view", "bookings:view", "finance:view", "finance:manage"]),
   VIEWER: new Set(["hotel:view", "bookings:view"]),
 };
 
