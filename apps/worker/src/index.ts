@@ -1,7 +1,8 @@
-import { expireStaleHolds } from "@platform/server";
+import { expirePendingMediaUploads, expireStaleHolds } from "@platform/server";
 
 const intervalMs = boundedInteger(process.env.HOLD_EXPIRY_INTERVAL_MS, 30_000, 5_000, 300_000);
-const batchSize = boundedInteger(process.env.HOLD_EXPIRY_BATCH_SIZE, 200, 1, 500);
+const bookingBatchSize = boundedInteger(process.env.HOLD_EXPIRY_BATCH_SIZE, 200, 1, 500);
+const mediaBatchSize = boundedInteger(process.env.MEDIA_UPLOAD_CLEANUP_BATCH_SIZE, 200, 1, 500);
 let running = false;
 let stopping = false;
 
@@ -9,10 +10,18 @@ async function tick(): Promise<void> {
   if (running || stopping) return;
   running = true;
   try {
-    const expired = await expireStaleHolds(batchSize);
-    if (expired > 0) console.info(JSON.stringify({event:"booking_holds_expired", count:expired, at:new Date().toISOString()}));
-  } catch (error) {
-    console.error(JSON.stringify({event:"booking_hold_expiry_failed", message:error instanceof Error ? error.message : "unknown error", at:new Date().toISOString()}));
+    try {
+      const expired = await expireStaleHolds(bookingBatchSize);
+      if (expired > 0) console.info(JSON.stringify({event:"booking_holds_expired", count:expired, at:new Date().toISOString()}));
+    } catch (error) {
+      console.error(JSON.stringify({event:"booking_hold_expiry_failed", message:error instanceof Error ? error.message : "unknown error", at:new Date().toISOString()}));
+    }
+    try {
+      const expiredMedia = await expirePendingMediaUploads(mediaBatchSize);
+      if (expiredMedia > 0) console.info(JSON.stringify({event:"media_uploads_expired", count:expiredMedia, at:new Date().toISOString()}));
+    } catch (error) {
+      console.error(JSON.stringify({event:"media_upload_cleanup_failed", message:error instanceof Error ? error.message : "unknown error", at:new Date().toISOString()}));
+    }
   } finally {
     running = false;
   }

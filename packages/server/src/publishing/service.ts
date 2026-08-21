@@ -10,6 +10,7 @@ const MIN_SELLABLE_DAYS = 7;
 const MIN_DESCRIPTION_LENGTH = 80;
 const MIN_PHOTOS = 3;
 const MIN_AMENITIES = 3;
+const REQUIRED_DOCUMENT_TYPES = ["COMMERCIAL_REGISTRATION", "BUSINESS_LICENSE"] as const;
 
 type ReadinessCheck = {code: string; label: string; passed: boolean; detail: string};
 
@@ -29,52 +30,26 @@ export async function submitPropertyForReview(actorUserId: string, hotelId: stri
   }
 
   const db = database();
+  const existing = await db.propertyReview.findFirst({where: {hotelId, status: "PENDING", submittedRevision: readiness.publishRevision}, orderBy: {submittedAt: "desc"}});
+  if (existing) return {review: existing, readiness, reused: true};
+
   const snapshot = readinessSnapshot(readiness);
-  const result = await db.$transaction(async (tx) => {
-    const current = await tx.hotel.findUnique({where: {id: hotelId}, select: {status: true, publishRevision: true}});
+  const review = await db.$transaction(async (tx) => {
+    const current = await tx.hotel.findUnique({where: {id: hotelId}, select: {publishRevision: true, status: true}});
     if (!current) notFound("Hotel");
-    if (current.publishRevision !== readiness.publishRevision) badRequest("PROPERTY_CHANGED_DURING_SUBMISSION", "The property changed while readiness was being checked. Review the current readiness and submit again.");
+    if (current.publishRevision !== readiness.publishRevision) badRequest("PROPERTY_CHANGED_DURING_SUBMISSION", "The property changed while it was being submitted; review readiness and submit again");
     if (current.status === "ACTIVE") badRequest("PROPERTY_ALREADY_ACTIVE", "This property is already active");
     if (current.status === "SUSPENDED") badRequest("PROPERTY_SUSPENDED", "A suspended property cannot be submitted for review");
-
-    const existing = await tx.propertyReview.findFirst({
-      where: {hotelId, status: "PENDING", submittedRevision: readiness.publishRevision},
-      orderBy: {submittedAt: "desc"},
-    });
-    if (existing) return {review: existing, reused: true};
-    if (current.status === "PENDING_REVIEW") badRequest("PENDING_REVIEW_INCONSISTENT", "This property is already pending review but no matching review record was found");
-
-    await tx.propertyReview.updateMany({
-      where: {hotelId, status: "PENDING"},
-      data: {status: "STALE", reviewedAt: new Date(), decisionReason: "Superseded by a newer submission"},
-    });
-    const created = await tx.propertyReview.create({
-      data: {
-        hotelId,
-        submittedByUserId: actorUserId,
-        submittedRevision: readiness.publishRevision,
-        readinessSnapshot: snapshot,
-      },
-    });
-    const hotelUpdated = await tx.hotel.updateMany({
-      where: {id: hotelId, status: "DRAFT", publishRevision: readiness.publishRevision},
-      data: {status: "PENDING_REVIEW", verified: false},
-    });
-    if (hotelUpdated.count !== 1) badRequest("PROPERTY_CHANGED_DURING_SUBMISSION", "The property changed before the review request could be created");
-    await tx.auditLog.create({
-      data: {
-        hotelId,
-        actorUserId,
-        action: "PROPERTY_SUBMITTED_FOR_REVIEW",
-        entityType: "PropertyReview",
-        entityId: created.id,
-        after: {submittedRevision: readiness.publishRevision, readiness: snapshot},
-      },
-    });
-    return {review: created, reused: false};
+    const raced = await tx.propertyReview.findFirst({where: {hotelId, status: "PENDING", submittedRevision: readiness.publishRevision}, orderBy: {submittedAt: "desc"}});
+    if (raced) return raced;
+    await tx.propertyReview.updateMany({where: {hotelId, status: "PENDING"}, data: {status: "STALE", reviewedAt: new Date(), decisionReason: "Superseded by a newer submission"}});
+    const created = await tx.propertyReview.create({data: {hotelId, submittedByUserId: actorUserId, submittedRevision: readiness.publishRevision, readinessSnapshot: snapshot}});
+    await tx.hotel.update({where: {id: hotelId}, data: {status: "PENDING_REVIEW", verified: false}});
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: "PROPERTY_SUBMITTED_FOR_REVIEW", entityType: "PropertyReview", entityId: created.id, after: {submittedRevision: readiness.publishRevision, readiness: snapshot}}});
+    return created;
   });
 
-  return {review: result.review, readiness: {...readiness, status: "PENDING_REVIEW" as const}, reused: result.reused};
+  return {review, readiness: {...readiness, status: "PENDING_REVIEW" as const}, reused: false};
 }
 
 export async function listPropertyReviewQueue(actorUserId: string) {
@@ -100,21 +75,22 @@ export async function listPropertyReviewQueue(actorUserId: string) {
           verified: true,
           publishRevision: true,
           starRating: true,
-          photos: {select: {url: true}, orderBy: {sortOrder: "asc"}, take: 1},
+          photos: {where: {mediaObject: {state: "READY"}}, select: {mediaObject: {select: {publicUrl: true}}}, orderBy: {sortOrder: "asc"}, take: 1},
         },
       },
     },
   });
-  return reviews.map((review) => ({...review, stale: review.hotel.publishRevision !== review.submittedRevision}));
+  return reviews.map((review) => ({
+    ...review,
+    hotel: {...review.hotel, photos: review.hotel.photos.flatMap((photo) => photo.mediaObject.publicUrl ? [{url: photo.mediaObject.publicUrl}] : [])},
+    stale: review.hotel.publishRevision !== review.submittedRevision,
+  }));
 }
 
 export async function reviewPropertySubmission(actorUserId: string, reviewId: string, input: PropertyReviewDecisionInput) {
   await requirePlatformAdmin(actorUserId);
   const db = database();
-  const review = await db.propertyReview.findUnique({
-    where: {id: reviewId},
-    include: {hotel: {select: {id: true, status: true, publishRevision: true}}},
-  });
+  const review = await db.propertyReview.findUnique({where: {id: reviewId}, include: {hotel: {select: {id: true, status: true, publishRevision: true}}}});
   if (!review) notFound("Property review");
   if (review.status !== "PENDING") badRequest("REVIEW_ALREADY_RESOLVED", "This property review has already been resolved");
 
@@ -124,24 +100,11 @@ export async function reviewPropertySubmission(actorUserId: string, reviewId: st
   }
 
   if (input.decision === "REJECT") {
-    if (!input.reason || input.reason.trim().length < 10) badRequest("REJECTION_REASON_REQUIRED", "A clear rejection reason is required");
     return db.$transaction(async (tx) => {
-      const resolved = await tx.propertyReview.updateMany({
-        where: {id: review.id, status: "PENDING"},
-        data: {status: "REJECTED", reviewedByUserId: actorUserId, reviewedAt: new Date(), decisionReason: input.reason},
-      });
+      const resolved = await tx.propertyReview.updateMany({where: {id: review.id, status: "PENDING"}, data: {status: "REJECTED", reviewedByUserId: actorUserId, reviewedAt: new Date(), decisionReason: input.reason}});
       if (resolved.count !== 1) badRequest("REVIEW_ALREADY_RESOLVED", "This property review has already been resolved");
       await tx.hotel.update({where: {id: review.hotel.id}, data: {status: "DRAFT", verified: false}});
-      await tx.auditLog.create({
-        data: {
-          hotelId: review.hotel.id,
-          actorUserId,
-          action: "PROPERTY_REVIEW_REJECTED",
-          entityType: "PropertyReview",
-          entityId: review.id,
-          after: {submittedRevision: review.submittedRevision, reason: input.reason},
-        },
-      });
+      await tx.auditLog.create({data: {hotelId: review.hotel.id, actorUserId, action: "PROPERTY_REVIEW_REJECTED", entityType: "PropertyReview", entityId: review.id, after: {submittedRevision: review.submittedRevision, reason: input.reason}}});
       return {reviewId: review.id, hotelId: review.hotel.id, status: "REJECTED" as const};
     });
   }
@@ -155,29 +118,12 @@ export async function reviewPropertySubmission(actorUserId: string, reviewId: st
   return db.$transaction(async (tx) => {
     const hotelUpdated = await tx.hotel.updateMany({
       where: {id: review.hotel.id, status: "PENDING_REVIEW", publishRevision: review.submittedRevision},
-      data: {
-        status: "ACTIVE",
-        verified: true,
-        publishedRevision: review.submittedRevision,
-        lastPublishedAt: new Date(),
-      },
+      data: {status: "ACTIVE", verified: true, publishedRevision: review.submittedRevision, lastPublishedAt: new Date()},
     });
     if (hotelUpdated.count !== 1) badRequest("REVIEW_STALE", "The property changed or is no longer pending review");
-    const resolved = await tx.propertyReview.updateMany({
-      where: {id: review.id, status: "PENDING"},
-      data: {status: "APPROVED", reviewedByUserId: actorUserId, reviewedAt: new Date(), decisionReason: input.reason ?? null},
-    });
+    const resolved = await tx.propertyReview.updateMany({where: {id: review.id, status: "PENDING"}, data: {status: "APPROVED", reviewedByUserId: actorUserId, reviewedAt: new Date(), decisionReason: input.reason ?? null}});
     if (resolved.count !== 1) badRequest("REVIEW_ALREADY_RESOLVED", "This property review has already been resolved");
-    await tx.auditLog.create({
-      data: {
-        hotelId: review.hotel.id,
-        actorUserId,
-        action: "PROPERTY_REVIEW_APPROVED",
-        entityType: "PropertyReview",
-        entityId: review.id,
-        after: {publishedRevision: review.submittedRevision},
-      },
-    });
+    await tx.auditLog.create({data: {hotelId: review.hotel.id, actorUserId, action: "PROPERTY_REVIEW_APPROVED", entityType: "PropertyReview", entityId: review.id, after: {publishedRevision: review.submittedRevision}}});
     return {reviewId: review.id, hotelId: review.hotel.id, status: "APPROVED" as const, publishedRevision: review.submittedRevision};
   });
 }
@@ -226,8 +172,9 @@ async function buildPublishingReadiness(hotelId: string) {
       checkInTime: true,
       checkOutTime: true,
       overbookingEnabled: true,
-      photos: {select: {id: true}},
+      photos: {where: {mediaObject: {state: "READY"}}, select: {id: true}},
       amenities: {select: {id: true}},
+      documents: {where: {status: "APPROVED", mediaObject: {state: "READY"}}, select: {type: true}},
       reviews: {orderBy: {submittedAt: "desc"}, take: 1, select: {id: true, status: true, submittedRevision: true, decisionReason: true, submittedAt: true, reviewedAt: true}},
       roomTypes: {
         where: {active: true},
@@ -254,24 +201,17 @@ async function buildPublishingReadiness(hotelId: string) {
   const from = new Date(`${localToday}T00:00:00.000Z`);
   const to = new Date(from);
   to.setUTCDate(to.getUTCDate() + REVIEW_WINDOW_DAYS);
-  const fromMs = from.getTime();
-  const toMs = to.getTime();
 
   const activePlans = hotel.roomTypes.flatMap((roomType) => roomType.ratePlans);
   const validPlans = activePlans.filter((plan) => Boolean(plan.cancellationPolicy?.rules.length) && (plan.allowPayNow || plan.allowPayAtHotel));
   const sellableDates = new Set<string>();
 
   for (const roomType of hotel.roomTypes) {
-    const inventoryByDate = new Map(
-      roomType.inventory
-        .filter((entry) => entry.date.getTime() >= fromMs && entry.date.getTime() < toMs)
-        .map((entry) => [dateKey(entry.date), entry]),
-    );
+    const inventoryByDate = new Map(roomType.inventory.filter((entry) => entry.date >= from && entry.date < to).map((entry) => [dateKey(entry.date), entry]));
     for (const plan of roomType.ratePlans) {
       if (!plan.cancellationPolicy?.rules.length || (!plan.allowPayNow && !plan.allowPayAtHotel)) continue;
       for (const rate of plan.rates) {
-        const rateMs = rate.date.getTime();
-        if (rateMs < fromMs || rateMs >= toMs || rate.closed || rate.stopSell) continue;
+        if (rate.date < from || rate.date >= to || rate.closed || rate.stopSell) continue;
         const inventory = inventoryByDate.get(dateKey(rate.date));
         if (!inventory) continue;
         const floor = hotel.overbookingEnabled ? -inventory.overbookingLimit : 0;
@@ -280,12 +220,15 @@ async function buildPublishingReadiness(hotelId: string) {
     }
   }
 
+  const approvedDocumentTypes = new Set(hotel.documents.map((document) => document.type));
+  const missingDocuments = REQUIRED_DOCUMENT_TYPES.filter((type) => !approvedDocumentTypes.has(type));
   const checks: ReadinessCheck[] = [
     check("DESCRIPTION", "Property description", (hotel.description?.trim().length ?? 0) >= MIN_DESCRIPTION_LENGTH, `At least ${MIN_DESCRIPTION_LENGTH} characters`),
     check("STAR_RATING", "Official star rating", hotel.starRating !== null && hotel.starRating >= 1 && hotel.starRating <= 5, "Set a star rating from 1 to 5"),
     check("CHECK_TIMES", "Check-in and check-out times", Boolean(hotel.checkInTime && hotel.checkOutTime), "Both arrival and departure times are required"),
-    check("PHOTOS", "Property photos", hotel.photos.length >= MIN_PHOTOS, `At least ${MIN_PHOTOS} photos`),
+    check("PHOTOS", "Verified property photos", hotel.photos.length >= MIN_PHOTOS, `At least ${MIN_PHOTOS} completed object-storage photos`),
     check("AMENITIES", "Property amenities", hotel.amenities.length >= MIN_AMENITIES, `At least ${MIN_AMENITIES} amenities`),
+    check("VERIFICATION_DOCUMENTS", "Verification documents", missingDocuments.length === 0, missingDocuments.length === 0 ? "Required verification documents approved" : `Missing approved documents: ${missingDocuments.join(", ")}`),
     check("ROOM_TYPES", "Active room type", hotel.roomTypes.length > 0, "At least one active room type"),
     check("RATE_PLANS", "Bookable rate plan", validPlans.length > 0, "At least one active plan with payment mode and cancellation policy"),
     check("SELLABLE_CALENDAR", "Live rates and inventory", sellableDates.size >= MIN_SELLABLE_DAYS, `At least ${MIN_SELLABLE_DAYS} sellable days in the next ${REVIEW_WINDOW_DAYS} days`),
@@ -308,22 +251,14 @@ async function buildPublishingReadiness(hotelId: string) {
 
 async function invalidateReview(reviewId: string, hotelId: string, reason: string) {
   await database().$transaction(async (tx) => {
-    const stale = await tx.propertyReview.updateMany({where: {id: reviewId, status: "PENDING"}, data: {status: "STALE", reviewedAt: new Date(), decisionReason: reason}});
-    if (stale.count === 0) return;
+    await tx.propertyReview.updateMany({where: {id: reviewId, status: "PENDING"}, data: {status: "STALE", reviewedAt: new Date(), decisionReason: reason}});
     await tx.hotel.updateMany({where: {id: hotelId, status: "PENDING_REVIEW"}, data: {status: "DRAFT", verified: false}});
     await tx.auditLog.create({data: {hotelId, actorUserId: null, action: "PROPERTY_REVIEW_STALE", entityType: "PropertyReview", entityId: reviewId, after: {reason}}});
   });
 }
 
 function readinessSnapshot(readiness: Awaited<ReturnType<typeof buildPublishingReadiness>>) {
-  return {
-    generatedAt: new Date().toISOString(),
-    publishRevision: readiness.publishRevision,
-    ready: readiness.ready,
-    sellableDays: readiness.sellableDays,
-    reviewWindowDays: readiness.reviewWindowDays,
-    checks: readiness.checks.map((item) => ({...item})),
-  };
+  return {generatedAt: new Date().toISOString(), publishRevision: readiness.publishRevision, ready: readiness.ready, sellableDays: readiness.sellableDays, reviewWindowDays: readiness.reviewWindowDays, checks: readiness.checks};
 }
 
 function check(code: string, label: string, passed: boolean, detail: string): ReadinessCheck {

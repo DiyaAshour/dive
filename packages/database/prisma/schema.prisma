@@ -42,6 +42,37 @@ enum PropertyReviewStatus {
   STALE
 }
 
+enum MediaKind {
+  HOTEL_IMAGE
+  VERIFICATION_DOCUMENT
+}
+
+enum MediaState {
+  PENDING_UPLOAD
+  READY
+  DELETED
+}
+
+enum MediaVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum HotelDocumentType {
+  COMMERCIAL_REGISTRATION
+  BUSINESS_LICENSE
+  TAX_REGISTRATION
+  BANK_PROOF
+  OWNER_ID
+  OTHER
+}
+
+enum DocumentReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum BookingStatus {
   HOLD
   CONFIRMED
@@ -139,6 +170,8 @@ model User {
   bookings                 Booking[]
   submittedPropertyReviews PropertyReview[] @relation("PropertyReviewSubmitter")
   reviewedPropertyReviews  PropertyReview[] @relation("PropertyReviewReviewer")
+  uploadedMediaObjects     MediaObject[]     @relation("MediaObjectUploader")
+  reviewedHotelDocuments   HotelDocument[]   @relation("HotelDocumentReviewer")
   createdAt                DateTime         @default(now())
   updatedAt                DateTime         @updatedAt
 }
@@ -193,6 +226,8 @@ model Hotel {
   photos             HotelPhoto[]
   amenities          HotelAmenity[]
   reviews            PropertyReview[]
+  mediaObjects       MediaObject[]
+  documents          HotelDocument[]
   bookings           Booking[]
   financialEvents    FinancialEvent[]
   auditLogs          AuditLog[]
@@ -203,16 +238,63 @@ model Hotel {
   @@index([countryCode, city])
 }
 
+model MediaObject {
+  id                String             @id @default(cuid())
+  hotelId           String
+  hotel             Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  uploadedByUserId  String
+  uploadedBy        User               @relation("MediaObjectUploader", fields: [uploadedByUserId], references: [id])
+  kind              MediaKind
+  state             MediaState         @default(PENDING_UPLOAD)
+  visibility        MediaVisibility
+  objectKey         String             @unique
+  originalFileName  String
+  contentType       String
+  expectedSizeBytes Int
+  documentType      HotelDocumentType?
+  publicUrl         String?
+  uploadExpiresAt   DateTime
+  uploadedAt        DateTime?
+  deletedAt         DateTime?
+  photo             HotelPhoto?
+  document          HotelDocument?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([hotelId, kind, state, createdAt])
+  @@index([uploadExpiresAt, state])
+}
+
 model HotelPhoto {
-  id        String   @id @default(cuid())
-  hotelId   String
-  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  url       String
-  alt       String?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  id            String      @id @default(cuid())
+  hotelId       String
+  hotel         Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  mediaObjectId String      @unique
+  mediaObject   MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Restrict)
+  alt           String?
+  sortOrder     Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([hotelId, sortOrder])
+}
+
+model HotelDocument {
+  id               String               @id @default(cuid())
+  hotelId          String
+  hotel            Hotel                @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  mediaObjectId    String               @unique
+  mediaObject      MediaObject          @relation(fields: [mediaObjectId], references: [id], onDelete: Restrict)
+  type             HotelDocumentType
+  status           DocumentReviewStatus @default(PENDING)
+  reviewedByUserId String?
+  reviewedBy       User?                @relation("HotelDocumentReviewer", fields: [reviewedByUserId], references: [id])
+  rejectionReason  String?              @db.Text
+  submittedAt      DateTime             @default(now())
+  reviewedAt       DateTime?
+
+  @@index([hotelId, type, status, submittedAt])
+  @@index([status, submittedAt])
 }
 
 model HotelAmenity {
