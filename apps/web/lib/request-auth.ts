@@ -13,6 +13,11 @@ export function bookingToken(request: NextRequest): string | null {
   return request.headers.get("x-booking-token")?.trim() || null;
 }
 
+export async function bookingAccessContext(request: NextRequest): Promise<{userId: string | null; accessToken: string | null}> {
+  const user = await requestUser(request);
+  return {userId: user?.id ?? null, accessToken: bookingToken(request)};
+}
+
 export function idempotencyKey(request: NextRequest): string | null {
   return request.headers.get("idempotency-key")?.trim() || null;
 }

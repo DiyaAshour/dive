@@ -17,9 +17,28 @@ Browsers use the HttpOnly session cookie. Native clients may send the same opaqu
 - `POST /api/v1/hotels`
 - `POST /api/v1/hotels/:hotelId/room-types`
 - `POST /api/v1/hotels/:hotelId/rate-plans`
+- `PUT /api/v1/hotels/:hotelId/rate-plans/:ratePlanId/cancellation-policy`
 - `GET /api/v1/hotels/:hotelId/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
 - `PUT /api/v1/hotels/:hotelId/calendar`
 - `PUT /api/v1/hotels/:hotelId/pricing-policy`
+
+Rate plans explicitly define allowed payment modes and own a persisted cancellation policy. Bookable rates must never depend on an invisible default policy at request time.
+
+## Booking quote
+
+`POST /api/v1/booking-quotes`
+
+```json
+{
+  "hotelId": "...",
+  "roomTypeId": "...",
+  "ratePlanId": "...",
+  "arrival": "2026-09-01",
+  "departure": "2026-09-04"
+}
+```
+
+Returns the current server-calculated base/service/tax/total, rate-plan payment modes, cancellation terms, and minimum live sellable inventory across the stay. A quote does **not** reserve inventory. Hold creation revalidates everything.
 
 ## Booking engine
 
@@ -42,7 +61,7 @@ Mutation requests use an `Idempotency-Key` header (8-128 characters). Guest book
 }
 ```
 
-The operation reserves every stay date in one serializable transaction. If any date fails, the complete transaction rolls back.
+The server verifies that the requested payment mode is enabled on the rate plan, snapshots the cancellation policy, recalculates the price, and reserves every stay date in one serializable transaction. If any date fails, the complete transaction rolls back.
 
 ### Read booking
 
@@ -54,32 +73,61 @@ Requires booking access token, booking owner session, hotel booking-management p
 
 `PATCH /api/v1/bookings/:bookingId`
 
-Requires `Idempotency-Key`. A new booking revision and new nightly snapshots are appended. Previous nightly revisions remain stored. Captured pay-now bookings currently reject price-changing modification until the payment-adjustment layer is implemented.
+Requires `Idempotency-Key`. A new booking revision and new nightly snapshots are appended. Previous nightly revisions remain stored. A valid new rate plan also produces a new cancellation-policy snapshot. Captured pay-now bookings still reject price-changing modification until payment adjustment support is implemented.
 
 ### Confirm booking
 
 `POST /api/v1/bookings/:bookingId/confirm`
 
-Requires `Idempotency-Key`. Pay-at-hotel bookings may confirm directly while the hold is valid. Pay-now bookings require `paymentState=CAPTURED`; there is deliberately no fake payment-success shortcut.
+Requires `Idempotency-Key`. Pay-at-hotel bookings may confirm directly while the hold is valid. Pay-now bookings require provider-recorded `paymentState=CAPTURED`; there is no client or staff shortcut for payment success.
+
+### Cancellation preview
+
+`GET /api/v1/bookings/:bookingId/cancellation`
+
+Evaluates the booking's stored policy snapshot in the hotel's timezone and returns the current penalty/refundable amount without mutating the reservation.
 
 ### Cancel booking
 
 `POST /api/v1/bookings/:bookingId/cancel`
 
-Requires `Idempotency-Key`. Current-revision inventory is released atomically. Cancellation itself does not invent or complete a refund.
+Requires `Idempotency-Key`. Current-revision inventory is released atomically. The policy result is stored on the booking. If captured funds are refundable, a refund **request** is created; cancellation does not claim that provider funds have already been returned.
+
+## Payments
+
+### Capability
+
+`GET /api/v1/payment-capabilities`
+
+Returns whether a real registered online-payment adapter is available. `PAYMENT_PROVIDER=none` means checkout must disable pay-now.
+
+### Initiate payment
+
+`POST /api/v1/bookings/:bookingId/payments`
+
+Headers: `Idempotency-Key`, plus booking/session authorization.
+
+```json
+{"returnUrl":"https://example.test/booking/return"}
+```
+
+Creates an auditable payment attempt and calls the configured `PaymentProvider`. The application stores provider identifiers/status/redirect/failure metadata, not card numbers, CVV, or raw provider payloads.
+
+A provider result of `CAPTURED` is recorded through the booking payment-capture application service. `REQUIRES_ACTION` may return a redirect URL.
 
 ## Refunds
 
 - `POST /api/v1/bookings/:bookingId/refunds` — finance-authorized refund request
-- `POST /api/v1/refunds/:refundId/complete` — finance-authorized completion and append-only refund financial event
+- `POST /api/v1/refunds/:refundId/process` — executes the refund through the provider that captured the original payment
 
-Refund amount cannot exceed captured value not already committed to another active/completed refund.
+There is intentionally **no public `/refunds/:id/complete` endpoint**. Refund completion is an outcome recorded by the provider-backed service. Refund amount cannot exceed captured/refundable value not already committed to another active/completed refund.
 
 ## Hold expiry
 
-`POST /api/v1/internal/booking-holds/expire`
+- `POST /api/v1/internal/booking-holds/expire` — controlled platform-admin execution
+- `npm run worker:holds` — deployment-neutral recurring worker
 
-Platform-admin controlled execution of the reusable stale-hold expiry service. Production scheduling must call the same application service instead of implementing separate inventory-release logic.
+Both call the same `expireStaleHolds()` application service. Scheduler/worker code must not duplicate inventory-release logic.
 
 ## Pricing
 

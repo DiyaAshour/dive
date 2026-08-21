@@ -26,7 +26,9 @@ export const createRatePlanRequestSchema = z.object({
   code: z.string().trim().min(2).max(20).transform((value) => value.toUpperCase()),
   refundable: z.boolean(),
   mealPlan: z.enum(["ROOM_ONLY", "BREAKFAST", "HALF_BOARD", "FULL_BOARD"]).default("ROOM_ONLY"),
-});
+  allowPayNow: z.boolean().default(true),
+  allowPayAtHotel: z.boolean().default(true),
+}).refine((value) => value.allowPayNow || value.allowPayAtHotel, {message: "At least one payment mode must be enabled", path: ["allowPayNow"]});
 
 export const updatePricingPolicyRequestSchema = z.object({
   serviceRate: rate,

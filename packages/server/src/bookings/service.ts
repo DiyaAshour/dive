@@ -1,5 +1,13 @@
-import { buildStayDates, calculatePrice, holdExpiresAt, parseDateOnly, roundMoney } from "@platform/core";
-import type { CreateBookingHoldInput, CreateRefundInput, ModifyBookingInput } from "@platform/contracts";
+import {
+  buildStayDates,
+  calculatePrice,
+  evaluateCancellation,
+  holdExpiresAt,
+  parseDateOnly,
+  roundMoney,
+  type CancellationPolicySnapshot,
+} from "@platform/core";
+import type { BookingQuoteInput, CreateBookingHoldInput, CreateRefundInput, ModifyBookingInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { ApplicationError, badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "../hotels/authorization";
@@ -9,9 +17,44 @@ import { bookingAccessToken, bookingAccessTokenHash, fingerprint, reservationRef
 
 export type BookingAccessContext = Readonly<{userId?: string | null; accessToken?: string | null}>;
 type NightPrice = Readonly<{date: Date; base: number; service: number; tax: number; total: number}>;
-type DbClient = ReturnType<typeof database>;
+type DbClient = Pick<ReturnType<typeof database>, "ratePlan" | "dailyRate" | "inventoryDay" | "refund">;
 type TransactionLike = Pick<DbClient, "ratePlan" | "dailyRate" | "inventoryDay">;
 type HotelPricing = Readonly<{id: string; serviceRate: unknown; taxRate: unknown}>;
+type PolicyJson = {name: string; rules: Array<{minimumDaysBeforeArrival: number; penaltyType: string; penaltyValue: number | null}>; noShowPenaltyType: string; noShowPenaltyValue: number | null};
+
+type PricedStay = Readonly<{
+  nights: readonly NightPrice[];
+  policy: CancellationPolicySnapshot;
+  ratePlan: Readonly<{
+    id: string;
+    name: string;
+    code: string;
+    allowPayNow: boolean;
+    allowPayAtHotel: boolean;
+    roomType: Readonly<{id: string; name: string}>;
+  }>;
+}>;
+
+export async function quoteBooking(input: BookingQuoteInput) {
+  const hotel = await database().hotel.findUnique({where: {id: input.hotelId}});
+  if (!hotel || hotel.status !== "ACTIVE" || !hotel.verified) conflict("HOTEL_NOT_BOOKABLE", "Hotel is not open for bookings");
+  const stay = buildStayDates(input.arrival, input.departure);
+  const priced = await priceStay(database(), hotel, input.roomTypeId, input.ratePlanId, stay.nights);
+  const availableToSell = await availableToSellForStay(database(), input.roomTypeId, priced.nights.map((night) => night.date), hotel.overbookingEnabled);
+  const totals = sumPrices(priced.nights);
+  return {
+    hotel: {id: hotel.id, name: hotel.name, currency: hotel.currency},
+    roomType: priced.ratePlan.roomType,
+    ratePlan: {id: priced.ratePlan.id, name: priced.ratePlan.name, code: priced.ratePlan.code},
+    arrival: input.arrival,
+    departure: input.departure,
+    nights: stay.nights.length,
+    amounts: totals,
+    allowedPaymentModes: [priced.ratePlan.allowPayNow ? "PAY_NOW" : null, priced.ratePlan.allowPayAtHotel ? "PAY_AT_HOTEL" : null].filter(Boolean),
+    cancellationPolicy: priced.policy,
+    availableToSell,
+  };
+}
 
 export async function createBookingHold(input: CreateBookingHoldInput, context: Readonly<{userId?: string | null; idempotencyKey: string}>) {
   const stay = buildStayDates(input.arrival, input.departure);
@@ -30,13 +73,13 @@ export async function createBookingHold(input: CreateBookingHoldInput, context: 
         if (raced.requestFingerprint !== requestFingerprint) conflict("IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used for a different request");
         return raced.id;
       }
-
       const hotel = await tx.hotel.findUnique({where: {id: input.hotelId}});
       if (!hotel || hotel.status !== "ACTIVE" || !hotel.verified) conflict("HOTEL_NOT_BOOKABLE", "Hotel is not open for bookings");
       const priced = await priceStay(tx, hotel, input.roomTypeId, input.ratePlanId, stay.nights);
-      await reserveInventory(inventoryPort(tx), input.roomTypeId, priced.map((night) => night.date), hotel.overbookingEnabled);
+      assertPaymentModeAllowed(input.paymentMode, priced.ratePlan);
+      await reserveInventory(inventoryPort(tx), input.roomTypeId, priced.nights.map((night) => night.date), hotel.overbookingEnabled);
 
-      const totals = sumPrices(priced);
+      const totals = sumPrices(priced.nights);
       const commissionAmount = roundMoney(totals.base * Number(hotel.commissionRate));
       const booking = await tx.booking.create({data: {
         reference: reservationReference(),
@@ -57,12 +100,13 @@ export async function createBookingHold(input: CreateBookingHoldInput, context: 
         totalAmount: totals.total,
         commissionRateSnapshot: hotel.commissionRate,
         commissionAmount,
+        cancellationPolicySnapshot: policyToJson(priced.policy),
         idempotencyKey: context.idempotencyKey,
         requestFingerprint,
         accessTokenHash: bookingAccessTokenHash(accessToken),
         holdExpiresAt: holdExpiresAt(),
-        nights: {create: priced.map((night) => ({revision: 1, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))},
-        events: {create: {type: "HOLD_CREATED", actorUserId: context.userId ?? null, data: {arrival: input.arrival, departure: input.departure, total: totals.total}}},
+        nights: {create: priced.nights.map((night) => ({revision: 1, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))},
+        events: {create: {type: "HOLD_CREATED", actorUserId: context.userId ?? null, data: {arrival: input.arrival, departure: input.departure, total: totals.total, cancellationPolicy: priced.policy.name}}},
       }});
       return booking.id;
     }, {isolationLevel: "Serializable"});
@@ -81,27 +125,24 @@ export async function confirmBooking(bookingId: string, idempotencyKey: string, 
       assertFingerprint(replay.requestFingerprint, requestFingerprint);
       return {bookingId: replay.bookingId, expired: replay.type === "EXPIRED"};
     }
-
     const booking = await tx.booking.findUnique({where: {id: bookingId}});
     if (!booking) notFound("Booking");
     if (booking.status === "CONFIRMED" || booking.status === "MODIFIED") return {bookingId: booking.id, expired: false};
     if (booking.status !== "HOLD") conflict("BOOKING_NOT_CONFIRMABLE", "Booking is not in hold state");
-
     if (booking.holdExpiresAt && booking.holdExpiresAt.getTime() <= Date.now()) {
       const nights = await tx.bookingNight.findMany({where: {bookingId, revision: booking.revision}});
       await releaseInventory(inventoryPort(tx), booking.roomTypeId, nights.map((night) => night.date));
       await tx.booking.update({where: {id: booking.id}, data: {status: "EXPIRED", holdExpiresAt: null}});
+      await createAutomaticRefundIfNeeded(tx, booking, Number(booking.totalAmount), "Hold expired after payment capture");
       await tx.bookingEvent.create({data: {bookingId, type: "EXPIRED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint}});
       return {bookingId, expired: true};
     }
-
     if (booking.paymentMode === "PAY_NOW" && booking.paymentState !== "CAPTURED") conflict("PAYMENT_REQUIRED", "Pay-now booking cannot be confirmed before payment is captured");
     await tx.booking.update({where: {id: bookingId}, data: {status: "CONFIRMED", confirmedAt: new Date(), holdExpiresAt: null}});
     const event = await tx.bookingEvent.create({data: {bookingId, type: "CONFIRMED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint}});
     await tx.financialEvent.createMany({data: confirmationFinancialEvents(booking, event.id)});
     return {bookingId, expired: false};
   }, {isolationLevel: "Serializable"});
-
   if (result.expired) conflict("HOLD_EXPIRED", "Booking hold expired before confirmation");
   return bookingView(result.bookingId);
 }
@@ -116,7 +157,6 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
         assertFingerprint(replay.requestFingerprint, requestFingerprint);
         return replay.bookingId;
       }
-
       const booking = await tx.booking.findUnique({where: {id: bookingId}, include: {hotel: true}});
       if (!booking) notFound("Booking");
       if (!isMutableStatus(booking.status)) conflict("BOOKING_NOT_MODIFIABLE", "Booking cannot be modified in its current state");
@@ -125,17 +165,17 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
 
       const stay = buildStayDates(input.arrival, input.departure);
       const priced = await priceStay(tx, booking.hotel, input.roomTypeId, input.ratePlanId, stay.nights);
+      assertPaymentModeAllowed(booking.paymentMode, priced.ratePlan);
       const oldNights = await tx.bookingNight.findMany({where: {bookingId, revision: booking.revision}});
       const oldKeys = new Set(oldNights.map((night) => dateKey(night.date)));
-      const newKeys = new Set(priced.map((night) => dateKey(night.date)));
+      const newKeys = new Set(priced.nights.map((night) => dateKey(night.date)));
       const roomChanged = booking.roomTypeId !== input.roomTypeId;
-      const reserveDates = roomChanged ? priced.map((night) => night.date) : priced.filter((night) => !oldKeys.has(dateKey(night.date))).map((night) => night.date);
+      const reserveDates = roomChanged ? priced.nights.map((night) => night.date) : priced.nights.filter((night) => !oldKeys.has(dateKey(night.date))).map((night) => night.date);
       const releaseDates = roomChanged ? oldNights.map((night) => night.date) : oldNights.filter((night) => !newKeys.has(dateKey(night.date))).map((night) => night.date);
-
       await reserveInventory(inventoryPort(tx), input.roomTypeId, reserveDates, booking.hotel.overbookingEnabled);
       await releaseInventory(inventoryPort(tx), booking.roomTypeId, releaseDates);
 
-      const totals = sumPrices(priced);
+      const totals = sumPrices(priced.nights);
       const newCommission = roundMoney(totals.base * Number(booking.commissionRateSnapshot));
       const newRevision = booking.revision + 1;
       const nextStatus = booking.status === "HOLD" ? "HOLD" : "MODIFIED";
@@ -151,16 +191,10 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
         taxAmount: totals.tax,
         totalAmount: totals.total,
         commissionAmount: newCommission,
+        cancellationPolicySnapshot: policyToJson(priced.policy),
       }});
-      await tx.bookingNight.createMany({data: priced.map((night) => ({bookingId, revision: newRevision, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))});
-      const event = await tx.bookingEvent.create({data: {
-        bookingId,
-        type: "MODIFIED",
-        actorUserId: context.userId ?? null,
-        idempotencyKey,
-        requestFingerprint,
-        data: {fromRevision: booking.revision, toRevision: newRevision, oldTotal: Number(booking.totalAmount), newTotal: totals.total},
-      }});
+      await tx.bookingNight.createMany({data: priced.nights.map((night) => ({bookingId, revision: newRevision, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))});
+      const event = await tx.bookingEvent.create({data: {bookingId, type: "MODIFIED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint, data: {fromRevision: booking.revision, toRevision: newRevision, oldTotal: Number(booking.totalAmount), newTotal: totals.total, cancellationPolicy: priced.policy.name}}});
       if (booking.status !== "HOLD") {
         const deltas = financialDeltas(booking, totals, newCommission, event.id);
         if (deltas.length) await tx.financialEvent.createMany({data: deltas});
@@ -173,6 +207,16 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
   }
 }
 
+export async function previewCancellation(bookingId: string, context: BookingAccessContext) {
+  await requireBookingAccess(bookingId, context);
+  const booking = await database().booking.findUnique({where: {id: bookingId}, include: {hotel: {select: {timezone: true}}, nights: {where: {}}}});
+  if (!booking) notFound("Booking");
+  if (booking.status === "CANCELLED") return {policy: cancellationPolicyFromJson(booking.cancellationPolicySnapshot), penaltyAmount: Number(booking.cancellationPenaltyAmount), refundableAmount: Number(booking.refundableAmount ?? 0), alreadyCancelled: true};
+  if (!isMutableStatus(booking.status)) conflict("BOOKING_NOT_CANCELLABLE", "Booking cannot be cancelled in its current state");
+  const currentNights = booking.nights.filter((night) => night.revision === booking.revision);
+  return {...cancellationEvaluation(booking, booking.hotel.timezone, currentNights), alreadyCancelled: false};
+}
+
 export async function cancelBooking(bookingId: string, idempotencyKey: string, context: BookingAccessContext) {
   await requireBookingAccess(bookingId, context);
   const requestFingerprint = fingerprint({bookingId, action: "cancel"});
@@ -182,20 +226,31 @@ export async function cancelBooking(bookingId: string, idempotencyKey: string, c
       assertFingerprint(replay.requestFingerprint, requestFingerprint);
       return replay.bookingId;
     }
-    const booking = await tx.booking.findUnique({where: {id: bookingId}});
+    const booking = await tx.booking.findUnique({where: {id: bookingId}, include: {hotel: {select: {timezone: true}}}});
     if (!booking) notFound("Booking");
     if (booking.status === "CANCELLED") return booking.id;
     if (!isMutableStatus(booking.status)) conflict("BOOKING_NOT_CANCELLABLE", "Booking cannot be cancelled in its current state");
-    const nights = await tx.bookingNight.findMany({where: {bookingId, revision: booking.revision}});
+    const nights = await tx.bookingNight.findMany({where: {bookingId, revision: booking.revision}, orderBy: {date: "asc"}});
+    const evaluation = cancellationEvaluation(booking, booking.hotel.timezone, nights);
     await releaseInventory(inventoryPort(tx), booking.roomTypeId, nights.map((night) => night.date));
-    await tx.booking.update({where: {id: bookingId}, data: {status: "CANCELLED", cancelledAt: new Date(), holdExpiresAt: null}});
-    await tx.bookingEvent.create({data: {bookingId, type: "CANCELLED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint}});
+    await tx.booking.update({where: {id: bookingId}, data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      holdExpiresAt: null,
+      cancellationPenaltyAmount: evaluation.penaltyAmount,
+      refundableAmount: evaluation.refundableAmount,
+    }});
+    const event = await tx.bookingEvent.create({data: {bookingId, type: "CANCELLED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint, data: {penaltyAmount: evaluation.penaltyAmount, refundableAmount: evaluation.refundableAmount, daysBeforeArrival: evaluation.daysBeforeArrival, policy: evaluation.policy.name}}});
+    if ((booking.status === "CONFIRMED" || booking.status === "MODIFIED") && evaluation.refundableAmount > 0) {
+      await tx.financialEvent.create({data: {bookingId, hotelId: booking.hotelId, type: "CANCELLATION_ADJUSTMENT", amount: -evaluation.refundableAmount, currency: booking.currency, referenceType: "BOOKING_CANCELLATION", referenceId: event.id}});
+    }
+    await createAutomaticRefundIfNeeded(tx, booking, evaluation.refundableAmount, `Cancellation under policy: ${evaluation.policy.name}`);
     return bookingId;
   }, {isolationLevel: "Serializable"});
   return bookingView(resultId);
 }
 
-export async function recordPaymentCaptured(bookingId: string, externalReference: string, actorUserId?: string | null) {
+export async function recordPaymentCaptured(bookingId: string, externalReference: string, actorUserId?: string | null, paymentAttemptId?: string | null) {
   const requestFingerprint = fingerprint({bookingId, externalReference, action: "payment-captured"});
   const idempotencyKey = `payment:${externalReference}`;
   const resultId = await database().$transaction(async (tx) => {
@@ -208,7 +263,9 @@ export async function recordPaymentCaptured(bookingId: string, externalReference
     if (!booking) notFound("Booking");
     if (booking.paymentMode !== "PAY_NOW") badRequest("PAYMENT_NOT_REQUIRED", "Booking is configured for pay at hotel");
     await tx.booking.update({where: {id: bookingId}, data: {paymentState: "CAPTURED"}});
-    await tx.bookingEvent.create({data: {bookingId, type: "PAYMENT_CAPTURED", actorUserId: actorUserId ?? null, idempotencyKey, requestFingerprint, data: {externalReference}}});
+    if (paymentAttemptId) await tx.paymentAttempt.updateMany({where: {id: paymentAttemptId, bookingId}, data: {status: "CAPTURED", externalPaymentId: externalReference, completedAt: new Date()}});
+    await tx.bookingEvent.create({data: {bookingId, type: "PAYMENT_CAPTURED", actorUserId: actorUserId ?? null, idempotencyKey, requestFingerprint, data: {externalReference, paymentAttemptId: paymentAttemptId ?? null}}});
+    if (booking.status === "CANCELLED" || booking.status === "EXPIRED") await createAutomaticRefundIfNeeded(tx, booking, Number(booking.totalAmount), `Payment captured after booking became ${booking.status}`);
     return bookingId;
   }, {isolationLevel: "Serializable"});
   return bookingView(resultId);
@@ -219,16 +276,21 @@ export async function requestRefund(bookingId: string, input: CreateRefundInput,
   if (!booking) notFound("Booking");
   await requireHotelPermission(userId, booking.hotelId, "finance:manage");
   if (booking.paymentState !== "CAPTURED" && booking.paymentState !== "PARTIALLY_REFUNDED") badRequest("NOTHING_REFUNDABLE", "Booking does not have captured payment available for refund");
-  const committed = await database().refund.aggregate({where: {bookingId, status: {in: ["REQUESTED", "APPROVED", "COMPLETED"]}}, _sum: {amount: true}});
-  const outstanding = roundMoney(Number(booking.totalAmount) - Number(committed._sum.amount ?? 0));
+  const committed = await database().refund.aggregate({where: {bookingId, status: {in: ["REQUESTED", "APPROVED", "PROCESSING", "COMPLETED"]}}, _sum: {amount: true}});
+  const policyCap = booking.status === "CANCELLED" && booking.refundableAmount !== null ? Number(booking.refundableAmount) : Number(booking.totalAmount);
+  const outstanding = roundMoney(policyCap - Number(committed._sum.amount ?? 0));
   if (input.amount > outstanding) badRequest("REFUND_EXCEEDS_OUTSTANDING", `Refund cannot exceed ${outstanding.toFixed(2)} ${booking.currency}`);
-  return database().refund.create({data: {bookingId, amount: input.amount, currency: booking.currency, reason: input.reason, requestedByUserId: userId, externalReference: input.externalReference}});
+  return database().refund.create({data: {bookingId, amount: input.amount, currency: booking.currency, reason: input.reason, requestedByUserId: userId, externalReference: input.externalReference ?? null}});
 }
 
 export async function completeRefund(refundId: string, userId: string, externalReference?: string) {
   const initial = await database().refund.findUnique({where: {id: refundId}, include: {booking: true}});
   if (!initial) notFound("Refund");
   await requireHotelPermission(userId, initial.booking.hotelId, "finance:manage");
+  return completeRefundRecord(refundId, externalReference, userId);
+}
+
+export async function completeRefundRecord(refundId: string, externalReference: string | undefined, actorUserId: string | null) {
   try {
     const resultId = await database().$transaction(async (tx) => {
       const refund = await tx.refund.findUnique({where: {id: refundId}, include: {booking: true}});
@@ -237,7 +299,7 @@ export async function completeRefund(refundId: string, userId: string, externalR
       if (refund.status === "REJECTED") conflict("REFUND_REJECTED", "Rejected refund cannot be completed");
       await tx.refund.update({where: {id: refundId}, data: {status: "COMPLETED", completedAt: new Date(), externalReference: externalReference ?? refund.externalReference}});
       await tx.financialEvent.create({data: {bookingId: refund.bookingId, hotelId: refund.booking.hotelId, type: "REFUND", amount: -Number(refund.amount), currency: refund.currency, referenceType: "REFUND", referenceId: refundId}});
-      await tx.bookingEvent.create({data: {bookingId: refund.bookingId, type: "REFUND_RECORDED", actorUserId: userId, data: {refundId, amount: Number(refund.amount)}}});
+      await tx.bookingEvent.create({data: {bookingId: refund.bookingId, type: "REFUND_RECORDED", actorUserId: actorUserId, data: {refundId, amount: Number(refund.amount)}}});
       const totals = await tx.refund.aggregate({where: {bookingId: refund.bookingId, status: "COMPLETED"}, _sum: {amount: true}});
       const refunded = Number(totals._sum.amount ?? 0);
       await tx.booking.update({where: {id: refund.bookingId}, data: {paymentState: refunded >= Number(refund.booking.totalAmount) ? "REFUNDED" : "PARTIALLY_REFUNDED"}});
@@ -254,16 +316,21 @@ export async function expireStaleHolds(limit = 100): Promise<number> {
   const stale = await database().booking.findMany({where: {status: "HOLD", holdExpiresAt: {lte: new Date()}}, select: {id: true}, orderBy: {holdExpiresAt: "asc"}, take: Math.max(1, Math.min(limit, 500))});
   let expired = 0;
   for (const item of stale) {
-    const changed = await database().$transaction(async (tx) => {
-      const booking = await tx.booking.findUnique({where: {id: item.id}});
-      if (!booking || booking.status !== "HOLD" || !booking.holdExpiresAt || booking.holdExpiresAt.getTime() > Date.now()) return false;
-      const nights = await tx.bookingNight.findMany({where: {bookingId: booking.id, revision: booking.revision}});
-      await releaseInventory(inventoryPort(tx), booking.roomTypeId, nights.map((night) => night.date));
-      await tx.booking.update({where: {id: booking.id}, data: {status: "EXPIRED", holdExpiresAt: null}});
-      await tx.bookingEvent.create({data: {bookingId: booking.id, type: "EXPIRED"}});
-      return true;
-    }, {isolationLevel: "Serializable"});
-    if (changed) expired += 1;
+    try {
+      const changed = await database().$transaction(async (tx) => {
+        const booking = await tx.booking.findUnique({where: {id: item.id}});
+        if (!booking || booking.status !== "HOLD" || !booking.holdExpiresAt || booking.holdExpiresAt.getTime() > Date.now()) return false;
+        const nights = await tx.bookingNight.findMany({where: {bookingId: booking.id, revision: booking.revision}});
+        await releaseInventory(inventoryPort(tx), booking.roomTypeId, nights.map((night) => night.date));
+        await tx.booking.update({where: {id: booking.id}, data: {status: "EXPIRED", holdExpiresAt: null}});
+        await createAutomaticRefundIfNeeded(tx, booking, Number(booking.totalAmount), "Hold expired after payment capture");
+        await tx.bookingEvent.create({data: {bookingId: booking.id, type: "EXPIRED"}});
+        return true;
+      }, {isolationLevel: "Serializable"});
+      if (changed) expired += 1;
+    } catch (error) {
+      if (!isPrismaSerializationConflict(error)) throw error;
+    }
   }
   return expired;
 }
@@ -278,6 +345,7 @@ export async function bookingView(bookingId: string) {
       nights: {orderBy: [{revision: "asc"}, {date: "asc"}]},
       events: {select: {type: true, data: true, createdAt: true}, orderBy: {createdAt: "asc"}},
       refunds: {select: {id: true, amount: true, currency: true, reason: true, status: true, createdAt: true, completedAt: true}, orderBy: {createdAt: "asc"}},
+      paymentAttempts: {select: {id: true, provider: true, status: true, amount: true, currency: true, redirectUrl: true, failureCode: true, createdAt: true, completedAt: true}, orderBy: {createdAt: "asc"}},
     },
   });
   if (!booking) notFound("Booking");
@@ -297,26 +365,38 @@ export async function bookingView(bookingId: string) {
     paymentState: booking.paymentState,
     currency: booking.currency,
     amounts: {base: Number(booking.baseAmount), service: Number(booking.serviceAmount), tax: Number(booking.taxAmount), total: Number(booking.totalAmount)},
+    cancellation: {policy: cancellationPolicyFromJson(booking.cancellationPolicySnapshot), penaltyAmount: Number(booking.cancellationPenaltyAmount), refundableAmount: booking.refundableAmount === null ? null : Number(booking.refundableAmount)},
     holdExpiresAt: booking.holdExpiresAt,
     confirmedAt: booking.confirmedAt,
     cancelledAt: booking.cancelledAt,
     nights: booking.nights.filter((night) => night.revision === booking.revision).map((night) => ({date: dateKey(night.date), base: Number(night.baseAmount), service: Number(night.serviceAmount), tax: Number(night.taxAmount), total: Number(night.totalAmount)})),
     events: booking.events,
     refunds: booking.refunds.map((refund) => ({...refund, amount: Number(refund.amount)})),
+    paymentAttempts: booking.paymentAttempts.map((attempt) => ({...attempt, amount: Number(attempt.amount)})),
     createdAt: booking.createdAt,
     updatedAt: booking.updatedAt,
   };
 }
 
-async function priceStay(tx: TransactionLike, hotel: HotelPricing, roomTypeId: string, ratePlanId: string, dates: readonly string[]): Promise<NightPrice[]> {
-  const ratePlan = await tx.ratePlan.findFirst({where: {id: ratePlanId, roomTypeId, active: true, roomType: {hotelId: hotel.id, active: true}}});
+async function priceStay(tx: TransactionLike, hotel: HotelPricing, roomTypeId: string, ratePlanId: string, dates: readonly string[]): Promise<PricedStay> {
+  const ratePlan = await tx.ratePlan.findFirst({where: {id: ratePlanId, roomTypeId, active: true, roomType: {hotelId: hotel.id, active: true}}, include: {roomType: {select: {id: true, name: true}}, cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}}}});
   if (!ratePlan) conflict("RATE_PLAN_NOT_AVAILABLE", "Rate plan is not available for this room type");
+  if (!ratePlan.cancellationPolicy) conflict("CANCELLATION_POLICY_NOT_CONFIGURED", "Rate plan does not have a cancellation policy");
   const dateValues = dates.map(parseDateOnly);
   const rates = await tx.dailyRate.findMany({where: {ratePlanId, date: {in: dateValues}}, orderBy: {date: "asc"}});
   if (rates.length !== dates.length) conflict("RATE_NOT_CONFIGURED", "A rate is missing for one or more stay dates");
   const stayLength = dates.length;
   if (rates.some((rate) => rate.closed || rate.stopSell || rate.minStay > stayLength || (rate.maxStay !== null && rate.maxStay < stayLength))) conflict("RATE_RESTRICTED", "Selected stay is closed or restricted by the rate plan");
-  return rates.map((rate) => ({date: rate.date, ...calculatePrice(Number(rate.baseRate), {serviceRate: Number(hotel.serviceRate), taxRate: Number(hotel.taxRate)})}));
+  const nights = rates.map((rate) => ({date: rate.date, ...calculatePrice(Number(rate.baseRate), {serviceRate: Number(hotel.serviceRate), taxRate: Number(hotel.taxRate)})}));
+  return {nights, policy: policySnapshot(ratePlan.cancellationPolicy), ratePlan: {id: ratePlan.id, name: ratePlan.name, code: ratePlan.code, allowPayNow: ratePlan.allowPayNow, allowPayAtHotel: ratePlan.allowPayAtHotel, roomType: ratePlan.roomType}};
+}
+
+async function availableToSellForStay(tx: Pick<DbClient, "inventoryDay">, roomTypeId: string, dates: readonly Date[], overbookingEnabled: boolean): Promise<number> {
+  const rows = await tx.inventoryDay.findMany({where: {roomTypeId, date: {in: [...dates]}}, select: {date: true, available: true, overbookingLimit: true}});
+  if (rows.length !== dates.length) conflict("INVENTORY_NOT_CONFIGURED", "Inventory is missing for one or more stay dates");
+  const remaining = rows.map((row) => row.available + (overbookingEnabled ? row.overbookingLimit : 0));
+  if (remaining.some((value) => value <= 0)) conflict("INVENTORY_UNAVAILABLE", "No inventory is available for one or more stay dates");
+  return Math.min(...remaining);
 }
 
 function inventoryPort(tx: Pick<DbClient, "inventoryDay">) {
@@ -332,6 +412,55 @@ function inventoryPort(tx: Pick<DbClient, "inventoryDay">) {
       await tx.inventoryDay.update({where: {id}, data: {available: {increment: 1}}});
     },
   };
+}
+
+function cancellationEvaluation(booking: {status: string; paymentState: string; arrival: Date; totalAmount: unknown; cancellationPolicySnapshot: unknown}, hotelTimeZone: string, nights: Array<{totalAmount: unknown; date: Date}>) {
+  const policy = cancellationPolicyFromJson(booking.cancellationPolicySnapshot);
+  if (booking.status === "HOLD") {
+    const captured = booking.paymentState === "CAPTURED" || booking.paymentState === "PARTIALLY_REFUNDED";
+    return {policy, daysBeforeArrival: 0, penaltyType: "NONE" as const, penaltyAmount: 0, refundableAmount: captured ? Number(booking.totalAmount) : 0, rule: "CANCELLATION" as const};
+  }
+  const firstNight = [...nights].sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+  if (!firstNight) throw new ApplicationError("BOOKING_NIGHTS_MISSING", "Booking does not contain nightly pricing snapshots", 500);
+  return {policy, ...evaluateCancellation({arrival: dateKey(booking.arrival), hotelTimeZone, totalAmount: Number(booking.totalAmount), firstNightAmount: Number(firstNight.totalAmount), policy})};
+}
+
+function policySnapshot(policy: {name: string; noShowPenaltyType: string; noShowPenaltyValue: unknown; rules: Array<{minimumDaysBeforeArrival: number; penaltyType: string; penaltyValue: unknown}>}): CancellationPolicySnapshot {
+  return {
+    name: policy.name,
+    noShowPenaltyType: policy.noShowPenaltyType as CancellationPolicySnapshot["noShowPenaltyType"],
+    noShowPenaltyValue: policy.noShowPenaltyValue === null ? null : Number(policy.noShowPenaltyValue),
+    rules: policy.rules.map((rule) => ({minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType as CancellationPolicySnapshot["rules"][number]["penaltyType"], penaltyValue: rule.penaltyValue === null ? null : Number(rule.penaltyValue)})),
+  };
+}
+
+function policyToJson(policy: CancellationPolicySnapshot): PolicyJson {
+  return {name: policy.name, noShowPenaltyType: policy.noShowPenaltyType, noShowPenaltyValue: policy.noShowPenaltyValue ?? null, rules: policy.rules.map((rule) => ({minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType, penaltyValue: rule.penaltyValue ?? null}))};
+}
+
+function cancellationPolicyFromJson(value: unknown): CancellationPolicySnapshot {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ApplicationError("INVALID_CANCELLATION_SNAPSHOT", "Stored cancellation policy is invalid", 500);
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.name !== "string" || typeof raw.noShowPenaltyType !== "string" || !Array.isArray(raw.rules)) throw new ApplicationError("INVALID_CANCELLATION_SNAPSHOT", "Stored cancellation policy is invalid", 500);
+  const rules = raw.rules.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new ApplicationError("INVALID_CANCELLATION_SNAPSHOT", "Stored cancellation rule is invalid", 500);
+    const rule = item as Record<string, unknown>;
+    if (typeof rule.minimumDaysBeforeArrival !== "number" || typeof rule.penaltyType !== "string") throw new ApplicationError("INVALID_CANCELLATION_SNAPSHOT", "Stored cancellation rule is invalid", 500);
+    return {minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType as CancellationPolicySnapshot["rules"][number]["penaltyType"], penaltyValue: typeof rule.penaltyValue === "number" ? rule.penaltyValue : null};
+  });
+  return {name: raw.name, noShowPenaltyType: raw.noShowPenaltyType as CancellationPolicySnapshot["noShowPenaltyType"], noShowPenaltyValue: typeof raw.noShowPenaltyValue === "number" ? raw.noShowPenaltyValue : null, rules};
+}
+
+async function createAutomaticRefundIfNeeded(tx: Pick<DbClient, "refund">, booking: {id: string; currency: string; paymentState: string}, allowedAmount: number, reason: string) {
+  if ((booking.paymentState !== "CAPTURED" && booking.paymentState !== "PARTIALLY_REFUNDED") || allowedAmount <= 0) return;
+  const committed = await tx.refund.aggregate({where: {bookingId: booking.id, status: {in: ["REQUESTED", "APPROVED", "PROCESSING", "COMPLETED"]}}, _sum: {amount: true}});
+  const remaining = roundMoney(allowedAmount - Number(committed._sum.amount ?? 0));
+  if (remaining > 0) await tx.refund.create({data: {bookingId: booking.id, amount: remaining, currency: booking.currency, reason}});
+}
+
+function assertPaymentModeAllowed(mode: string, ratePlan: {allowPayNow: boolean; allowPayAtHotel: boolean}) {
+  if (mode === "PAY_NOW" && !ratePlan.allowPayNow) conflict("PAYMENT_MODE_NOT_ALLOWED", "This rate plan does not allow pay now");
+  if (mode === "PAY_AT_HOTEL" && !ratePlan.allowPayAtHotel) conflict("PAYMENT_MODE_NOT_ALLOWED", "This rate plan does not allow pay at hotel");
 }
 
 function sumPrices(nights: readonly NightPrice[]) {

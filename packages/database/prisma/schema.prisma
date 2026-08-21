@@ -3,282 +3,456 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-datasource db { provider = "postgresql" }
+datasource db {
+  provider = "postgresql"
+}
 
-enum PlatformRole { GUEST HOTEL_USER PLATFORM_ADMIN }
-enum HotelRole { OWNER MANAGER REVENUE FRONT_DESK FINANCE VIEWER }
-enum MembershipStatus { ACTIVE INVITED SUSPENDED }
-enum PropertyStatus { DRAFT PENDING_REVIEW ACTIVE SUSPENDED }
-enum BookingStatus { HOLD CONFIRMED MODIFIED CANCELLED NO_SHOW EXPIRED }
-enum PaymentMode { PAY_NOW PAY_AT_HOTEL }
-enum PaymentState { NOT_REQUIRED PENDING CAPTURED FAILED PARTIALLY_REFUNDED REFUNDED }
-enum RoomStatus { READY OCCUPIED CLEANING MAINTENANCE OUT_OF_SERVICE }
-enum MealPlan { ROOM_ONLY BREAKFAST HALF_BOARD FULL_BOARD }
-enum BookingEventType { HOLD_CREATED CONFIRMED MODIFIED CANCELLED EXPIRED PAYMENT_CAPTURED REFUND_RECORDED }
-enum RefundStatus { REQUESTED APPROVED REJECTED COMPLETED }
-enum FinancialEventType { BOOKING_GROSS ROOM_BASE EMPLOYEE_SERVICE TAX PLATFORM_COMMISSION REFUND }
+enum PlatformRole {
+  GUEST
+  HOTEL_USER
+  PLATFORM_ADMIN
+}
+
+enum HotelRole {
+  OWNER
+  MANAGER
+  REVENUE
+  FRONT_DESK
+  FINANCE
+  VIEWER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+}
+
+enum BookingStatus {
+  HOLD
+  CONFIRMED
+  MODIFIED
+  CANCELLED
+  NO_SHOW
+  EXPIRED
+}
+
+enum PaymentMode {
+  PAY_NOW
+  PAY_AT_HOTEL
+}
+
+enum PaymentState {
+  NOT_REQUIRED
+  PENDING
+  CAPTURED
+  FAILED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+enum PaymentAttemptStatus {
+  INITIATED
+  REQUIRES_ACTION
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  CANCELLED
+}
+
+enum RoomStatus {
+  READY
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum MealPlan {
+  ROOM_ONLY
+  BREAKFAST
+  HALF_BOARD
+  FULL_BOARD
+}
+
+enum PenaltyType {
+  NONE
+  PERCENTAGE
+  FIXED_AMOUNT
+  FIRST_NIGHT
+  FULL_STAY
+}
+
+enum BookingEventType {
+  HOLD_CREATED
+  CONFIRMED
+  MODIFIED
+  CANCELLED
+  EXPIRED
+  PAYMENT_INITIATED
+  PAYMENT_CAPTURED
+  PAYMENT_FAILED
+  REFUND_RECORDED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  FAILED
+  REJECTED
+  COMPLETED
+}
+
+enum FinancialEventType {
+  BOOKING_GROSS
+  ROOM_BASE
+  EMPLOYEE_SERVICE
+  TAX
+  PLATFORM_COMMISSION
+  CANCELLATION_ADJUSTMENT
+  REFUND
+}
 
 model User {
-  id String @id @default(cuid())
-  email String @unique
-  displayName String
-  platformRole PlatformRole @default(GUEST)
-  credential Credential?
-  sessions Session[]
+  id               String            @id @default(cuid())
+  email            String            @unique
+  displayName      String
+  platformRole     PlatformRole      @default(GUEST)
+  credential       Credential?
+  sessions         Session[]
   hotelMemberships HotelMembership[]
-  bookings Booking[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  bookings         Booking[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Credential {
-  userId String @id
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String   @id
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   passwordHash String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Session {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String @unique
-  expiresAt DateTime
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
   lastUsedAt DateTime @default(now())
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
   @@index([userId, expiresAt])
 }
 
 model Hotel {
-  id String @id @default(cuid())
-  name String
-  slug String @unique
-  city String
-  countryCode String @db.Char(2)
-  address String
-  timezone String
-  currency String @default("JOD") @db.Char(3)
-  status PropertyStatus @default(DRAFT)
-  verified Boolean @default(false)
-  commissionRate Decimal @default(0.10) @db.Decimal(6,5)
-  serviceRate Decimal @default(0.07) @db.Decimal(6,5)
-  taxRate Decimal @default(0.086) @db.Decimal(6,5)
-  overbookingEnabled Boolean @default(false)
-  memberships HotelMembership[]
-  roomTypes RoomType[]
-  bookings Booking[]
-  financialEvents FinancialEvent[]
-  auditLogs AuditLog[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  city               String
+  countryCode        String             @db.Char(2)
+  address            String
+  timezone           String
+  currency           String             @default("JOD") @db.Char(3)
+  status             PropertyStatus     @default(DRAFT)
+  verified           Boolean            @default(false)
+  commissionRate     Decimal            @default(0.10) @db.Decimal(6, 5)
+  serviceRate        Decimal            @default(0.07) @db.Decimal(6, 5)
+  taxRate            Decimal            @default(0.086) @db.Decimal(6, 5)
+  overbookingEnabled Boolean            @default(false)
+  memberships        HotelMembership[]
+  roomTypes          RoomType[]
+  bookings           Booking[]
+  financialEvents    FinancialEvent[]
+  auditLogs          AuditLog[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 }
 
 model HotelMembership {
-  id String @id @default(cuid())
-  hotelId String
-  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role HotelRole
-  status MembershipStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String           @id @default(cuid())
+  hotelId   String
+  hotel     Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      HotelRole
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
   @@unique([hotelId, userId])
   @@index([userId, status])
 }
 
 model RoomType {
-  id String @id @default(cuid())
-  hotelId String
-  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  name String
-  code String
-  maxAdults Int
-  maxChildren Int @default(0)
-  active Boolean @default(true)
+  id            String         @id @default(cuid())
+  hotelId       String
+  hotel         Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name          String
+  code          String
+  maxAdults     Int
+  maxChildren   Int            @default(0)
+  active        Boolean        @default(true)
   physicalRooms PhysicalRoom[]
-  ratePlans RatePlan[]
-  inventory InventoryDay[]
-  bookings Booking[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ratePlans     RatePlan[]
+  inventory     InventoryDay[]
+  bookings      Booking[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
   @@unique([hotelId, code])
   @@index([hotelId, active])
 }
 
 model PhysicalRoom {
-  id String @id @default(cuid())
+  id         String     @id @default(cuid())
   roomTypeId String
-  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  roomType   RoomType   @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
   roomNumber String
-  status RoomStatus @default(READY)
-  active Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status     RoomStatus @default(READY)
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
   @@unique([roomTypeId, roomNumber])
 }
 
 model RatePlan {
-  id String @id @default(cuid())
-  roomTypeId String
-  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
-  name String
-  code String
-  refundable Boolean
-  mealPlan MealPlan @default(ROOM_ONLY)
-  active Boolean @default(true)
-  rates DailyRate[]
-  bookings Booking[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String              @id @default(cuid())
+  roomTypeId           String
+  roomType             RoomType            @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  name                 String
+  code                 String
+  refundable           Boolean
+  mealPlan             MealPlan            @default(ROOM_ONLY)
+  allowPayNow          Boolean             @default(true)
+  allowPayAtHotel      Boolean             @default(true)
+  active               Boolean             @default(true)
+  rates                DailyRate[]
+  bookings             Booking[]
+  cancellationPolicy   CancellationPolicy?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
   @@unique([roomTypeId, code])
   @@index([roomTypeId, active])
 }
 
+model CancellationPolicy {
+  id                   String             @id @default(cuid())
+  ratePlanId           String             @unique
+  ratePlan             RatePlan           @relation(fields: [ratePlanId], references: [id], onDelete: Cascade)
+  name                 String
+  noShowPenaltyType    PenaltyType        @default(FULL_STAY)
+  noShowPenaltyValue   Decimal?           @db.Decimal(12, 5)
+  rules                CancellationRule[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model CancellationRule {
+  id                       String             @id @default(cuid())
+  policyId                 String
+  policy                   CancellationPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  minimumDaysBeforeArrival Int
+  penaltyType              PenaltyType
+  penaltyValue             Decimal?           @db.Decimal(12, 5)
+  createdAt                DateTime           @default(now())
+
+  @@unique([policyId, minimumDaysBeforeArrival])
+  @@index([policyId, minimumDaysBeforeArrival])
+}
+
 model DailyRate {
-  id String @id @default(cuid())
+  id         String   @id @default(cuid())
   ratePlanId String
-  ratePlan RatePlan @relation(fields: [ratePlanId], references: [id], onDelete: Cascade)
-  date DateTime @db.Date
-  baseRate Decimal @db.Decimal(12,2)
-  minStay Int @default(1)
-  maxStay Int?
-  closed Boolean @default(false)
-  stopSell Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ratePlan   RatePlan @relation(fields: [ratePlanId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  baseRate   Decimal  @db.Decimal(12, 2)
+  minStay    Int      @default(1)
+  maxStay    Int?
+  closed     Boolean  @default(false)
+  stopSell   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@unique([ratePlanId, date])
   @@index([date, closed, stopSell])
 }
 
 model InventoryDay {
-  id String @id @default(cuid())
-  roomTypeId String
-  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
-  date DateTime @db.Date
-  available Int
-  overbookingLimit Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  roomTypeId       String
+  roomType         RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  date             DateTime @db.Date
+  available        Int
+  overbookingLimit Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
   @@unique([roomTypeId, date])
   @@index([date, available])
 }
 
 model Booking {
-  id String @id @default(cuid())
-  reference String @unique
-  userId String?
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  hotelId String
-  hotel Hotel @relation(fields: [hotelId], references: [id])
-  roomTypeId String
-  roomType RoomType @relation(fields: [roomTypeId], references: [id])
-  ratePlanId String
-  ratePlan RatePlan @relation(fields: [ratePlanId], references: [id])
-  guestName String
-  guestEmail String
-  arrival DateTime @db.Date
-  departure DateTime @db.Date
-  status BookingStatus @default(HOLD)
-  revision Int @default(1)
-  paymentMode PaymentMode
-  paymentState PaymentState
-  currency String @db.Char(3)
-  baseAmount Decimal @db.Decimal(12,2)
-  serviceAmount Decimal @db.Decimal(12,2)
-  taxAmount Decimal @db.Decimal(12,2)
-  totalAmount Decimal @db.Decimal(12,2)
-  commissionRateSnapshot Decimal @db.Decimal(6,5)
-  commissionAmount Decimal @db.Decimal(12,2)
-  idempotencyKey String @unique
-  requestFingerprint String
-  accessTokenHash String @unique
-  holdExpiresAt DateTime?
-  confirmedAt DateTime?
-  cancelledAt DateTime?
-  nights BookingNight[]
-  events BookingEvent[]
-  refunds Refund[]
-  financialEvents FinancialEvent[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                        String           @id @default(cuid())
+  reference                 String           @unique
+  userId                    String?
+  user                      User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hotelId                   String
+  hotel                     Hotel            @relation(fields: [hotelId], references: [id])
+  roomTypeId                String
+  roomType                  RoomType         @relation(fields: [roomTypeId], references: [id])
+  ratePlanId                String
+  ratePlan                  RatePlan         @relation(fields: [ratePlanId], references: [id])
+  guestName                 String
+  guestEmail                String
+  arrival                   DateTime         @db.Date
+  departure                 DateTime         @db.Date
+  status                    BookingStatus    @default(HOLD)
+  revision                  Int              @default(1)
+  paymentMode               PaymentMode
+  paymentState              PaymentState
+  currency                  String           @db.Char(3)
+  baseAmount                Decimal          @db.Decimal(12, 2)
+  serviceAmount             Decimal          @db.Decimal(12, 2)
+  taxAmount                 Decimal          @db.Decimal(12, 2)
+  totalAmount               Decimal          @db.Decimal(12, 2)
+  commissionRateSnapshot    Decimal          @db.Decimal(6, 5)
+  commissionAmount          Decimal          @db.Decimal(12, 2)
+  cancellationPolicySnapshot Json
+  cancellationPenaltyAmount Decimal          @default(0) @db.Decimal(12, 2)
+  refundableAmount          Decimal?         @db.Decimal(12, 2)
+  idempotencyKey            String           @unique
+  requestFingerprint        String
+  accessTokenHash           String           @unique
+  holdExpiresAt             DateTime?
+  confirmedAt               DateTime?
+  cancelledAt               DateTime?
+  nights                    BookingNight[]
+  events                    BookingEvent[]
+  refunds                   Refund[]
+  paymentAttempts           PaymentAttempt[]
+  financialEvents           FinancialEvent[]
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+
   @@index([hotelId, arrival, departure, status])
   @@index([guestEmail, createdAt])
   @@index([status, holdExpiresAt])
 }
 
 model BookingNight {
-  id String @id @default(cuid())
-  bookingId String
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  revision Int
-  date DateTime @db.Date
-  baseAmount Decimal @db.Decimal(12,2)
-  serviceAmount Decimal @db.Decimal(12,2)
-  taxAmount Decimal @db.Decimal(12,2)
-  totalAmount Decimal @db.Decimal(12,2)
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  bookingId     String
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  revision      Int
+  date          DateTime @db.Date
+  baseAmount    Decimal  @db.Decimal(12, 2)
+  serviceAmount Decimal  @db.Decimal(12, 2)
+  taxAmount     Decimal  @db.Decimal(12, 2)
+  totalAmount   Decimal  @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+
   @@unique([bookingId, revision, date])
   @@index([bookingId, revision])
   @@index([date])
 }
 
 model BookingEvent {
-  id String @id @default(cuid())
-  bookingId String
-  booking Booking @relation(fields: [bookingId], references: [id])
-  type BookingEventType
-  actorUserId String?
-  idempotencyKey String? @unique
+  id                 String           @id @default(cuid())
+  bookingId          String
+  booking            Booking          @relation(fields: [bookingId], references: [id])
+  type               BookingEventType
+  actorUserId        String?
+  idempotencyKey     String?          @unique
   requestFingerprint String?
-  data Json?
-  createdAt DateTime @default(now())
+  data               Json?
+  createdAt          DateTime         @default(now())
+
   @@index([bookingId, createdAt])
+}
+
+model PaymentAttempt {
+  id                 String               @id @default(cuid())
+  bookingId          String
+  booking            Booking              @relation(fields: [bookingId], references: [id])
+  provider           String
+  status             PaymentAttemptStatus @default(INITIATED)
+  amount             Decimal              @db.Decimal(12, 2)
+  currency           String               @db.Char(3)
+  idempotencyKey     String               @unique
+  requestFingerprint String
+  externalPaymentId  String?
+  returnUrl          String
+  redirectUrl        String?
+  failureCode        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  completedAt        DateTime?
+
+  @@unique([provider, externalPaymentId])
+  @@index([bookingId, createdAt])
+  @@index([provider, status, createdAt])
 }
 
 model Refund {
-  id String @id @default(cuid())
-  bookingId String
-  booking Booking @relation(fields: [bookingId], references: [id])
-  amount Decimal @db.Decimal(12,2)
-  currency String @db.Char(3)
-  reason String
-  status RefundStatus @default(REQUESTED)
+  id                String       @id @default(cuid())
+  bookingId         String
+  booking           Booking      @relation(fields: [bookingId], references: [id])
+  amount            Decimal      @db.Decimal(12, 2)
+  currency          String       @db.Char(3)
+  reason            String
+  status            RefundStatus @default(REQUESTED)
   requestedByUserId String?
+  provider          String?
   externalReference String?
-  createdAt DateTime @default(now())
-  completedAt DateTime?
+  failureCode       String?
+  createdAt         DateTime     @default(now())
+  completedAt       DateTime?
+
   @@index([bookingId, createdAt])
+  @@index([provider, status, createdAt])
 }
 
 model FinancialEvent {
-  id String @id @default(cuid())
-  bookingId String
-  booking Booking @relation(fields: [bookingId], references: [id])
-  hotelId String
-  hotel Hotel @relation(fields: [hotelId], references: [id])
-  type FinancialEventType
-  amount Decimal @db.Decimal(12,2)
-  currency String @db.Char(3)
+  id            String             @id @default(cuid())
+  bookingId     String
+  booking       Booking            @relation(fields: [bookingId], references: [id])
+  hotelId       String
+  hotel         Hotel              @relation(fields: [hotelId], references: [id])
+  type          FinancialEventType
+  amount        Decimal            @db.Decimal(12, 2)
+  currency      String             @db.Char(3)
   referenceType String
-  referenceId String
-  createdAt DateTime @default(now())
+  referenceId   String
+  createdAt     DateTime           @default(now())
+
   @@index([bookingId, createdAt])
   @@index([hotelId, type, createdAt])
 }
 
 model AuditLog {
-  id String @id @default(cuid())
-  hotelId String?
-  hotel Hotel? @relation(fields: [hotelId], references: [id], onDelete: SetNull)
+  id          String   @id @default(cuid())
+  hotelId     String?
+  hotel       Hotel?   @relation(fields: [hotelId], references: [id], onDelete: SetNull)
   actorUserId String?
-  action String
-  entityType String
-  entityId String?
-  before Json?
-  after Json?
-  createdAt DateTime @default(now())
+  action      String
+  entityType  String
+  entityId    String?
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now())
+
   @@index([hotelId, createdAt])
   @@index([actorUserId, createdAt])
 }

@@ -17,7 +17,7 @@ A change is not considered complete unless it is:
 - backward-conscious for public API contracts;
 - secure by default;
 - auditable for booking, inventory, permission, and financial mutations;
-- free of duplicated pricing, permission, and booking rules.
+- free of duplicated pricing, permission, payment, and booking rules.
 
 **No quick patch is allowed to become production architecture.** If an emergency hotfix is ever required in production, it must be followed by a root-cause fix before normal feature development continues.
 
@@ -28,16 +28,17 @@ The web application is only one client of the platform. Business logic must not 
 ```text
 apps/
   web/                 Next.js web client and HTTP API host
+  worker/              background application worker
   mobile/              future iOS + Android client
   desktop/             future desktop client if needed
 packages/
   core/                pure business rules; no framework dependency
   contracts/           shared API validation and DTO contracts
   database/            PostgreSQL / Prisma persistence adapter
-  server/              backend application services and authorization
+  server/              backend application services, authorization and provider boundaries
 ```
 
-Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, or booking rules.
+Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, or booking rules.
 
 ## Phase 2 foundation
 
@@ -54,30 +55,51 @@ Future mobile and desktop apps use the same versioned HTTP API and do not reimpl
 
 ## Phase 3 booking engine
 
-Phase 3 establishes the reservation lifecycle before payment gateway and channel integrations are added.
-
 - 15-minute temporary booking holds
 - Serializable database transactions for inventory mutations
 - Optimistic compare-and-decrement inventory reservation to prevent double booking
 - Full rollback when any stay date cannot be reserved
 - Explicit overbooking floor support only when the hotel enables it
 - Client idempotency keys for hold, confirmation, modification and cancellation
-- Deterministic HMAC booking access tokens for guest bookings; only token hashes are stored
-- Current booking revision plus historical nightly price snapshots for every modification
+- Guest booking access tokens; only token hashes are stored
+- Booking revisions and historical nightly price snapshots
 - Confirmation, modification, cancellation and expiration events
 - Automatic inventory release on cancellation and expired holds
 - Pay-now bookings cannot confirm until a payment adapter records `CAPTURED`
-- Refund request/completion lifecycle restricted by hotel finance permissions
-- Append-only financial events for gross booking value, room base, employee service charge, tax, platform commission and refunds
-- Public booking responses use an explicit allow-list and never expose access-token hashes, request fingerprints or idempotency internals
+- Append-only financial events
+- Public booking responses use explicit allow-lists
+
+## Phase 4 payments, policies, and live checkout
+
+Phase 4 connects the customer experience to the real booking engine without introducing a fake payment provider.
+
+- Framework-independent cancellation-policy engine in `@platform/core`
+- Persisted cancellation rules per rate plan
+- Payment modes (`PAY_NOW` / `PAY_AT_HOTEL`) explicitly configured per rate plan
+- Cancellation-policy snapshot stored with each booking so later hotel edits never rewrite old terms
+- Cancellation preview and policy-driven penalty/refundable calculations in the hotel's timezone
+- Provider-neutral `PaymentProvider` interface for payment creation and refunds
+- Payment attempts persisted for idempotency and reconciliation without storing card data or raw provider payloads
+- Online payment disabled when no real provider adapter is registered
+- Refund execution routed through the provider that captured the original payment
+- Manual public refund-completion bypass removed
+- Live booking quote endpoint with final base/service/tax/total, live inventory, payment modes, and cancellation terms
+- Legacy mock checkout removed
+- Checkout now creates the real atomic hold and then confirms pay-at-hotel or starts the configured payment provider
+- Secure booking-status page
+- Separate background worker calls the same `expireStaleHolds()` application service and does not duplicate inventory-release logic
+
+### Payment rule
+
+A UI action, query string, or staff button can never mark payment as successful. `CAPTURED` is an application result recorded from a registered payment provider adapter. The platform does not store card numbers or CVV.
+
+### Cancellation and refund rule
+
+Cancellation uses the policy snapshot stored on the booking. Cancellation may create a refund request for captured refundable value, but it does not mark money as returned. Refund completion is recorded only from the provider-backed payment/refund service.
 
 ### Financial design rule
 
-Financial history is append-only. Confirmations create financial events; later modifications create delta events rather than rewriting history; refunds create negative refund events. Cancellation does not silently rewrite revenue or invent a refund—the applicable cancellation/refund policy will determine financial action separately.
-
-### Hold expiry
-
-Expired holds are released by the reusable `expireStaleHolds()` application service. An authenticated internal/admin endpoint exists for controlled execution. Production deployment should schedule the same application service rather than duplicating expiry logic in another system.
+Financial history is append-only. Confirmations create financial events; modifications create delta events; cancellations create explicit adjustments when applicable; completed provider refunds create negative refund events. Old financial records are never rewritten to make later events disappear.
 
 ## Current pricing default
 
@@ -93,15 +115,20 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 2. Start PostgreSQL: `docker compose up -d postgres`.
 3. Install dependencies: `npm install`.
 4. Generate Prisma Client: `npm run db:generate`.
-5. Create/apply the database migration: `npm run db:migrate -- --name phase3_booking_engine`.
+5. Create/apply the database migration: `npm run db:migrate -- --name phase4_payments_policy_checkout`.
 6. Run the web app: `npm run dev`.
+7. In a separate process, run hold expiry: `npm run worker:holds`.
+
+`PAYMENT_PROVIDER=none` is the safe default. Pay-now remains unavailable until a real adapter is registered and configured.
 
 ## Architecture documents
 
 - `docs/ARCHITECTURE.md`
 - `docs/ENGINEERING_RULES.md`
 - `docs/API.md`
+- `docs/PHASE3.md`
+- `docs/PHASE4.md`
 
 ## Deferred by design
 
-A real payment gateway, cancellation-policy engine, Channel Manager, PMS integrations, Redis, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain deferred until booking correctness is verified. No fake payment-success path is allowed as a shortcut.
+A concrete launch payment gateway adapter, signed payment webhooks, chargebacks/disputes, Channel Manager, PMS integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary success flags or duplicated business logic.

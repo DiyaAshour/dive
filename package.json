@@ -1,9 +1,9 @@
 {
   "name":"hotel-platform",
-  "version":"0.2.0",
+  "version":"0.4.0",
   "private":true,
   "type":"module",
   "workspaces":["apps/*","packages/*"],
-  "engines":{"node":">=20.19.0"},
-  "scripts":{"dev":"npm run dev -w @platform/web","build":"npm run build -w @platform/web","typecheck":"npm run typecheck --workspaces --if-present","db:generate":"npm run generate -w @platform/database","db:migrate":"npm run migrate -w @platform/database","db:studio":"npm run studio -w @platform/database"}
+  "engines":{"node":">=22.0.0"},
+  "scripts":{"dev":"npm run dev -w @platform/web","build":"npm run build -w @platform/web","typecheck":"npm run typecheck --workspaces --if-present","worker:holds":"npm run start -w @platform/worker","db:generate":"npm run generate -w @platform/database","db:migrate":"npm run migrate -w @platform/database","db:studio":"npm run studio -w @platform/database"}
 }

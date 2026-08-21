@@ -12,6 +12,7 @@ jobs:
       DATABASE_URL: postgresql://hotel:hotel@localhost:5432/hotel_platform?schema=public
       SESSION_COOKIE_NAME: hp_session
       SESSION_TTL_DAYS: 30
+      PAYMENT_PROVIDER: none
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,11 +20,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-          cache: npm
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
+
+      - name: Audit production dependencies
+        run: node scripts/security-audit.mjs
 
       - name: Generate Prisma client
         run: npm run db:generate

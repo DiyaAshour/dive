@@ -7,3 +7,6 @@ export * from "./bookings/security";
 export * from "./bookings/inventory";
 export * from "./bookings/authorization";
 export * from "./bookings/service";
+export * from "./payments/provider";
+export * from "./payments/registry";
+export * from "./payments/service";
