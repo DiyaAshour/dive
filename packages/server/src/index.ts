@@ -3,3 +3,7 @@ export * from "./auth/service";
 export * from "./auth/session";
 export * from "./hotels/authorization";
 export * from "./hotels/service";
+export * from "./bookings/security";
+export * from "./bookings/inventory";
+export * from "./bookings/authorization";
+export * from "./bookings/service";
