@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const parsedKey = idempotencyKeySchema.safeParse(idempotencyKey(request));
     if (!parsedKey.success) return validationError(parsedKey.error);
     const user = await requestUser(request);
-    const result = await createBookingHold(body.data, {userId: user?.id, idempotencyKey: parsedKey.data});
+    const result = await createBookingHold(body.data, {userId: user?.id ?? null, idempotencyKey: parsedKey.data});
     return ok(result, {status: result.reused ? 200 : 201});
   } catch (error) {
     return handleApiError(error);

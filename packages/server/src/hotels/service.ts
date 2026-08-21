@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { CreateHotelRequest, CreateRatePlanRequest, CreateRoomTypeRequest, UpsertCalendarRequest } from "@platform/contracts";
+import type { CreateHotelRequest, CreateRatePlanRequest, CreateRoomTypeRequest, UpdateCancellationPolicyInput, UpsertCalendarRequest } from "@platform/contracts";
 import { database } from "@platform/database";
 import { badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "./authorization";
@@ -33,9 +33,51 @@ export async function createRatePlan(actorUserId: string, hotelId: string, input
   const roomType = await database().roomType.findFirst({where: {id: input.roomTypeId, hotelId}, select: {id: true}});
   if (!roomType) notFound("Room type");
   return database().$transaction(async (tx) => {
-    const ratePlan = await tx.ratePlan.create({data: {roomTypeId: input.roomTypeId, name: input.name, code: input.code, refundable: input.refundable, mealPlan: input.mealPlan}});
-    await tx.auditLog.create({data: {hotelId, actorUserId, action: "RATE_PLAN_CREATED", entityType: "RatePlan", entityId: ratePlan.id, after: {name: ratePlan.name, code: ratePlan.code}}});
+    const policy = defaultCancellationPolicy(input.refundable);
+    const ratePlan = await tx.ratePlan.create({data: {
+      roomTypeId: input.roomTypeId,
+      name: input.name,
+      code: input.code,
+      refundable: input.refundable,
+      mealPlan: input.mealPlan,
+      allowPayNow: input.allowPayNow,
+      allowPayAtHotel: input.allowPayAtHotel,
+      cancellationPolicy: {create: {name: policy.name, noShowPenaltyType: policy.noShowPenaltyType, noShowPenaltyValue: policy.noShowPenaltyValue, rules: {create: policy.rules}}},
+    }, include: {cancellationPolicy: {include: {rules: true}}}});
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: "RATE_PLAN_CREATED", entityType: "RatePlan", entityId: ratePlan.id, after: {name: ratePlan.name, code: ratePlan.code, allowPayNow: ratePlan.allowPayNow, allowPayAtHotel: ratePlan.allowPayAtHotel}}});
     return ratePlan;
+  });
+}
+
+export async function updateRatePlanCancellationPolicy(actorUserId: string, hotelId: string, ratePlanId: string, input: UpdateCancellationPolicyInput) {
+  await requireHotelPermission(actorUserId, hotelId, "rates:manage");
+  const db = database();
+  const ratePlan = await db.ratePlan.findFirst({where: {id: ratePlanId, roomType: {hotelId}}, include: {cancellationPolicy: {include: {rules: true}}}});
+  if (!ratePlan) notFound("Rate plan");
+
+  return db.$transaction(async (tx) => {
+    const before = ratePlan.cancellationPolicy ? policyAuditValue(ratePlan.cancellationPolicy) : {};
+    if (ratePlan.cancellationPolicy) {
+      await tx.cancellationRule.deleteMany({where: {policyId: ratePlan.cancellationPolicy.id}});
+      await tx.cancellationPolicy.update({where: {id: ratePlan.cancellationPolicy.id}, data: {
+        name: input.name,
+        noShowPenaltyType: input.noShowPenaltyType,
+        noShowPenaltyValue: input.noShowPenaltyValue ?? null,
+        rules: {create: input.rules.map((rule) => ({minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType, penaltyValue: rule.penaltyValue ?? null}))},
+      }});
+    } else {
+      await tx.cancellationPolicy.create({data: {
+        ratePlanId,
+        name: input.name,
+        noShowPenaltyType: input.noShowPenaltyType,
+        noShowPenaltyValue: input.noShowPenaltyValue ?? null,
+        rules: {create: input.rules.map((rule) => ({minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType, penaltyValue: rule.penaltyValue ?? null}))},
+      }});
+    }
+    const updated = await tx.cancellationPolicy.findUnique({where: {ratePlanId}, include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}});
+    const after = updated ? policyAuditValue(updated) : {};
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: "CANCELLATION_POLICY_UPDATED", entityType: "RatePlan", entityId: ratePlanId, before, after}});
+    return updated;
   });
 }
 
@@ -68,7 +110,7 @@ export async function upsertCalendar(actorUserId: string, hotelId: string, input
 
 export async function getHotelWorkspace(actorUserId: string, hotelId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
-  const hotel = await database().hotel.findUnique({where: {id: hotelId}, include: {roomTypes: {include: {ratePlans: true}}, memberships: {where: {status: "ACTIVE"}, select: {id: true, role: true, user: {select: {id: true, email: true, displayName: true}}}}}});
+  const hotel = await database().hotel.findUnique({where: {id: hotelId}, include: {roomTypes: {include: {ratePlans: {include: {cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}}}}}}, memberships: {where: {status: "ACTIVE"}, select: {id: true, role: true, user: {select: {id: true, email: true, displayName: true}}}}}});
   if (!hotel) notFound("Hotel");
   return hotel;
 }
@@ -104,4 +146,16 @@ export async function getCalendar(actorUserId: string, hotelId: string, from: st
     database().inventoryDay.findMany({where: {date: {gte: fromDate, lte: toDate}, roomType: {hotelId}}, orderBy: [{date: "asc"}, {roomTypeId: "asc"}]}),
   ]);
   return {rates, inventory};
+}
+
+function defaultCancellationPolicy(refundable: boolean) {
+  if (!refundable) return {name: "Non-refundable", noShowPenaltyType: "FULL_STAY" as const, noShowPenaltyValue: null, rules: [{minimumDaysBeforeArrival: 0, penaltyType: "FULL_STAY" as const, penaltyValue: null}]};
+  return {name: "Flexible 1 day", noShowPenaltyType: "FULL_STAY" as const, noShowPenaltyValue: null, rules: [
+    {minimumDaysBeforeArrival: 1, penaltyType: "NONE" as const, penaltyValue: null},
+    {minimumDaysBeforeArrival: 0, penaltyType: "FIRST_NIGHT" as const, penaltyValue: null},
+  ]};
+}
+
+function policyAuditValue(policy: {name: string; noShowPenaltyType: string; noShowPenaltyValue: unknown; rules: Array<{minimumDaysBeforeArrival: number; penaltyType: string; penaltyValue: unknown}>}) {
+  return {name: policy.name, noShowPenaltyType: policy.noShowPenaltyType, noShowPenaltyValue: policy.noShowPenaltyValue === null ? null : String(policy.noShowPenaltyValue), rules: policy.rules.map((rule) => ({minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType, penaltyValue: rule.penaltyValue === null ? null : String(rule.penaltyValue)}))};
 }

@@ -1,8 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { config } from "dotenv";
 import { PrismaClient } from "./generated/prisma/client";
-
-if (!process.env.DATABASE_URL) config({path: new URL("../../../.env", import.meta.url)});
 
 const globalDatabase = globalThis as unknown as {databaseClient?: PrismaClient};
 

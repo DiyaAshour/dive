@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { hotels, roomPlans } from "@/lib/mock-data";
-import { stayPrice } from "@/lib/pricing";
+import { CheckoutFlow } from "./checkout-flow";
 
-export default async function CheckoutPage({searchParams}:{searchParams:Promise<{hotel?:string;plan?:string}>}){const q=await searchParams;const hotel=hotels.find(h=>h.id===q.hotel)??hotels[0];const plan=roomPlans.find(r=>r.id===q.plan)??roomPlans[0];const price=stayPrice(plan.base,2);return <main className="soft"><header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href={`/hotel/${hotel.id}`}>Back to hotel</Link></nav></header><section className="shell section"><div className="sectionHead"><div><span className="eyebrow">Secure checkout</span><h2>Review and confirm</h2></div></div><div className="checkout"><div className="panel"><h3>Guest information</h3><div className="formGrid"><input placeholder="First name"/><input placeholder="Last name"/><input placeholder="Email"/><input placeholder="Phone"/></div><h3 style={{marginTop:28}}>Payment option</h3><label style={{display:"block",marginBottom:10}}><input type="radio" name="payment" defaultChecked/> Pay now</label><label style={{display:"block"}}><input type="radio" name="payment"/> Pay at hotel, when allowed by the rate plan</label><button className="primary" style={{width:"100%",marginTop:28}}>Confirm booking</button><p className="muted">The booking service will use an idempotency key and an atomic inventory transaction before confirmation.</p></div><aside className="panel"><span className="eyebrow">Your booking</span><h2>{hotel.name}</h2><p className="muted">{plan.room} · {plan.plan}</p><p className="muted">25 Aug — 27 Aug · 2 nights</p><div className="breakdown"><span>Room base</span><strong>{price.base.toFixed(2)} JOD</strong></div><div className="breakdown"><span>Service charge 7%</span><strong>{price.service.toFixed(2)} JOD</strong></div><div className="breakdown"><span>Tax / charges 8.6%</span><strong>{price.tax.toFixed(2)} JOD</strong></div><div className="breakdown total"><span>Total</span><strong>{price.total.toFixed(2)} JOD</strong></div><small className="muted">Final total shown before payment.</small></aside></div></section></main>}
+export default async function CheckoutPage({searchParams}:{searchParams:Promise<{hotelId?:string;roomTypeId?:string;ratePlanId?:string;arrival?:string;departure?:string}>}) {
+  const query = await searchParams;
+  const complete = query.hotelId && query.roomTypeId && query.ratePlanId && query.arrival && query.departure;
+  return <main className="soft">
+    <header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href="/search">Back to search</Link></nav></header>
+    <section className="shell section">
+      <div className="sectionHead"><div><span className="eyebrow">Secure checkout</span><h2>Review the live rate before booking</h2></div></div>
+      {complete ? <CheckoutFlow hotelId={query.hotelId!} roomTypeId={query.roomTypeId!} ratePlanId={query.ratePlanId!} arrival={query.arrival!} departure={query.departure!}/> : <div className="panel"><h3>A live rate selection is required</h3><p className="muted">Checkout now accepts database-backed hotel, room type and rate plan IDs plus arrival/departure dates. The legacy demo checkout has been removed rather than kept as a hidden fallback.</p><Link href="/search" className="primary" style={{display:"inline-block",marginTop:12}}>Return to search</Link></div>}
+    </section>
+  </main>;
+}
