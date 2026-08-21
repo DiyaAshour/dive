@@ -16,8 +16,8 @@ A change is not considered complete unless it is:
 - tested or designed so it can be tested in isolation;
 - backward-conscious for public API contracts;
 - secure by default;
-- auditable for booking, inventory, permission, and financial mutations;
-- free of duplicated pricing, permission, payment, and booking rules.
+- auditable for booking, inventory, permission, publishing, review, and financial mutations;
+- free of duplicated pricing, permission, payment, publishing, and booking rules.
 
 **No quick patch is allowed to become production architecture.** If an emergency hotfix is ever required in production, it must be followed by a root-cause fix before normal feature development continues.
 
@@ -38,7 +38,7 @@ packages/
   server/              backend application services, authorization and provider boundaries
 ```
 
-Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, or booking rules.
+Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, or booking rules.
 
 ## Phase 2 foundation
 
@@ -71,35 +71,53 @@ Future mobile and desktop apps use the same versioned HTTP API and do not reimpl
 
 ## Phase 4 payments, policies, and live checkout
 
-Phase 4 connects the customer experience to the real booking engine without introducing a fake payment provider.
-
 - Framework-independent cancellation-policy engine in `@platform/core`
 - Persisted cancellation rules per rate plan
 - Payment modes (`PAY_NOW` / `PAY_AT_HOTEL`) explicitly configured per rate plan
-- Cancellation-policy snapshot stored with each booking so later hotel edits never rewrite old terms
-- Cancellation preview and policy-driven penalty/refundable calculations in the hotel's timezone
+- Cancellation-policy snapshot stored with each booking
 - Provider-neutral `PaymentProvider` interface for payment creation and refunds
-- Payment attempts persisted for idempotency and reconciliation without storing card data or raw provider payloads
+- Payment attempts persisted for idempotency and reconciliation without card data
 - Online payment disabled when no real provider adapter is registered
-- Refund execution routed through the provider that captured the original payment
-- Manual public refund-completion bypass removed
-- Live booking quote endpoint with final base/service/tax/total, live inventory, payment modes, and cancellation terms
-- Legacy mock checkout removed
-- Checkout now creates the real atomic hold and then confirms pay-at-hotel or starts the configured payment provider
-- Secure booking-status page
-- Separate background worker calls the same `expireStaleHolds()` application service and does not duplicate inventory-release logic
+- Live booking quote endpoint with final base/service/tax/total and live inventory
+- Checkout creates the real atomic hold
+- Separate background worker expires stale holds through the same booking service
 
 ### Payment rule
 
 A UI action, query string, or staff button can never mark payment as successful. `CAPTURED` is an application result recorded from a registered payment provider adapter. The platform does not store card numbers or CVV.
 
-### Cancellation and refund rule
-
-Cancellation uses the policy snapshot stored on the booking. Cancellation may create a refund request for captured refundable value, but it does not mark money as returned. Refund completion is recorded only from the provider-backed payment/refund service.
-
 ### Financial design rule
 
-Financial history is append-only. Confirmations create financial events; modifications create delta events; cancellations create explicit adjustments when applicable; completed provider refunds create negative refund events. Old financial records are never rewritten to make later events disappear.
+Financial history is append-only. Confirmations create financial events; modifications create delta events; cancellations create explicit adjustments when applicable; completed provider refunds create negative refund events.
+
+## Phase 5 live discovery and hotel content
+
+- PostgreSQL-backed public hotel content
+- Ordered property photos and searchable amenities
+- Live destination search and filters
+- Full-stay rate, restriction, capacity and inventory validation
+- Home, search and hotel pages no longer use mock hotel data
+- Final prices are calculated by shared domain logic
+- Only `ACTIVE + verified` properties are discoverable and bookable
+- Public discovery API can be reused by future native applications
+
+## Phase 6 publishing and verification
+
+- Explicit `publishing:manage` permission for hotel owners and managers
+- Publishing readiness gate before review submission
+- Minimum public-content, room, rate-plan, cancellation-policy and live-calendar requirements
+- At least seven sellable dates inside the next 30 days are required for initial publishing review
+- Immutable review history records submitter, submitted revision, readiness snapshot, reviewer, decision and reason
+- Hotel `publishRevision` advances whenever review-relevant content, rates or inventory change
+- Pending reviews automatically become `STALE` when their submitted revision changes
+- Admin approval publishes exactly the revision that was reviewed
+- Rejection returns the hotel to draft with persistent review feedback
+- Platform suspension removes the hotel from discovery immediately; restoration returns it to draft and requires review again
+- Review and publishing mutations are audit logged
+
+### Publishing invariant
+
+A property must never become `ACTIVE + verified` through a UI flag, direct client request, or ordinary hotel edit. Activation only occurs through the platform-admin review service after readiness and revision checks pass.
 
 ## Current pricing default
 
@@ -115,7 +133,7 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 2. Start PostgreSQL: `docker compose up -d postgres`.
 3. Install dependencies: `npm install`.
 4. Generate Prisma Client: `npm run db:generate`.
-5. Create/apply the database migration: `npm run db:migrate -- --name phase4_payments_policy_checkout`.
+5. Create/apply the database migration: `npm run db:migrate -- --name phase6_publishing_verification`.
 6. Run the web app: `npm run dev`.
 7. In a separate process, run hold expiry: `npm run worker:holds`.
 
@@ -128,6 +146,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 - `docs/API.md`
 - `docs/PHASE3.md`
 - `docs/PHASE4.md`
+- `docs/PHASE5.md`
+- `docs/PHASE6.md`
 
 ## Deferred by design
 

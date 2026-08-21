@@ -7,6 +7,7 @@ export type HotelRole = (typeof HOTEL_ROLES)[number];
 export const HOTEL_PERMISSIONS = [
   "hotel:view",
   "hotel:edit",
+  "publishing:manage",
   "rooms:manage",
   "rates:manage",
   "inventory:manage",
@@ -18,9 +19,12 @@ export const HOTEL_PERMISSIONS = [
 ] as const;
 export type HotelPermission = (typeof HOTEL_PERMISSIONS)[number];
 
+const ownerPermissions = new Set<HotelPermission>(HOTEL_PERMISSIONS);
+const managerPermissions = new Set<HotelPermission>(HOTEL_PERMISSIONS);
+
 const permissionsByRole: Readonly<Record<HotelRole, ReadonlySet<HotelPermission>>> = {
-  OWNER: new Set(HOTEL_PERMISSIONS),
-  MANAGER: new Set(["hotel:view", "hotel:edit", "rooms:manage", "rates:manage", "inventory:manage", "bookings:view", "bookings:manage", "finance:view", "finance:manage", "members:manage"]),
+  OWNER: ownerPermissions,
+  MANAGER: managerPermissions,
   REVENUE: new Set(["hotel:view", "rooms:manage", "rates:manage", "inventory:manage", "bookings:view", "finance:view"]),
   FRONT_DESK: new Set(["hotel:view", "bookings:view", "bookings:manage"]),
   FINANCE: new Set(["hotel:view", "bookings:view", "finance:view", "finance:manage"]),
