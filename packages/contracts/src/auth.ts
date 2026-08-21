@@ -1,0 +1,15 @@
+import { z } from "zod";
+
+const email = z.string().trim().toLowerCase().email().max(254);
+const password = z.string().min(10).max(128);
+
+export const registerRequestSchema = z.object({
+  email,
+  password,
+  displayName: z.string().trim().min(2).max(100),
+});
+
+export const loginRequestSchema = z.object({email, password});
+
+export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+export type LoginRequest = z.infer<typeof loginRequestSchema>;

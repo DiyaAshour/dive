@@ -1,0 +1,10 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+type Mode = "login" | "register";
+
+export default function AuthForm() {
+  const [mode,setMode]=useState<Mode>("login"); const [error,setError]=useState<string|null>(null); const [submitting,setSubmitting]=useState(false);
+  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setError(null);setSubmitting(true);const form=new FormData(event.currentTarget);const payload=mode==="register"?{displayName:form.get("displayName"),email:form.get("email"),password:form.get("password")}:{email:form.get("email"),password:form.get("password")};try{const response=await fetch(`/api/v1/auth/${mode}`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw new Error(result?.error?.message??"Unable to continue");window.location.assign(mode==="register"?"/partner/onboarding":"/hotel-dashboard");}catch(cause){setError(cause instanceof Error?cause.message:"Unable to continue");}finally{setSubmitting(false);}}
+  return <div className="panel authCard"><div className="authTabs"><button className={mode==="login"?"active":""} onClick={()=>setMode("login")} type="button">Sign in</button><button className={mode==="register"?"active":""} onClick={()=>setMode("register")} type="button">Create account</button></div><form onSubmit={submit}>{mode==="register"&&<label>Full name<input name="displayName" autoComplete="name" minLength={2} required/></label>}<label>Email<input name="email" type="email" autoComplete="email" required/></label><label>Password<input name="password" type="password" minLength={10} autoComplete={mode==="login"?"current-password":"new-password"} required/></label>{error&&<p className="formError">{error}</p>}<button className="primaryButton authSubmit" disabled={submitting}>{submitting?"Working…":mode==="login"?"Sign in":"Create account"}</button></form><small>Sessions are revocable. The raw session token is never stored in the database.</small></div>;
+}
