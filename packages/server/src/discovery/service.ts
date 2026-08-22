@@ -9,6 +9,7 @@ import {
 import type { DiscoverySearchInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { notFound } from "../errors";
+import { promotionBaseRate, selectBestPromotion, type PromotionCandidate } from "../promotions/engine";
 
 type StayInput = Readonly<{arrival: string; departure: string; adults: number; children: number}>;
 type PublicPhoto = Readonly<{url: string; alt: string | null; sortOrder: number}>;
@@ -30,6 +31,7 @@ type RatePlanRow = Readonly<{
   allowPayNow: boolean;
   allowPayAtHotel: boolean;
   rates: RateRow[];
+  promotions: Array<Readonly<{promotion: PromotionCandidate}>>;
   cancellationPolicy: PolicyRow | null;
 }>;
 type RoomRow = Readonly<{
@@ -64,6 +66,8 @@ type HotelRow = Readonly<{
   roomTypes: RoomRow[];
 }>;
 
+type ReviewSummary = Readonly<{count: number; overall: number | null}>;
+
 const livePhotoQuery = {
   where: {mediaObject: {state: "READY" as const}},
   select: {alt: true, sortOrder: true, mediaObject: {select: {publicUrl: true}}},
@@ -88,9 +92,10 @@ export async function listFeaturedHotels(limit = 6) {
     orderBy: [{verified: "desc"}, {updatedAt: "desc"}],
     take: Math.max(1, Math.min(limit, 24)),
   });
+  const reviewMap = await reviewSummaries(hotels.map((hotel) => hotel.id));
   return hotels.map((hotel) => {
     const photos = publicPhotos(hotel.photos);
-    return {...hotel, coverPhoto: photos[0] ?? null, photos: undefined};
+    return {...hotel, reviewSummary: reviewMap.get(hotel.id) ?? {count: 0, overall: null}, coverPhoto: photos[0] ?? null, photos: undefined};
   });
 }
 
@@ -123,6 +128,7 @@ export async function searchHotels(input: DiscoverySearchInput) {
             include: {
               rates: {where: {date: {in: dates}}, orderBy: {date: "asc"}, select: {date: true, baseRate: true, minStay: true, maxStay: true, closed: true, stopSell: true}},
               cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}},
+              promotions: {where: {promotion: {status: "ACTIVE"}}, include: {promotion: true}},
             },
           },
         },
@@ -131,6 +137,7 @@ export async function searchHotels(input: DiscoverySearchInput) {
     take: 200,
   });
 
+  const reviewMap = await reviewSummaries(hotels.map((hotel) => hotel.id));
   const requestedAmenities = new Set(input.amenities);
   const results = hotels.flatMap((rawHotel) => {
     const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
@@ -152,6 +159,7 @@ export async function searchHotels(input: DiscoverySearchInput) {
       countryCode: hotel.countryCode,
       area: hotel.area,
       starRating: hotel.starRating,
+      reviewSummary: reviewMap.get(hotel.id) ?? {count: 0, overall: null},
       currency: hotel.currency,
       coverPhoto: hotel.photos[0] ?? null,
       amenities: hotel.amenities,
@@ -181,6 +189,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
             include: {
               rates: {where: {date: {in: dates}}, orderBy: {date: "asc"}, select: {date: true, baseRate: true, minStay: true, maxStay: true, closed: true, stopSell: true}},
               cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}},
+              promotions: {where: {promotion: {status: "ACTIVE"}}, include: {promotion: true}},
             },
           },
         },
@@ -190,6 +199,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
   if (!rawHotel) notFound("Hotel");
   const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
   const offers = buildOffers(hotel, stay, stayInput).sort((a, b) => a.total - b.total);
+  const reviewMap = await reviewSummaries([hotelId]);
   return {
     id: hotel.id,
     slug: hotel.slug,
@@ -200,6 +210,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
     area: hotel.area,
     description: hotel.description,
     starRating: hotel.starRating,
+    reviewSummary: reviewMap.get(hotelId) ?? {count: 0, overall: null},
     location: hotel.latitude === null || hotel.longitude === null ? null : {latitude: Number(hotel.latitude), longitude: Number(hotel.longitude)},
     checkInTime: hotel.checkInTime,
     checkOutTime: hotel.checkOutTime,
@@ -214,6 +225,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
 
 function buildOffers(hotel: HotelRow, stay: Readonly<{arrival: string; departure: string; nights: readonly string[]}>, guests: Readonly<{adults: number; children: number}>) {
   const stayLength = stay.nights.length;
+  const stayDates = stay.nights.map(parseDateOnly);
   return hotel.roomTypes.flatMap((room) => {
     if (room.maxAdults < guests.adults || room.maxChildren < guests.children) return [];
     if (room.inventory.length !== stayLength) return [];
@@ -223,7 +235,11 @@ function buildOffers(hotel: HotelRow, stay: Readonly<{arrival: string; departure
     return room.ratePlans.flatMap((plan) => {
       if (!plan.cancellationPolicy || plan.rates.length !== stayLength) return [];
       if (plan.rates.some((rate) => rate.closed || rate.stopSell || rate.minStay > stayLength || (rate.maxStay !== null && rate.maxStay < stayLength))) return [];
-      const nightly = plan.rates.map((rate) => ({date: rate.date, ...calculatePrice(Number(rate.baseRate), {serviceRate: Number(hotel.serviceRate), taxRate: Number(hotel.taxRate)})}));
+      const promotion = selectBestPromotion(plan.promotions.map((item) => item.promotion), stayDates);
+      const nightly = plan.rates.map((rate) => {
+        const base = promotionBaseRate(Number(rate.baseRate), promotion);
+        return {date: rate.date, ...calculatePrice(base, {serviceRate: Number(hotel.serviceRate), taxRate: Number(hotel.taxRate)})};
+      });
       const totals = {
         base: roundMoney(nightly.reduce((sum, night) => sum + night.base, 0)),
         service: roundMoney(nightly.reduce((sum, night) => sum + night.service, 0)),
@@ -242,6 +258,7 @@ function buildOffers(hotel: HotelRow, stay: Readonly<{arrival: string; departure
         ratePlanName: plan.name,
         ratePlanCode: plan.code,
         mealPlan: plan.mealPlan,
+        promotion,
         paymentModes,
         cancellationPolicy: policy,
         cancellationNow: cancellation,
@@ -253,6 +270,17 @@ function buildOffers(hotel: HotelRow, stay: Readonly<{arrival: string; departure
       }];
     });
   });
+}
+
+async function reviewSummaries(hotelIds: readonly string[]): Promise<Map<string, ReviewSummary>> {
+  if (!hotelIds.length) return new Map();
+  const rows = await database().guestReview.groupBy({
+    by: ["hotelId"],
+    where: {hotelId: {in: [...hotelIds]}, status: "PUBLISHED"},
+    _count: {_all: true},
+    _avg: {overall: true},
+  });
+  return new Map(rows.map((row) => [row.hotelId, {count: row._count._all, overall: row._avg.overall === null ? null : Math.round(row._avg.overall * 10) / 10}]));
 }
 
 function policySnapshot(policy: PolicyRow): CancellationPolicySnapshot {
