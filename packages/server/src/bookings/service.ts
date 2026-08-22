@@ -11,6 +11,7 @@ import type { BookingQuoteInput, CreateBookingHoldInput, CreateRefundInput, Modi
 import { database } from "@platform/database";
 import { ApplicationError, badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "../hotels/authorization";
+import { promotionBaseRate, selectBestPromotion, type AppliedPromotion } from "../promotions/engine";
 import { requireBookingAccess } from "./authorization";
 import { InventoryConcurrencyError, InventoryUnavailableError, releaseInventory, reserveInventory } from "./inventory";
 import { bookingAccessToken, bookingAccessTokenHash, fingerprint, reservationReference } from "./security";
@@ -25,6 +26,7 @@ type PolicyJson = {name: string; rules: Array<{minimumDaysBeforeArrival: number;
 type PricedStay = Readonly<{
   nights: readonly NightPrice[];
   policy: CancellationPolicySnapshot;
+  promotion: AppliedPromotion | null;
   ratePlan: Readonly<{
     id: string;
     name: string;
@@ -50,6 +52,7 @@ export async function quoteBooking(input: BookingQuoteInput) {
     departure: input.departure,
     nights: stay.nights.length,
     amounts: totals,
+    promotion: priced.promotion,
     allowedPaymentModes: [priced.ratePlan.allowPayNow ? "PAY_NOW" : null, priced.ratePlan.allowPayAtHotel ? "PAY_AT_HOTEL" : null].filter(Boolean),
     cancellationPolicy: priced.policy,
     availableToSell,
@@ -100,13 +103,15 @@ export async function createBookingHold(input: CreateBookingHoldInput, context: 
         totalAmount: totals.total,
         commissionRateSnapshot: hotel.commissionRate,
         commissionAmount,
+        promotionNameSnapshot: priced.promotion?.name ?? null,
+        promotionDiscountPercentSnapshot: priced.promotion?.discountPercent ?? null,
         cancellationPolicySnapshot: policyToJson(priced.policy),
         idempotencyKey: context.idempotencyKey,
         requestFingerprint,
         accessTokenHash: bookingAccessTokenHash(accessToken),
         holdExpiresAt: holdExpiresAt(),
         nights: {create: priced.nights.map((night) => ({revision: 1, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))},
-        events: {create: {type: "HOLD_CREATED", actorUserId: context.userId ?? null, data: {arrival: input.arrival, departure: input.departure, total: totals.total, cancellationPolicy: priced.policy.name}}},
+        events: {create: {type: "HOLD_CREATED", actorUserId: context.userId ?? null, data: {arrival: input.arrival, departure: input.departure, total: totals.total, cancellationPolicy: priced.policy.name, promotion: priced.promotion}}},
       }});
       return booking.id;
     }, {isolationLevel: "Serializable"});
@@ -191,10 +196,12 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
         taxAmount: totals.tax,
         totalAmount: totals.total,
         commissionAmount: newCommission,
+        promotionNameSnapshot: priced.promotion?.name ?? null,
+        promotionDiscountPercentSnapshot: priced.promotion?.discountPercent ?? null,
         cancellationPolicySnapshot: policyToJson(priced.policy),
       }});
       await tx.bookingNight.createMany({data: priced.nights.map((night) => ({bookingId, revision: newRevision, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))});
-      const event = await tx.bookingEvent.create({data: {bookingId, type: "MODIFIED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint, data: {fromRevision: booking.revision, toRevision: newRevision, oldTotal: Number(booking.totalAmount), newTotal: totals.total, cancellationPolicy: priced.policy.name}}});
+      const event = await tx.bookingEvent.create({data: {bookingId, type: "MODIFIED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint, data: {fromRevision: booking.revision, toRevision: newRevision, oldTotal: Number(booking.totalAmount), newTotal: totals.total, cancellationPolicy: priced.policy.name, promotion: priced.promotion}}});
       if (booking.status !== "HOLD") {
         const deltas = financialDeltas(booking, totals, newCommission, event.id);
         if (deltas.length) await tx.financialEvent.createMany({data: deltas});
@@ -365,6 +372,7 @@ export async function bookingView(bookingId: string) {
     paymentState: booking.paymentState,
     currency: booking.currency,
     amounts: {base: Number(booking.baseAmount), service: Number(booking.serviceAmount), tax: Number(booking.taxAmount), total: Number(booking.totalAmount)},
+    promotion: booking.promotionNameSnapshot ? {name: booking.promotionNameSnapshot, discountPercent: Number(booking.promotionDiscountPercentSnapshot ?? 0)} : null,
     cancellation: {policy: cancellationPolicyFromJson(booking.cancellationPolicySnapshot), penaltyAmount: Number(booking.cancellationPenaltyAmount), refundableAmount: booking.refundableAmount === null ? null : Number(booking.refundableAmount)},
     holdExpiresAt: booking.holdExpiresAt,
     confirmedAt: booking.confirmedAt,
@@ -379,16 +387,27 @@ export async function bookingView(bookingId: string) {
 }
 
 async function priceStay(tx: TransactionLike, hotel: HotelPricing, roomTypeId: string, ratePlanId: string, dates: readonly string[]): Promise<PricedStay> {
-  const ratePlan = await tx.ratePlan.findFirst({where: {id: ratePlanId, roomTypeId, active: true, roomType: {hotelId: hotel.id, active: true}}, include: {roomType: {select: {id: true, name: true}}, cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}}}});
+  const dateValues = dates.map(parseDateOnly);
+  const ratePlan = await tx.ratePlan.findFirst({
+    where: {id: ratePlanId, roomTypeId, active: true, roomType: {hotelId: hotel.id, active: true}},
+    include: {
+      roomType: {select: {id: true, name: true}},
+      cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}},
+      promotions: {where: {promotion: {status: "ACTIVE"}}, include: {promotion: true}},
+    },
+  });
   if (!ratePlan) conflict("RATE_PLAN_NOT_AVAILABLE", "Rate plan is not available for this room type");
   if (!ratePlan.cancellationPolicy) conflict("CANCELLATION_POLICY_NOT_CONFIGURED", "Rate plan does not have a cancellation policy");
-  const dateValues = dates.map(parseDateOnly);
   const rates = await tx.dailyRate.findMany({where: {ratePlanId, date: {in: dateValues}}, orderBy: {date: "asc"}});
   if (rates.length !== dates.length) conflict("RATE_NOT_CONFIGURED", "A rate is missing for one or more stay dates");
   const stayLength = dates.length;
   if (rates.some((rate) => rate.closed || rate.stopSell || rate.minStay > stayLength || (rate.maxStay !== null && rate.maxStay < stayLength))) conflict("RATE_RESTRICTED", "Selected stay is closed or restricted by the rate plan");
-  const nights = rates.map((rate) => ({date: rate.date, ...calculatePrice(Number(rate.baseRate), {serviceRate: Number(hotel.serviceRate), taxRate: Number(hotel.taxRate)})}));
-  return {nights, policy: policySnapshot(ratePlan.cancellationPolicy), ratePlan: {id: ratePlan.id, name: ratePlan.name, code: ratePlan.code, allowPayNow: ratePlan.allowPayNow, allowPayAtHotel: ratePlan.allowPayAtHotel, roomType: ratePlan.roomType}};
+  const promotion = selectBestPromotion(ratePlan.promotions.map((item) => item.promotion), dateValues);
+  const nights = rates.map((rate) => {
+    const base = promotionBaseRate(Number(rate.baseRate), promotion);
+    return {date: rate.date, ...calculatePrice(base, {serviceRate: Number(hotel.serviceRate), taxRate: Number(hotel.taxRate)})};
+  });
+  return {nights, promotion, policy: policySnapshot(ratePlan.cancellationPolicy), ratePlan: {id: ratePlan.id, name: ratePlan.name, code: ratePlan.code, allowPayNow: ratePlan.allowPayNow, allowPayAtHotel: ratePlan.allowPayAtHotel, roomType: ratePlan.roomType}};
 }
 
 async function availableToSellForStay(tx: Pick<DbClient, "inventoryDay">, roomTypeId: string, dates: readonly Date[], overbookingEnabled: boolean): Promise<number> {

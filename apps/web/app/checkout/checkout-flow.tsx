@@ -11,6 +11,7 @@ type Quote = {
   departure:string;
   nights:number;
   amounts:{base:number;service:number;tax:number;total:number};
+  promotion:{id:string;name:string;discountPercent:number}|null;
   allowedPaymentModes:PaymentMode[];
   cancellationPolicy:{name:string;rules:Array<{minimumDaysBeforeArrival:number;penaltyType:string;penaltyValue?:number|null}>;noShowPenaltyType:string;noShowPenaltyValue?:number|null};
   availableToSell:number;
@@ -116,6 +117,7 @@ export function CheckoutFlow(props: Props) {
       <h2>{quote.hotel.name}</h2>
       <p>{quote.roomType.name} · {quote.ratePlan.name}</p>
       <p className="muted">{quote.arrival} — {quote.departure} · {quote.nights} night{quote.nights===1?"":"s"}</p>
+      {quote.promotion && <div className="alertCard" style={{marginBottom:14}}><div><strong>{quote.promotion.name}</strong><p>{quote.promotion.discountPercent}% off the room base is already included below.</p></div></div>}
       <div className="breakdown"><span>Room base</span><strong>{money(quote.amounts.base,quote.hotel.currency)}</strong></div>
       <div className="breakdown"><span>Employee service</span><strong>{money(quote.amounts.service,quote.hotel.currency)}</strong></div>
       <div className="breakdown"><span>Tax / mandatory charges</span><strong>{money(quote.amounts.tax,quote.hotel.currency)}</strong></div>

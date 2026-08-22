@@ -8,7 +8,7 @@ This project must **never** be developed through temporary patches, one-off fixe
 
 Every change must solve the underlying problem at the correct layer. If a feature exposes an architectural weakness, fix the architecture first. Do not stack another workaround on top of it.
 
-A change is not considered complete unless it is understandable without tribal knowledge, typed and validated at system boundaries, reusable where the same business rule exists, secure by default, auditable for sensitive mutations, and free of duplicated pricing, permission, payment, publishing, media, booking, and operations rules.
+A change is not considered complete unless it is understandable without tribal knowledge, typed and validated at system boundaries, reusable where the same business rule exists, secure by default, auditable for sensitive mutations, and free of duplicated pricing, permission, payment, publishing, media, booking, operations, promotion, review, and messaging rules.
 
 **No quick patch is allowed to become production architecture.** If an emergency hotfix is ever required in production, it must be followed by a root-cause fix before normal feature development continues.
 
@@ -29,7 +29,7 @@ packages/
   server/              backend application services, authorization and provider boundaries
 ```
 
-Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, guest-trip, reservation-operations, or booking rules.
+Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, guest-trip, reservation-operations, promotion, review, messaging, or booking rules.
 
 ## Phase 2 foundation
 
@@ -130,6 +130,23 @@ A filename, extension, browser-supplied MIME type, or successful PUT is never en
 
 Do not overload the booking lifecycle with check-in state or private notes. Commercial reservation state, arrival state, guest requests, and private hotel notes remain separate concerns with separate authorization rules.
 
+## Phase 9 reviews, promotions, and booking messaging
+
+- Verified-stay reviews: one review per completed booking, with 1–10 overall and category scores
+- Public hotel scores come only from persisted verified-stay reviews; no synthetic ratings
+- Hotel responses to reviews are permission-scoped and audit logged
+- Promotions target explicit rate plans and have booking/stay windows plus minimum-night rules
+- The same server promotion engine prices discovery, quotes, holds, and modifications
+- Discounts apply to room base before service and tax, while `DailyRate` remains unchanged
+- Promotion name and percentage are snapshotted on the booking
+- Guest ↔ hotel messaging is attached to confirmed bookings, not an anonymous chat channel
+- Guest and hotel unread state is tracked separately
+- Private front-desk notes remain isolated from guest-facing messages
+
+### Engagement invariant
+
+The displayed deal, quoted deal, and booked deal must be derived from the same server-side promotion rule. Reviews require a completed accessible booking, and booking messages require booking access or property-scoped hotel permissions.
+
 ## Current pricing default
 
 - base room rate × **1.156** = final guest price;
@@ -144,7 +161,7 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 2. Start PostgreSQL: `docker compose up -d postgres`.
 3. Install dependencies: `npm install`.
 4. Generate Prisma Client: `npm run db:generate`.
-5. Create/apply the database migration: `npm run db:migrate -- --name phase8_guest_trip_operations`.
+5. Create/apply the database migration: `npm run db:migrate -- --name phase9_reviews_promotions_messaging`.
 6. Run the web app: `npm run dev`.
 7. Run the background worker separately: `npm run worker:holds`.
 
@@ -161,7 +178,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 - `docs/PHASE6.md`
 - `docs/PHASE7.md`
 - `docs/PHASE8.md`
+- `docs/PHASE9.md`
 
 ## Deferred by design
 
-Physical room assignment, housekeeping workflow, guest chat, passport/ID capture, police/nationality reports, PMS and Channel Manager integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary flags or duplicated business logic.
+Physical room assignment, housekeeping workflow, passport/ID capture, police/nationality reports, PMS and Channel Manager integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary flags or duplicated business logic.

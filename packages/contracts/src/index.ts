@@ -7,3 +7,6 @@ export * from "./hotel-content";
 export * from "./publishing";
 export * from "./media";
 export * from "./operations";
+export * from "./reviews";
+export * from "./promotions";
+export * from "./messaging";
