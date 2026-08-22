@@ -1,6 +1,6 @@
-# Hotel Platform
+# HandMeKey
 
-Unbranded custom hotel booking platform. The product name is intentionally omitted while the platform architecture is being built.
+Custom hotel booking marketplace and hotel partner platform. HandMeKey separates the traveler marketplace from the Partner Hub while keeping pricing, booking, permissions, publishing, messaging, reviews and analytics in shared domain services.
 
 ## Non-negotiable engineering rule: no patches
 
@@ -165,6 +165,32 @@ The displayed deal, quoted deal, and booked deal must be derived from the same s
 
 Analytics must never invent demand, ratings, traffic, or conversion. Price watches must re-price through the live booking rules, background checks must not inflate views, and analytics write failure must never block search or booking. Deterministic signals are not presented as AI.
 
+## Phase 11 HandMeKey product UI and Partner Hub
+
+- HandMeKey wordmark replaces the temporary single-letter brand on traveler and partner surfaces
+- Premium traveler shell across Home, Search, Hotel and Checkout
+- Media-first hotel presentation with final-price, cancellation, deal and verified-review hierarchy
+- Traveler authentication is separated from partner authentication at the product-entry level
+- `/partner` acquisition landing page for hotels
+- `/partner/login` and `/partner/onboarding` create a clear hotel registration flow
+- Unified Partner Hub navigation across Property, Reservations, Performance, Promotions, Messages and Reviews
+- Partner navigation exposes implemented surfaces instead of placeholder functionality
+- Responsive customer and partner layouts share a design system without sharing the same information density
+
+### Portal contract
+
+Recommended production origins:
+
+```text
+handmekey.com            traveler marketplace
+partners.handmekey.com   hotel Partner Hub
+admin.handmekey.com      platform administration
+api.handmekey.com        versioned API origin
+media.handmekey.com      public media/CDN origin
+```
+
+Local and staging development may keep the current `/partner`, `/hotel-dashboard` and `/api/v1` paths. Hostname routing must not duplicate business rules or create a second authentication/authorization implementation.
+
 ## Current pricing default
 
 - base room rate × **1.156** = final guest price;
@@ -183,6 +209,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 6. Run the web app: `npm run dev`.
 7. Run the background worker separately: `npm run worker:holds`.
 
+Phase 11 changes product UI and portal routing only, so it does not require a new database migration.
+
 `PAYMENT_PROVIDER=none` and `STORAGE_PROVIDER=none` are safe defaults. Pay-now and media uploads remain unavailable until real providers are configured; the platform never simulates success.
 
 ## Architecture documents
@@ -198,6 +226,7 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 - `docs/PHASE8.md`
 - `docs/PHASE9.md`
 - `docs/PHASE10.md`
+- `docs/PHASE11.md`
 
 ## Deferred by design
 
