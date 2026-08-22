@@ -9,6 +9,9 @@
   "scripts": {
     "generate": "prisma generate --config prisma.config.ts",
     "migrate": "prisma migrate dev --config prisma.config.ts",
+    "push": "prisma db push --config prisma.config.ts",
+    "seed-demo": "tsx prisma/seed-demo.mjs",
+    "seed-demo:check": "node --check prisma/seed-demo.mjs",
     "studio": "prisma studio --config prisma.config.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -21,6 +24,7 @@
   "devDependencies": {
     "@types/pg": "8.15.5",
     "prisma": "7.9.1",
+    "tsx": "4.23.12",
     "typescript": "5.9.2",
     "@types/node": "22.18.0"
   }
