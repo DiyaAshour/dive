@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, KeyRound, LogOut, ShieldCheck } from "lucide-react";
+import { dictionary, type Locale } from "@/lib/i18n";
 
 type SessionView = {id:string;current:boolean;createdAt:string;lastUsedAt:string;expiresAt:string};
+type Props = Readonly<{locale: Locale}>;
 
-export function SecurityManager() {
+export function SecurityManager({locale}: Props) {
+  const copy = dictionary(locale);
   const [sessions,setSessions] = useState<SessionView[]>([]);
   const [loadingSessions,setLoadingSessions] = useState(true);
   const [busySession,setBusySession] = useState<string|null>(null);
@@ -19,7 +22,7 @@ export function SecurityManager() {
     try {
       const data = await requestJson<SessionView[]>("/api/v1/me/sessions");
       setSessions(data);
-    } catch (cause) { setError(messageFrom(cause)); }
+    } catch (cause) { setError(messageFrom(cause,locale)); }
     finally { setLoadingSessions(false); }
   }
 
@@ -32,9 +35,9 @@ export function SecurityManager() {
     try {
       await requestJson("/api/v1/me/security/password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({currentPassword:form.get("currentPassword"),newPassword:form.get("newPassword")})});
       event.currentTarget.reset();
-      setMessage("Password changed. Your previous sessions were closed and this session was securely rotated.");
+      setMessage(copy.security.changed);
       await loadSessions();
-    } catch (cause) { setError(messageFrom(cause)); }
+    } catch (cause) { setError(messageFrom(cause,locale)); }
     finally { setPasswordBusy(false); }
   }
 
@@ -43,8 +46,8 @@ export function SecurityManager() {
     try {
       await requestJson(`/api/v1/me/sessions/${id}`,{method:"DELETE"});
       setSessions((items)=>items.filter((item)=>item.id!==id));
-      setMessage("Session closed.");
-    } catch (cause) { setError(messageFrom(cause)); }
+      setMessage(copy.security.closed);
+    } catch (cause) { setError(messageFrom(cause,locale)); }
     finally { setBusySession(null); }
   }
 
@@ -53,31 +56,31 @@ export function SecurityManager() {
     try {
       const result = await requestJson<{revoked:number}>("/api/v1/me/sessions/revoke-others",{method:"POST"});
       setSessions((items)=>items.filter((item)=>item.current));
-      setMessage(result.revoked ? `${result.revoked} other session${result.revoked===1?"":"s"} closed.` : "No other sessions were active.");
-    } catch (cause) { setError(messageFrom(cause)); }
+      setMessage(result.revoked ? (locale === "ar" ? `تم إغلاق ${result.revoked} جلسة أخرى.` : `${result.revoked} other session${result.revoked===1?"":"s"} closed.`) : copy.security.noOthers);
+    } catch (cause) { setError(messageFrom(cause,locale)); }
     finally { setBusySession(null); }
   }
 
   return <div className="securityGrid">
     <section className="accountFormCard">
-      <div className="securityHeading"><span><KeyRound size={19}/></span><div><h2>Change password</h2><p>A password change closes every existing session and issues a fresh session for this browser.</p></div></div>
+      <div className="securityHeading"><span><KeyRound size={19}/></span><div><h2>{copy.security.change}</h2><p>{copy.security.changeBody}</p></div></div>
       <form className="securityPasswordForm" onSubmit={changePassword}>
-        <label>Current password<input name="currentPassword" type="password" minLength={10} maxLength={128} autoComplete="current-password" required/></label>
-        <label>New password<input name="newPassword" type="password" minLength={12} maxLength={128} autoComplete="new-password" required/><small>Use at least 12 characters.</small></label>
-        <button className="primaryButton" disabled={passwordBusy}>{passwordBusy?"Updating…":"Update password"}</button>
+        <label>{copy.security.currentPassword}<input name="currentPassword" type="password" minLength={10} maxLength={128} autoComplete="current-password" required/></label>
+        <label>{copy.security.newPassword}<input name="newPassword" type="password" minLength={12} maxLength={128} autoComplete="new-password" required/><small>{copy.security.hint}</small></label>
+        <button className="primaryButton" disabled={passwordBusy}>{passwordBusy?copy.security.updating:copy.security.update}</button>
       </form>
     </section>
 
     <section className="accountFormCard">
-      <div className="securityHeading"><span><ShieldCheck size={19}/></span><div><h2>Active sessions</h2><p>HandMeKey stores opaque server sessions. You can close sessions you no longer trust without exposing session tokens to the browser.</p></div></div>
-      {loadingSessions?<p className="muted">Checking active sessions…</p>:<div className="sessionList">
+      <div className="securityHeading"><span><ShieldCheck size={19}/></span><div><h2>{copy.security.sessions}</h2><p>{copy.security.sessionsBody}</p></div></div>
+      {loadingSessions?<p className="muted">{copy.security.checking}</p>:<div className="sessionList">
         {sessions.map((session)=><article className="sessionRow" key={session.id}>
-          <div><strong>{session.current?"This browser":"Another active session"}</strong><span>{session.current&&<em><CheckCircle2 size={13}/> Current</em>}</span><small>Last active {formatTime(session.lastUsedAt)} · Created {formatDate(session.createdAt)} · Expires {formatDate(session.expiresAt)}</small></div>
-          {!session.current&&<button className="sessionRevoke" disabled={busySession===session.id} onClick={()=>void revokeSession(session.id)}><LogOut size={15}/>{busySession===session.id?"Closing…":"Close"}</button>}
+          <div><strong>{session.current?copy.security.thisBrowser:copy.security.other}</strong><span>{session.current&&<em><CheckCircle2 size={13}/> {copy.security.current}</em>}</span><small>{copy.security.lastActive} {formatTime(session.lastUsedAt,locale)} · {copy.security.created} {formatDate(session.createdAt,locale)} · {copy.security.expires} {formatDate(session.expiresAt,locale)}</small></div>
+          {!session.current&&<button className="sessionRevoke" disabled={busySession===session.id} onClick={()=>void revokeSession(session.id)}><LogOut size={15}/>{busySession===session.id?copy.security.closing:copy.security.close}</button>}
         </article>)}
-        {!sessions.length&&<p className="muted">No active sessions found.</p>}
+        {!sessions.length&&<p className="muted">{copy.security.none}</p>}
       </div>}
-      <button className="secondaryButton revokeOthers" disabled={busySession!==null || sessions.filter((item)=>!item.current).length===0} onClick={()=>void revokeOthers()}>Sign out other sessions</button>
+      <button className="secondaryButton revokeOthers" disabled={busySession!==null || sessions.filter((item)=>!item.current).length===0} onClick={()=>void revokeOthers()}>{copy.security.signOutOthers}</button>
     </section>
 
     {(message||error)&&<div className={error?"securityNotice error":"securityNotice"}>{error??message}</div>}
@@ -90,6 +93,6 @@ async function requestJson<T=unknown>(url:string,init?:RequestInit):Promise<T>{
   if(!response.ok||!payload||payload.error)throw new Error(payload?.error?.message||`Request failed (${response.status})`);
   return payload.data as T;
 }
-function messageFrom(value:unknown){return value instanceof Error?value.message:"An unexpected error occurred";}
-function formatDate(value:string){return new Date(value).toLocaleDateString("en",{year:"numeric",month:"short",day:"numeric"});}
-function formatTime(value:string){return new Date(value).toLocaleString("en",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}
+function messageFrom(value:unknown,locale:Locale){return value instanceof Error?value.message:(locale === "ar"?"حدث خطأ غير متوقع":"An unexpected error occurred");}
+function formatDate(value:string,locale:Locale){return new Date(value).toLocaleDateString(locale === "ar"?"ar-JO":"en",{year:"numeric",month:"short",day:"numeric"});}
+function formatTime(value:string,locale:Locale){return new Date(value).toLocaleString(locale === "ar"?"ar-JO":"en",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}

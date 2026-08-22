@@ -2,9 +2,13 @@
 
 import { LogOut } from "lucide-react";
 import { useState } from "react";
+import { dictionary, type Locale } from "@/lib/i18n";
 
-export function SignOutButton() {
+type Props = Readonly<{locale: Locale}>;
+
+export function SignOutButton({locale}: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const copy = dictionary(locale);
 
   async function signOut() {
     if (submitting) return;
@@ -23,9 +27,9 @@ export function SignOutButton() {
     className="partnerEntry"
     onClick={signOut}
     disabled={submitting}
-    title="Sign out"
+    title={copy.nav.signOut}
     style={{border: 0, background: "transparent"}}
   >
-    <LogOut size={16}/>{submitting ? "Signing out…" : "Sign out"}
+    <LogOut size={16}/>{submitting ? copy.nav.signingOut : copy.nav.signOut}
   </button>;
 }
