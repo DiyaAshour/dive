@@ -21,7 +21,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
       <div className="siteActions">
         {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>List your property</Link>}
         {user ? <>
-          <Link className="accountButton" href="/trips" title={user.email}><UserRound size={16}/><span>{accountLabel}</span></Link>
+          <Link className="accountButton" href="/account" title={`My account · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
           {!minimal && <SignOutButton/>}
         </> : <Link className="accountButton" href="/login"><UserRound size={16}/><span>Sign in</span></Link>}
       </div>

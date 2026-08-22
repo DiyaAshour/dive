@@ -17,7 +17,7 @@ type Quote = {
   availableToSell:number;
 };
 
-type Props = {hotelId:string;roomTypeId:string;ratePlanId:string;arrival:string;departure:string};
+type Props = {hotelId:string;roomTypeId:string;ratePlanId:string;arrival:string;departure:string;initialGuestName:string;initialGuestEmail:string};
 
 export function CheckoutFlow(props: Props) {
   const [quote,setQuote] = useState<Quote|null>(null);
@@ -25,14 +25,15 @@ export function CheckoutFlow(props: Props) {
   const [loading,setLoading] = useState(true);
   const [submitting,setSubmitting] = useState(false);
   const [error,setError] = useState<string|null>(null);
-  const [guestName,setGuestName] = useState("");
-  const [guestEmail,setGuestEmail] = useState("");
+  const [guestName,setGuestName] = useState(props.initialGuestName);
+  const [guestEmail,setGuestEmail] = useState(props.initialGuestEmail);
   const [paymentMode,setPaymentMode] = useState<PaymentMode|null>(null);
+  const selection = {hotelId:props.hotelId,roomTypeId:props.roomTypeId,ratePlanId:props.ratePlanId,arrival:props.arrival,departure:props.departure};
 
   useEffect(() => {
     let active = true;
     Promise.all([
-      requestJson<Quote>("/api/v1/booking-quotes", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(props)}),
+      requestJson<Quote>("/api/v1/booking-quotes", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({hotelId:props.hotelId,roomTypeId:props.roomTypeId,ratePlanId:props.ratePlanId,arrival:props.arrival,departure:props.departure})}),
       requestJson<{onlinePaymentAvailable:boolean}>("/api/v1/payment-capabilities"),
     ]).then(([nextQuote,capabilities]) => {
       if (!active) return;
@@ -56,7 +57,7 @@ export function CheckoutFlow(props: Props) {
       const hold = await requestJson<{booking:{id:string;status:string;holdExpiresAt:string|null};bookingAccessToken:string}>("/api/v1/bookings/holds", {
         method:"POST",
         headers:{"content-type":"application/json","idempotency-key":holdKey},
-        body:JSON.stringify({...props,guestName:guestName.trim(),guestEmail:guestEmail.trim(),paymentMode}),
+        body:JSON.stringify({...selection,guestName:guestName.trim(),guestEmail:guestEmail.trim(),paymentMode}),
       });
       sessionStorage.setItem(`booking-token:${hold.booking.id}`, hold.bookingAccessToken);
 
@@ -100,6 +101,7 @@ export function CheckoutFlow(props: Props) {
     <div className="panel">
       <span className="eyebrow">Live inventory checkout</span>
       <h2>Guest information</h2>
+      {(props.initialGuestName||props.initialGuestEmail)&&<p className="muted">Prefilled from your HandMeKey account. You can change the guest details for this booking.</p>}
       <div className="formGrid">
         <input value={guestName} onChange={(event)=>setGuestName(event.target.value)} placeholder="Full name" autoComplete="name"/>
         <input value={guestEmail} onChange={(event)=>setGuestEmail(event.target.value)} placeholder="Email" type="email" autoComplete="email"/>

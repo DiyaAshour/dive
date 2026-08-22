@@ -10,7 +10,7 @@ export type SessionUser = Readonly<{
 
 export type CreatedSession = Readonly<{token: string; expiresAt: Date}>;
 
-function tokenHash(token: string): string {
+export function sessionTokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
@@ -22,13 +22,13 @@ function sessionTtlDays(): number {
 export async function createSession(userId: string): Promise<CreatedSession> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + sessionTtlDays() * 86_400_000);
-  await database().session.create({data: {userId, tokenHash: tokenHash(token), expiresAt}});
+  await database().session.create({data: {userId, tokenHash: sessionTokenHash(token), expiresAt}});
   return {token, expiresAt};
 }
 
 export async function getSessionUser(token: string | null | undefined): Promise<SessionUser | null> {
   if (!token) return null;
-  const session = await database().session.findUnique({where: {tokenHash: tokenHash(token)}, include: {user: true}});
+  const session = await database().session.findUnique({where: {tokenHash: sessionTokenHash(token)}, include: {user: true}});
   if (!session) return null;
   if (session.expiresAt.getTime() <= Date.now()) {
     await database().session.delete({where: {id: session.id}}).catch(() => undefined);
@@ -40,5 +40,5 @@ export async function getSessionUser(token: string | null | undefined): Promise<
 
 export async function revokeSession(token: string | null | undefined): Promise<void> {
   if (!token) return;
-  await database().session.deleteMany({where: {tokenHash: tokenHash(token)}});
+  await database().session.deleteMany({where: {tokenHash: sessionTokenHash(token)}});
 }
