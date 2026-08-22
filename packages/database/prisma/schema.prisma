@@ -82,6 +82,26 @@ enum BookingStatus {
   EXPIRED
 }
 
+enum ArrivalStatus {
+  NOT_PROVIDED
+  EXPECTED
+  ARRIVED
+}
+
+enum GuestRequestCategory {
+  ARRIVAL
+  BEDDING
+  ACCESSIBILITY
+  TRANSPORT
+  OTHER
+}
+
+enum GuestRequestStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
 enum PaymentMode {
   PAY_NOW
   PAY_AT_HOTEL
@@ -138,6 +158,11 @@ enum BookingEventType {
   PAYMENT_CAPTURED
   PAYMENT_FAILED
   REFUND_RECORDED
+  ACCOUNT_LINKED
+  ARRIVAL_UPDATED
+  REQUEST_CREATED
+  REQUEST_STATUS_UPDATED
+  FRONT_DESK_NOTE_ADDED
 }
 
 enum RefundStatus {
@@ -160,20 +185,22 @@ enum FinancialEventType {
 }
 
 model User {
-  id                       String           @id @default(cuid())
-  email                    String           @unique
+  id                       String                  @id @default(cuid())
+  email                    String                  @unique
   displayName              String
-  platformRole             PlatformRole     @default(GUEST)
+  platformRole             PlatformRole            @default(GUEST)
   credential               Credential?
   sessions                 Session[]
   hotelMemberships         HotelMembership[]
   bookings                 Booking[]
-  submittedPropertyReviews PropertyReview[] @relation("PropertyReviewSubmitter")
-  reviewedPropertyReviews  PropertyReview[] @relation("PropertyReviewReviewer")
-  uploadedMediaObjects     MediaObject[]     @relation("MediaObjectUploader")
-  reviewedHotelDocuments   HotelDocument[]   @relation("HotelDocumentReviewer")
-  createdAt                DateTime         @default(now())
-  updatedAt                DateTime         @updatedAt
+  submittedPropertyReviews PropertyReview[]        @relation("PropertyReviewSubmitter")
+  reviewedPropertyReviews  PropertyReview[]        @relation("PropertyReviewReviewer")
+  uploadedMediaObjects     MediaObject[]            @relation("MediaObjectUploader")
+  reviewedHotelDocuments   HotelDocument[]          @relation("HotelDocumentReviewer")
+  guestRequestsCreated     BookingGuestRequest[]    @relation("GuestRequestCreator")
+  frontDeskNotesAuthored   BookingFrontDeskNote[]   @relation("FrontDeskNoteAuthor")
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 }
 
 model Credential {
@@ -456,49 +483,54 @@ model InventoryDay {
 }
 
 model Booking {
-  id                         String           @id @default(cuid())
-  reference                  String           @unique
+  id                         String                  @id @default(cuid())
+  reference                  String                  @unique
   userId                     String?
-  user                       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user                       User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
   hotelId                    String
-  hotel                      Hotel            @relation(fields: [hotelId], references: [id])
+  hotel                      Hotel                   @relation(fields: [hotelId], references: [id])
   roomTypeId                 String
-  roomType                   RoomType         @relation(fields: [roomTypeId], references: [id])
+  roomType                   RoomType                @relation(fields: [roomTypeId], references: [id])
   ratePlanId                 String
-  ratePlan                   RatePlan         @relation(fields: [ratePlanId], references: [id])
+  ratePlan                   RatePlan                @relation(fields: [ratePlanId], references: [id])
   guestName                  String
   guestEmail                 String
-  arrival                    DateTime         @db.Date
-  departure                  DateTime         @db.Date
-  status                     BookingStatus    @default(HOLD)
-  revision                   Int              @default(1)
+  arrival                    DateTime                @db.Date
+  departure                  DateTime                @db.Date
+  expectedArrivalTime        String?
+  arrivalStatus              ArrivalStatus           @default(NOT_PROVIDED)
+  status                     BookingStatus           @default(HOLD)
+  revision                   Int                     @default(1)
   paymentMode                PaymentMode
   paymentState               PaymentState
-  currency                   String           @db.Char(3)
-  baseAmount                 Decimal          @db.Decimal(12, 2)
-  serviceAmount              Decimal          @db.Decimal(12, 2)
-  taxAmount                  Decimal          @db.Decimal(12, 2)
-  totalAmount                Decimal          @db.Decimal(12, 2)
-  commissionRateSnapshot     Decimal          @db.Decimal(6, 5)
-  commissionAmount           Decimal          @db.Decimal(12, 2)
+  currency                   String                  @db.Char(3)
+  baseAmount                 Decimal                 @db.Decimal(12, 2)
+  serviceAmount              Decimal                 @db.Decimal(12, 2)
+  taxAmount                  Decimal                 @db.Decimal(12, 2)
+  totalAmount                Decimal                 @db.Decimal(12, 2)
+  commissionRateSnapshot     Decimal                 @db.Decimal(6, 5)
+  commissionAmount           Decimal                 @db.Decimal(12, 2)
   cancellationPolicySnapshot Json
-  cancellationPenaltyAmount  Decimal          @default(0) @db.Decimal(12, 2)
-  refundableAmount           Decimal?         @db.Decimal(12, 2)
-  idempotencyKey             String           @unique
+  cancellationPenaltyAmount  Decimal                 @default(0) @db.Decimal(12, 2)
+  refundableAmount           Decimal?                @db.Decimal(12, 2)
+  idempotencyKey             String                  @unique
   requestFingerprint         String
-  accessTokenHash            String           @unique
+  accessTokenHash            String                  @unique
   holdExpiresAt              DateTime?
   confirmedAt                DateTime?
   cancelledAt                DateTime?
   nights                     BookingNight[]
   events                     BookingEvent[]
+  guestRequests              BookingGuestRequest[]
+  frontDeskNotes             BookingFrontDeskNote[]
   refunds                    Refund[]
   paymentAttempts            PaymentAttempt[]
   financialEvents            FinancialEvent[]
-  createdAt                  DateTime         @default(now())
-  updatedAt                  DateTime         @updatedAt
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
 
   @@index([hotelId, arrival, departure, status])
+  @@index([hotelId, arrival, arrivalStatus, status])
   @@index([guestEmail, createdAt])
   @@index([status, holdExpiresAt])
 }
@@ -532,6 +564,34 @@ model BookingEvent {
   createdAt          DateTime         @default(now())
 
   @@index([bookingId, createdAt])
+}
+
+model BookingGuestRequest {
+  id              String               @id @default(cuid())
+  bookingId       String
+  booking         Booking              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  category        GuestRequestCategory
+  message         String               @db.Text
+  status          GuestRequestStatus   @default(OPEN)
+  createdByUserId String?
+  createdBy       User?                @relation("GuestRequestCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([bookingId, status, createdAt])
+}
+
+model BookingFrontDeskNote {
+  id           String   @id @default(cuid())
+  bookingId    String
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  authorUserId String
+  author       User     @relation("FrontDeskNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+  body         String   @db.Text
+  createdAt    DateTime @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([authorUserId, createdAt])
 }
 
 model PaymentAttempt {

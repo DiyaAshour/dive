@@ -8,7 +8,7 @@ export default async function HomePage() {
   const hotels = await listFeaturedHotels(6);
   const stay = defaultStayDates();
   return <main>
-    <header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href="/search">Search</Link><Link href="/hotel-dashboard">Hotel dashboard</Link><Link href="/admin">Admin</Link></nav></header>
+    <header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href="/search">Search</Link><Link href="/trips">My trips</Link><Link href="/hotel-dashboard">Hotel dashboard</Link><Link href="/admin">Admin</Link></nav></header>
     <section className="hero"><div className="shell heroInner"><span className="eyebrow">Stay smarter</span><h1>Book hotels with the final price visible from the start.</h1><p>Search live hotel inventory, compare rate plans and see cancellation terms before creating a booking.</p>
       <form className="searchBox" action="/search" method="get">
         <label className="field"><span>Destination</span><input name="destination" defaultValue="Amman" required aria-label="Destination"/></label>

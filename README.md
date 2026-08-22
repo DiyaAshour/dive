@@ -8,16 +8,7 @@ This project must **never** be developed through temporary patches, one-off fixe
 
 Every change must solve the underlying problem at the correct layer. If a feature exposes an architectural weakness, fix the architecture first. Do not stack another workaround on top of it.
 
-A change is not considered complete unless it is:
-
-- understandable without tribal knowledge;
-- typed and validated at system boundaries;
-- reusable where the same business rule exists;
-- tested or designed so it can be tested in isolation;
-- backward-conscious for public API contracts;
-- secure by default;
-- auditable for booking, inventory, permission, publishing, media, review, and financial mutations;
-- free of duplicated pricing, permission, payment, publishing, media, and booking rules.
+A change is not considered complete unless it is understandable without tribal knowledge, typed and validated at system boundaries, reusable where the same business rule exists, secure by default, auditable for sensitive mutations, and free of duplicated pricing, permission, payment, publishing, media, booking, and operations rules.
 
 **No quick patch is allowed to become production architecture.** If an emergency hotfix is ever required in production, it must be followed by a root-cause fix before normal feature development continues.
 
@@ -38,7 +29,7 @@ packages/
   server/              backend application services, authorization and provider boundaries
 ```
 
-Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, or booking rules.
+Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, guest-trip, reservation-operations, or booking rules.
 
 ## Phase 2 foundation
 
@@ -47,7 +38,7 @@ Future mobile and desktop apps use the same versioned HTTP API and do not reimpl
 - PostgreSQL persistence package
 - Account registration and login
 - Revocable opaque sessions for browser and future native clients
-- Platform and hotel role-based permissions
+- Platform and hotel RBAC
 - Hotel onboarding lifecycle
 - Room types, rate plans and daily calendar CRUD
 - Configurable service and tax rates per hotel
@@ -56,86 +47,88 @@ Future mobile and desktop apps use the same versioned HTTP API and do not reimpl
 ## Phase 3 booking engine
 
 - 15-minute temporary booking holds
-- Serializable database transactions for inventory mutations
-- Optimistic compare-and-decrement inventory reservation to prevent double booking
-- Full rollback when any stay date cannot be reserved
-- Explicit overbooking floor support only when the hotel enables it
-- Client idempotency keys for hold, confirmation, modification and cancellation
-- Guest booking access tokens; only token hashes are stored
-- Booking revisions and historical nightly price snapshots
-- Confirmation, modification, cancellation and expiration events
-- Automatic inventory release on cancellation and expired holds
-- Pay-now bookings cannot confirm until a payment adapter records `CAPTURED`
+- Serializable inventory transactions
+- Atomic compare-and-decrement inventory reservation
+- Full rollback when any stay date fails
+- Explicit overbooking floors only when enabled
+- Idempotency for hold, confirmation, modification and cancellation
+- Guest booking access tokens with hashes stored only
+- Booking revisions and nightly price snapshots
+- Inventory release on cancellation and hold expiry
 - Append-only financial events
-- Public booking responses use explicit allow-lists
 
 ## Phase 4 payments, policies, and live checkout
 
-- Framework-independent cancellation-policy engine in `@platform/core`
+- Framework-independent cancellation-policy engine
 - Persisted cancellation rules per rate plan
-- Payment modes (`PAY_NOW` / `PAY_AT_HOTEL`) explicitly configured per rate plan
-- Cancellation-policy snapshot stored with each booking
-- Provider-neutral `PaymentProvider` interface for payment creation and refunds
-- Payment attempts persisted for idempotency and reconciliation without card data
-- Online payment disabled when no real provider adapter is registered
-- Live booking quote endpoint with final base/service/tax/total and live inventory
+- Explicit `PAY_NOW` / `PAY_AT_HOTEL` modes
+- Cancellation-policy snapshots on bookings
+- Provider-neutral payment boundary
+- Persisted payment attempts for reconciliation
+- Live booking quote endpoint
 - Checkout creates the real atomic hold
-- Separate background worker expires stale holds through the same booking service
+- Worker expires stale holds through the booking service
 
 ### Payment rule
 
-A UI action, query string, or staff button can never mark payment as successful. `CAPTURED` is an application result recorded from a registered payment provider adapter. The platform does not store card numbers or CVV.
-
-### Financial design rule
-
-Financial history is append-only. Confirmations create financial events; modifications create delta events; cancellations create explicit adjustments when applicable; completed provider refunds create negative refund events.
+A UI action, query string, or staff button can never mark payment as successful. `CAPTURED` must be recorded from a registered payment provider adapter. Card numbers and CVV are not stored.
 
 ## Phase 5 live discovery and hotel content
 
 - PostgreSQL-backed public hotel content
-- Ordered property photos and searchable amenities
+- Searchable amenities and media-backed property photos
 - Live destination search and filters
 - Full-stay rate, restriction, capacity and inventory validation
-- Home, search and hotel pages no longer use mock hotel data
-- Final prices are calculated by shared domain logic
-- Only `ACTIVE + verified` properties are discoverable and bookable
-- Public discovery API can be reused by future native applications
+- No mock hotel data in Home/Search/Hotel pages
+- Shared pricing logic
+- Only `ACTIVE + verified` hotels are discoverable
 
 ## Phase 6 publishing and verification
 
-- Explicit `publishing:manage` permission for hotel owners and managers
-- Publishing readiness gate before review submission
-- Minimum public-content, room, rate-plan, cancellation-policy and live-calendar requirements
-- At least seven sellable dates inside the next 30 days are required for initial publishing review
-- Immutable review history records submitter, submitted revision, readiness snapshot, reviewer, decision and reason
-- Hotel `publishRevision` advances whenever review-relevant content, rates or inventory change
-- Pending reviews automatically become `STALE` when their submitted revision changes
-- Admin approval publishes exactly the revision that was reviewed
-- Rejection returns the hotel to draft with persistent review feedback
-- Platform suspension removes the hotel from discovery immediately; restoration returns it to draft and requires review again
-- Review and publishing mutations are audit logged
+- Explicit publishing permissions
+- Readiness gate before review
+- Immutable property-review history
+- `publishRevision` advances on review-relevant changes
+- Pending reviews become stale when the revision changes
+- Admin approval publishes exactly the reviewed revision
+- Rejection returns the hotel to Draft
+- Suspension removes discovery immediately
 
 ### Publishing invariant
 
-A property must never become `ACTIVE + verified` through a UI flag, direct client request, or ordinary hotel edit. Activation only occurs through the platform-admin review service after readiness and revision checks pass.
+A property must never become `ACTIVE + verified` through a UI flag, direct client request, or ordinary hotel edit. Activation only occurs through platform-admin review after readiness and revision checks pass.
 
 ## Phase 7 secure media and verification documents
 
-- One storage-backed `MediaObject` lifecycle for public hotel images and private verification documents
-- Direct client-to-storage presigned uploads; raw file bytes do not pass through JSON or the platform database
-- Provider-neutral object-storage boundary with an S3-compatible AWS Signature V4 adapter
-- Exact storage size and MIME verification plus JPEG/PNG/WebP/PDF magic-byte checks before a file becomes `READY`
-- Manual external hotel-photo URLs removed from the content contract and dashboard
-- Discovery reads only completed media-backed public photos
-- Private verification documents use short-lived admin-only signed downloads
-- Document approval/rejection is persisted and audit logged
-- Commercial Registration and Business License must be approved before property Go-Live
-- Expired pending upload intents are cleaned by the background worker
-- Media and document changes participate in the same `publishRevision` stale-review protection as the rest of the property
+- One storage-backed `MediaObject` lifecycle for public images and private verification documents
+- Direct client-to-storage presigned uploads
+- S3-compatible provider boundary
+- Exact size/MIME plus JPEG/PNG/WebP/PDF magic-byte verification before `READY`
+- No manual external photo URLs
+- Private verification documents use short-lived admin-only downloads
+- Commercial Registration and Business License required before Go-Live
+- Pending-upload cleanup in the background worker
 
 ### Media invariant
 
-A filename, extension, browser-supplied MIME type, or successful PUT is never enough to publish a file. The server must verify storage metadata and the actual file signature before marking media `READY`. Verification documents never receive public URLs.
+A filename, extension, browser-supplied MIME type, or successful PUT is never enough to publish a file. Storage metadata and actual file signature must be verified before `READY`.
+
+## Phase 8 guest trips and reservation operations
+
+- Authenticated **My Trips** sourced from bookings linked to the user account
+- Guest bookings can be linked to an account only with the booking access token and matching account email
+- Expected arrival time stored as hotel-local `HH:mm`
+- Arrival operational state is separate from commercial `BookingStatus`
+- Guest requests are durable records with `OPEN / ACKNOWLEDGED / RESOLVED` lifecycle
+- Private front-desk notes are staff-only and never returned by guest/public APIs
+- Hotel operations workspace supports Arrivals, Departures, In-house, and Daily Operations views
+- Daily reservation CSV export uses the same live booking dataset
+- Guest cancellation UI previews the stored cancellation policy before an idempotent cancel request
+- Staff operational changes create booking events and audit records
+
+### Operations invariant
+
+Do not overload the booking lifecycle with check-in state or private notes. Commercial reservation state, arrival state, guest requests, and private hotel notes remain separate concerns with separate authorization rules.
 
 ## Current pricing default
 
@@ -151,9 +144,9 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 2. Start PostgreSQL: `docker compose up -d postgres`.
 3. Install dependencies: `npm install`.
 4. Generate Prisma Client: `npm run db:generate`.
-5. Create/apply the database migration: `npm run db:migrate -- --name phase7_media_documents`.
+5. Create/apply the database migration: `npm run db:migrate -- --name phase8_guest_trip_operations`.
 6. Run the web app: `npm run dev`.
-7. In a separate process, run the background worker: `npm run worker:holds`.
+7. Run the background worker separately: `npm run worker:holds`.
 
 `PAYMENT_PROVIDER=none` and `STORAGE_PROVIDER=none` are safe defaults. Pay-now and media uploads remain unavailable until real providers are configured; the platform never simulates success.
 
@@ -167,7 +160,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 - `docs/PHASE5.md`
 - `docs/PHASE6.md`
 - `docs/PHASE7.md`
+- `docs/PHASE8.md`
 
 ## Deferred by design
 
-A concrete launch payment gateway adapter, signed payment webhooks, malware-scanning provider, OCR, chargebacks/disputes, Channel Manager, PMS integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary success flags or duplicated business logic.
+Physical room assignment, housekeeping workflow, guest chat, passport/ID capture, police/nationality reports, PMS and Channel Manager integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary flags or duplicated business logic.
