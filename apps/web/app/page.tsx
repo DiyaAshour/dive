@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { ArrowRight, BadgeCheck, BellRing, CreditCard, Search, ShieldCheck } from "lucide-react";
 import { listFeaturedHotels } from "@platform/server";
+import { CustomerHeader } from "@/components/customer-header";
 import { defaultStayDates } from "@/lib/stay-dates";
 
 export const dynamic = "force-dynamic";
@@ -7,24 +9,19 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const hotels = await listFeaturedHotels(6);
   const stay = defaultStayDates();
-  return <main>
-    <header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href="/search">Search</Link><Link href="/trips">My trips</Link><Link href="/hotel-dashboard">Hotel dashboard</Link><Link href="/admin">Admin</Link></nav></header>
-    <section className="hero"><div className="shell heroInner"><span className="eyebrow">Stay smarter</span><h1>Book hotels with the final price visible from the start.</h1><p>Search live hotel inventory, compare rate plans and see cancellation terms before creating a booking.</p>
-      <form className="searchBox" action="/search" method="get">
-        <label className="field"><span>Destination</span><input name="destination" defaultValue="Amman" required aria-label="Destination"/></label>
-        <label className="field"><span>Arrival</span><input name="arrival" type="date" defaultValue={stay.arrival} required/></label>
-        <label className="field"><span>Departure</span><input name="departure" type="date" defaultValue={stay.departure} required/></label>
-        <label className="field"><span>Adults</span><input name="adults" type="number" min="1" max="20" defaultValue="2" required/></label>
-        <input type="hidden" name="children" value="0"/>
-        <button className="primary" type="submit">Search</button>
-      </form>
-      <div className="trust"><span>✓ Verified hotels only</span><span>✓ Live inventory</span><span>✓ Final price before payment</span><span>✓ Stored cancellation policies</span></div>
-    </div></section>
-    <section className="shell section"><div className="sectionHead"><div><span className="eyebrow">Published properties</span><h2>Verified stays</h2></div><Link href={`/search?destination=Amman&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>Search live rates →</Link></div>
-      {hotels.length === 0 ? <div className="panel"><h3>No verified properties are published yet</h3><p className="muted">Hotels appear here only after they are active and verified. Draft properties are never exposed to customers.</p></div> : <div className="grid3">{hotels.map((hotel)=><Link prefetch={false} className="card" href={`/hotel/${hotel.id}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} key={hotel.id}>
-        {hotel.coverPhoto ? <img src={hotel.coverPhoto.url} alt={hotel.coverPhoto.alt ?? hotel.name}/> : <div style={{height:200,display:"grid",placeItems:"center",background:"#eef1f4"}} className="muted">No property photo</div>}
-        <div className="cardBody"><div className="meta">{hotel.starRating ? `${hotel.starRating}★ · ` : ""}{hotel.area ? `${hotel.area} · ` : ""}{hotel.city}</div><h3>{hotel.name}</h3><div className="muted">Verified property{hotel.amenities.length ? ` · ${hotel.amenities.slice(0,3).map((item)=>item.name).join(" · ")}` : ""}</div><div className="price"><span className="muted">Rates and availability</span><b>Check live stay</b></div></div>
-      </Link>)}</div>}
+  const visualHotels = hotels.filter((hotel)=>hotel.coverPhoto).slice(0,3);
+  return <main className="customerPage">
+    <CustomerHeader/>
+    <section className="premiumHero"><div className="shell premiumHeroGrid"><div className="premiumHeroCopy"><span className="heroKicker">Hotels, clearly priced</span><h1>Find the stay you want. See the price you’ll actually pay.</h1><p>Live hotel inventory, verified properties, real guest reviews and cancellation terms shown before you commit.</p><div className="heroConfidence"><span><BadgeCheck size={17}/>Verified properties</span><span><ShieldCheck size={17}/>Stored cancellation terms</span><span><CreditCard size={17}/>Final stay total</span></div></div><div className="heroVisual" aria-label="Verified properties on HandMeKey">{visualHotels.length ? visualHotels.map((hotel,index)=><Link prefetch={false} href={`/hotel/${hotel.id}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} className={`heroPhoto heroPhoto${index+1}`} key={hotel.id}><img src={hotel.coverPhoto!.url} alt={hotel.coverPhoto!.alt ?? hotel.name}/><span><small>{hotel.city}</small><strong>{hotel.name}</strong></span></Link>) : <div className="heroPlaceholder"><Search size={34}/><strong>Live stays will appear here</strong><span>Only active, verified properties with published media are shown.</span></div>}</div></div>
+      <div className="shell"><form className="premiumSearchDock" action="/search" method="get"><label><span>Where</span><input name="destination" defaultValue="Amman" required aria-label="Destination"/><small>City, area or hotel</small></label><label><span>Check in</span><input name="arrival" type="date" defaultValue={stay.arrival} required/></label><label><span>Check out</span><input name="departure" type="date" defaultValue={stay.departure} required/></label><label><span>Guests</span><input name="adults" type="number" min="1" max="20" defaultValue="2" required/><small>Adults</small></label><input type="hidden" name="children" value="0"/><button type="submit"><Search size={19}/>Search stays</button></form></div>
     </section>
+
+    <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">Live on HandMeKey</span><h2>Verified stays worth opening.</h2><p>Properties appear here only after platform review and with live hotel content.</p></div><Link href={`/search?destination=Amman&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>Explore all stays <ArrowRight size={16}/></Link></div>
+      {hotels.length === 0 ? <div className="premiumEmpty"><BadgeCheck size={28}/><h3>No verified properties are published yet</h3><p>Draft and unverified hotels stay private until they complete the publishing review.</p></div> : <div className="stayCardGrid">{hotels.map((hotel)=><Link prefetch={false} className="stayCard" href={`/hotel/${hotel.id}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} key={hotel.id}><div className="stayCardMedia">{hotel.coverPhoto ? <img src={hotel.coverPhoto.url} alt={hotel.coverPhoto.alt ?? hotel.name}/> : <div className="stayCardPlaceholder">Photo pending</div>}<span className="verifiedPill"><BadgeCheck size={14}/>Verified</span></div><div className="stayCardBody"><div className="stayCardMeta">{hotel.starRating ? `${hotel.starRating}★ · ` : ""}{hotel.area ? `${hotel.area}, ` : ""}{hotel.city}</div><h3>{hotel.name}</h3>{hotel.reviewSummary.overall !== null && <div className="stayRating"><strong>{hotel.reviewSummary.overall.toFixed(1)}</strong><span>{hotel.reviewSummary.count} verified review{hotel.reviewSummary.count===1?"":"s"}</span></div>}<div className="stayAmenities">{hotel.amenities.slice(0,3).map((item)=><span key={item.code}>{item.name}</span>)}</div><div className="stayCardCta"><span>Check live price</span><ArrowRight size={17}/></div></div></Link>)}</div>}
+    </section>
+
+    <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">Designed around the booking</span><h2>Less guessing between search and confirmation.</h2></div></div><div className="valueGrid"><article><span><CreditCard/></span><h3>Final totals first</h3><p>Service and mandatory charges stay inside the server-calculated total shown before booking.</p></article><article><span><ShieldCheck/></span><h3>Policies that travel with the booking</h3><p>The cancellation policy is snapshotted when you book so later edits cannot rewrite your original terms.</p></article><article><span><BellRing/></span><h3>Watch a real stay price</h3><p>Track the same hotel and dates. HandMeKey re-prices through live rates, inventory and active promotions.</p></article></div></div></section>
+
+    <section className="shell partnerBridge"><div><span className="eyebrow">For hotel partners</span><h2>Own the listing. Control the rate. See the conversion.</h2><p>Partner Hub combines property setup, reservations, promotions, guest messages and first-party performance intelligence.</p></div><Link href="/partner">Explore Partner Hub <ArrowRight size={18}/></Link></section>
   </main>;
 }

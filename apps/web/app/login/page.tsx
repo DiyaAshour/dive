@@ -1,6 +1,24 @@
 import Link from "next/link";
+import { BadgeCheck, BellRing, MessagesSquare } from "lucide-react";
+import { CustomerHeader } from "@/components/customer-header";
 import AuthForm from "./auth-form";
 
 export default function LoginPage() {
-  return <main className="softBg authPage"><header className="topbar shell"><Link href="/" className="brandMark">B</Link><nav><Link href="/search">Browse hotels</Link></nav></header><section className="shell authShell"><div className="authIntro"><span className="eyebrow">One account, multiple roles</span><h1>Guest, hotel partner, and admin access share one secure identity layer.</h1><p>Hotel permissions are granted separately per property, so a user can manage one hotel without receiving access to another.</p></div><AuthForm /></section></main>;
+  return <main className="authPage customerAuthPage">
+    <CustomerHeader minimal/>
+    <section className="shell authShell premiumAuthShell">
+      <div className="authIntro">
+        <span className="eyebrow">Your stay, in one place</span>
+        <h1>Book once. Keep every trip within reach.</h1>
+        <p>Sign in to manage bookings, watch hotel prices and keep your conversation with the property attached to the stay.</p>
+        <div className="authBenefits">
+          <div><BadgeCheck size={20}/><span><strong>Verified bookings</strong><small>Access confirmed stays and cancellation terms.</small></span></div>
+          <div><BellRing size={20}/><span><strong>Price alerts</strong><small>Track a stay and get notified when the live rate drops.</small></span></div>
+          <div><MessagesSquare size={20}/><span><strong>Hotel messages</strong><small>Keep guest requests and property replies with the booking.</small></span></div>
+        </div>
+        <p className="partnerAuthPrompt">Managing a hotel? <Link href="/partner/login">Go to Partner Hub →</Link></p>
+      </div>
+      <AuthForm portal="guest"/>
+    </section>
+  </main>;
 }
