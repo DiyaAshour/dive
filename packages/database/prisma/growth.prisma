@@ -1,0 +1,108 @@
+enum GrowthEventType {
+  HOTEL_IMPRESSION
+  HOTEL_VIEW
+  CHECKOUT_STARTED
+  BOOKING_HOLD_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_EXPIRED
+}
+
+enum UserNotificationKind {
+  PRICE_DROP
+  PRICE_TARGET_REACHED
+}
+
+model SearchDemandEvent {
+  id             String   @id @default(cuid())
+  destination    String
+  destinationKey String
+  arrival        DateTime @db.Date
+  departure      DateTime @db.Date
+  adults         Int
+  children       Int      @default(0)
+  resultCount    Int
+  createdAt      DateTime @default(now())
+
+  @@index([destinationKey, arrival, createdAt])
+  @@index([arrival, createdAt])
+}
+
+model GrowthEvent {
+  id         String          @id @default(cuid())
+  type       GrowthEventType
+  hotelId    String
+  roomTypeId String?
+  ratePlanId String?
+  bookingId  String?
+  arrival    DateTime?       @db.Date
+  departure  DateTime?       @db.Date
+  amount     Decimal?        @db.Decimal(12, 2)
+  currency   String?         @db.Char(3)
+  metadata   Json?
+  occurredAt DateTime        @default(now())
+
+  @@index([hotelId, type, occurredAt])
+  @@index([hotelId, arrival, occurredAt])
+  @@index([bookingId, type])
+}
+
+model SavedSearch {
+  id             String   @id @default(cuid())
+  ownerUserId    String
+  name           String
+  destination    String
+  destinationKey String
+  arrival        DateTime @db.Date
+  departure      DateTime @db.Date
+  adults         Int
+  children       Int      @default(0)
+  filters        Json
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerUserId, active, updatedAt])
+  @@index([destinationKey, arrival])
+}
+
+model PriceWatch {
+  id                String   @id @default(cuid())
+  ownerUserId       String
+  hotelId           String
+  hotelName         String
+  arrival           DateTime @db.Date
+  departure         DateTime @db.Date
+  adults            Int
+  children          Int      @default(0)
+  currency          String   @db.Char(3)
+  baselineTotal     Decimal  @db.Decimal(12, 2)
+  lastSeenTotal     Decimal  @db.Decimal(12, 2)
+  lowestSeenTotal   Decimal  @db.Decimal(12, 2)
+  lastNotifiedTotal Decimal  @db.Decimal(12, 2)
+  targetTotal       Decimal? @db.Decimal(12, 2)
+  active            Boolean  @default(true)
+  lastCheckedAt     DateTime?
+  triggeredAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([ownerUserId, hotelId, arrival, departure, adults, children])
+  @@index([ownerUserId, active, updatedAt])
+  @@index([active, lastCheckedAt])
+}
+
+model UserNotification {
+  id        String               @id @default(cuid())
+  userId    String
+  kind      UserNotificationKind
+  title     String
+  body      String               @db.Text
+  link      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, createdAt])
+}

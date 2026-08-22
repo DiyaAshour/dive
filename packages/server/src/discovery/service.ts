@@ -9,6 +9,7 @@ import {
 import type { DiscoverySearchInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { notFound } from "../errors";
+import { captureHotelView, captureSearchDemand } from "../growth/analytics";
 import { promotionBaseRate, selectBestPromotion, type PromotionCandidate } from "../promotions/engine";
 
 type StayInput = Readonly<{arrival: string; departure: string; adults: number; children: number}>;
@@ -169,10 +170,11 @@ export async function searchHotels(input: DiscoverySearchInput) {
   });
 
   results.sort((a, b) => compareResults(a, b, input.sort));
+  await captureSearchDemand(input, results.map((result) => result.id));
   return {query: input, nights: stay.nights.length, count: results.length, results};
 }
 
-export async function getPublicHotelDetails(hotelId: string, stayInput: StayInput) {
+export async function getPublicHotelDetails(hotelId: string, stayInput: StayInput, options: Readonly<{trackView?: boolean}> = {}) {
   const stay = buildStayDates(stayInput.arrival, stayInput.departure);
   const dates = stay.nights.map(parseDateOnly);
   const rawHotel = await database().hotel.findFirst({
@@ -200,6 +202,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
   const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
   const offers = buildOffers(hotel, stay, stayInput).sort((a, b) => a.total - b.total);
   const reviewMap = await reviewSummaries([hotelId]);
+  if (options.trackView !== false) await captureHotelView(hotelId, {arrival: stay.arrival, departure: stay.departure});
   return {
     id: hotel.id,
     slug: hotel.slug,
