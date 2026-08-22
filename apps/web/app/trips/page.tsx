@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { listMyTrips } from "@platform/server";
+import { CustomerHeader } from "@/components/customer-header";
 import { currentUser } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function TripsPage() {
   ] as const;
 
   return <main className="softBg">
-    <header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href="/search">Search</Link><Link href="/trips">My trips</Link></nav></header>
+    <CustomerHeader/>
     <section className="shell section">
       <div className="sectionHeading"><div><span className="eyebrow">Guest account</span><h1>My trips</h1><p className="muted">Reservations linked to {user.email}. Guest bookings can be linked only with their booking access token.</p></div></div>
       {trips.length === 0 && <div className="panel"><h3>No trips linked yet</h3><p className="muted">Book while signed in, or open an existing reservation in the browser that created it and link it to this account.</p><Link className="primaryButton" href="/search">Find a hotel</Link></div>}

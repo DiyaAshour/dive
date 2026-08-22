@@ -1,9 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { BadgeCheck, BellRing, MessagesSquare } from "lucide-react";
 import { CustomerHeader } from "@/components/customer-header";
+import { currentUser } from "@/lib/server-session";
 import AuthForm from "./auth-form";
 
-export default function LoginPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage() {
+  const user = await currentUser();
+  if (user) redirect("/trips");
+
   return <main className="authPage customerAuthPage">
     <CustomerHeader minimal/>
     <section className="shell authShell premiumAuthShell">
