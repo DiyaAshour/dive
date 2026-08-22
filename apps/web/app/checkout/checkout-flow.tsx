@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { dictionary, type Locale } from "@/lib/i18n";
 
 type PaymentMode = "PAY_NOW" | "PAY_AT_HOTEL";
 type Quote = {
@@ -17,9 +18,11 @@ type Quote = {
   availableToSell:number;
 };
 
-type Props = {hotelId:string;roomTypeId:string;ratePlanId:string;arrival:string;departure:string;initialGuestName:string;initialGuestEmail:string};
+type Props = {locale:Locale;hotelId:string;roomTypeId:string;ratePlanId:string;arrival:string;departure:string;initialGuestName:string;initialGuestEmail:string};
 
 export function CheckoutFlow(props: Props) {
+  const copy=dictionary(props.locale).checkout;
+  const ar=props.locale==="ar";
   const [quote,setQuote] = useState<Quote|null>(null);
   const [onlinePaymentAvailable,setOnlinePaymentAvailable] = useState(false);
   const [loading,setLoading] = useState(true);
@@ -42,9 +45,9 @@ export function CheckoutFlow(props: Props) {
       const modes = nextQuote.allowedPaymentModes;
       if (modes.includes("PAY_AT_HOTEL")) setPaymentMode("PAY_AT_HOTEL");
       else if (modes.includes("PAY_NOW") && capabilities.onlinePaymentAvailable) setPaymentMode("PAY_NOW");
-    }).catch((cause) => active && setError(messageFrom(cause))).finally(() => active && setLoading(false));
+    }).catch((cause) => active && setError(messageFrom(cause,props.locale))).finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [props.hotelId,props.roomTypeId,props.ratePlanId,props.arrival,props.departure]);
+  }, [props.hotelId,props.roomTypeId,props.ratePlanId,props.arrival,props.departure,props.locale]);
 
   const canSubmit = useMemo(() => Boolean(quote && paymentMode && guestName.trim().length >= 2 && guestEmail.includes("@") && !submitting), [quote,paymentMode,guestName,guestEmail,submitting]);
 
@@ -81,16 +84,16 @@ export function CheckoutFlow(props: Props) {
         window.location.assign(`/booking/${hold.booking.id}`);
         return;
       }
-      setError("Payment was started but requires a provider action before the booking can be confirmed.");
+      setError(copy.paymentAction);
     } catch (cause) {
-      setError(messageFrom(cause));
+      setError(messageFrom(cause,props.locale));
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) return <div className="panel"><strong>Checking live rate and availability…</strong></div>;
-  if (error && !quote) return <div className="panel"><h3>We could not load this stay</h3><p className="danger">{error}</p></div>;
+  if (loading) return <div className="panel"><strong>{copy.checking}</strong></div>;
+  if (error && !quote) return <div className="panel"><h3>{copy.loadFail}</h3><p className="danger">{error}</p></div>;
   if (!quote) return null;
 
   const payNowAllowed = quote.allowedPaymentModes.includes("PAY_NOW");
@@ -99,37 +102,37 @@ export function CheckoutFlow(props: Props) {
 
   return <div className="checkout">
     <div className="panel">
-      <span className="eyebrow">Live inventory checkout</span>
-      <h2>Guest information</h2>
-      {(props.initialGuestName||props.initialGuestEmail)&&<p className="muted">Prefilled from your HandMeKey account. You can change the guest details for this booking.</p>}
+      <span className="eyebrow">{ar?"حجز من المخزون المباشر":"Live inventory checkout"}</span>
+      <h2>{copy.guestInfo}</h2>
+      {(props.initialGuestName||props.initialGuestEmail)&&<p className="muted">{ar?"تمت تعبئة البيانات من حساب HandMeKey ويمكنك تعديل بيانات الضيف لهذا الحجز.":"Prefilled from your HandMeKey account. You can change the guest details for this booking."}</p>}
       <div className="formGrid">
-        <input value={guestName} onChange={(event)=>setGuestName(event.target.value)} placeholder="Full name" autoComplete="name"/>
-        <input value={guestEmail} onChange={(event)=>setGuestEmail(event.target.value)} placeholder="Email" type="email" autoComplete="email"/>
+        <input value={guestName} onChange={(event)=>setGuestName(event.target.value)} placeholder={copy.fullName} autoComplete="name"/>
+        <input value={guestEmail} onChange={(event)=>setGuestEmail(event.target.value)} placeholder={copy.email} type="email" autoComplete="email"/>
       </div>
-      <h3 style={{marginTop:28}}>Payment option</h3>
-      {payAtHotelAllowed && <label style={{display:"block",marginBottom:12}}><input type="radio" name="payment" checked={paymentMode==="PAY_AT_HOTEL"} onChange={()=>setPaymentMode("PAY_AT_HOTEL")}/> Pay at hotel</label>}
-      {payNowAllowed && <label style={{display:"block",marginBottom:12,opacity:onlinePaymentAvailable?1:.55}}><input type="radio" name="payment" disabled={!onlinePaymentAvailable} checked={paymentMode==="PAY_NOW"} onChange={()=>setPaymentMode("PAY_NOW")}/> Pay now {onlinePaymentAvailable?"":"— online gateway not configured"}</label>}
-      {noUsablePayment && <p className="danger">This rate currently requires online payment, but no payment provider is configured for this deployment.</p>}
+      <h3 style={{marginTop:28}}>{copy.payment}</h3>
+      {payAtHotelAllowed && <label style={{display:"block",marginBottom:12}}><input type="radio" name="payment" checked={paymentMode==="PAY_AT_HOTEL"} onChange={()=>setPaymentMode("PAY_AT_HOTEL")}/> {copy.payHotel}</label>}
+      {payNowAllowed && <label style={{display:"block",marginBottom:12,opacity:onlinePaymentAvailable?1:.55}}><input type="radio" name="payment" disabled={!onlinePaymentAvailable} checked={paymentMode==="PAY_NOW"} onChange={()=>setPaymentMode("PAY_NOW")}/> {copy.payNow} {onlinePaymentAvailable?"":`— ${copy.gatewayMissing}`}</label>}
+      {noUsablePayment && <p className="danger">{copy.noPayment}</p>}
       {error && <p className="danger">{error}</p>}
-      <button className="primary" style={{width:"100%",marginTop:22}} disabled={!canSubmit || noUsablePayment} onClick={submit}>{submitting?"Securing your room…":"Reserve and continue"}</button>
-      <p className="muted">Your room is reserved with a temporary server-side hold. The final rate is revalidated before inventory is reduced.</p>
+      <button className="primary" style={{width:"100%",marginTop:22}} disabled={!canSubmit || noUsablePayment} onClick={submit}>{submitting?copy.securing:copy.reserve}</button>
+      <p className="muted">{copy.holdNote}</p>
     </div>
     <aside className="panel">
-      <span className="eyebrow">Your stay</span>
+      <span className="eyebrow">{copy.yourStay}</span>
       <h2>{quote.hotel.name}</h2>
       <p>{quote.roomType.name} · {quote.ratePlan.name}</p>
-      <p className="muted">{quote.arrival} — {quote.departure} · {quote.nights} night{quote.nights===1?"":"s"}</p>
-      {quote.promotion && <div className="alertCard" style={{marginBottom:14}}><div><strong>{quote.promotion.name}</strong><p>{quote.promotion.discountPercent}% off the room base is already included below.</p></div></div>}
-      <div className="breakdown"><span>Room base</span><strong>{money(quote.amounts.base,quote.hotel.currency)}</strong></div>
-      <div className="breakdown"><span>Employee service</span><strong>{money(quote.amounts.service,quote.hotel.currency)}</strong></div>
-      <div className="breakdown"><span>Tax / mandatory charges</span><strong>{money(quote.amounts.tax,quote.hotel.currency)}</strong></div>
-      <div className="breakdown total"><span>Final total</span><strong>{money(quote.amounts.total,quote.hotel.currency)}</strong></div>
+      <p className="muted">{quote.arrival} — {quote.departure} · {quote.nights} {ar?(quote.nights===1?"ليلة":"ليالٍ"):`night${quote.nights===1?"":"s"}`}</p>
+      {quote.promotion && <div className="alertCard" style={{marginBottom:14}}><div><strong>{quote.promotion.name}</strong><p>{quote.promotion.discountPercent}% {copy.offIncluded}</p></div></div>}
+      <div className="breakdown"><span>{copy.roomBase}</span><strong>{money(quote.amounts.base,quote.hotel.currency)}</strong></div>
+      <div className="breakdown"><span>{copy.service}</span><strong>{money(quote.amounts.service,quote.hotel.currency)}</strong></div>
+      <div className="breakdown"><span>{copy.tax}</span><strong>{money(quote.amounts.tax,quote.hotel.currency)}</strong></div>
+      <div className="breakdown total"><span>{copy.final}</span><strong>{money(quote.amounts.total,quote.hotel.currency)}</strong></div>
       <div style={{marginTop:22,paddingTop:18,borderTop:"1px solid var(--line)"}}>
-        <strong>Cancellation · {quote.cancellationPolicy.name}</strong>
-        {quote.cancellationPolicy.rules.map((rule)=><p className="muted" key={rule.minimumDaysBeforeArrival}>{policyLine(rule)}</p>)}
-        <p className="muted">No-show: {penaltyLabel(quote.cancellationPolicy.noShowPenaltyType,quote.cancellationPolicy.noShowPenaltyValue)}</p>
+        <strong>{copy.cancellation} · {quote.cancellationPolicy.name}</strong>
+        {quote.cancellationPolicy.rules.map((rule)=><p className="muted" key={rule.minimumDaysBeforeArrival}>{policyLine(rule,props.locale)}</p>)}
+        <p className="muted">{copy.noShow}: {penaltyLabel(quote.cancellationPolicy.noShowPenaltyType,quote.cancellationPolicy.noShowPenaltyValue,props.locale)}</p>
       </div>
-      <p className="muted">Live sellable inventory: {quote.availableToSell}</p>
+      <p className="muted">{copy.inventory}: {quote.availableToSell}</p>
     </aside>
   </div>;
 }
@@ -141,14 +144,15 @@ async function requestJson<T=unknown>(url:string, init?:RequestInit):Promise<T> 
   return payload.data as T;
 }
 
-function messageFrom(value:unknown):string { return value instanceof Error ? value.message : "An unexpected error occurred"; }
+function messageFrom(value:unknown,locale:Locale):string { return value instanceof Error ? value.message : (locale==="ar"?"حدث خطأ غير متوقع":"An unexpected error occurred"); }
 function money(value:number,currency:string):string { return `${value.toFixed(2)} ${currency}`; }
-function policyLine(rule:{minimumDaysBeforeArrival:number;penaltyType:string;penaltyValue?:number|null}):string { return `${rule.minimumDaysBeforeArrival}+ day${rule.minimumDaysBeforeArrival===1?"":"s"} before arrival: ${penaltyLabel(rule.penaltyType,rule.penaltyValue)}`; }
-function penaltyLabel(type:string,value?:number|null):string {
-  if(type==="NONE") return "free cancellation";
-  if(type==="FIRST_NIGHT") return "first-night penalty";
-  if(type==="FULL_STAY") return "full-stay penalty";
-  if(type==="PERCENTAGE") return `${Math.round((value??0)*100)}% penalty`;
-  if(type==="FIXED_AMOUNT") return `${Number(value??0).toFixed(2)} fixed penalty`;
+function policyLine(rule:{minimumDaysBeforeArrival:number;penaltyType:string;penaltyValue?:number|null},locale:Locale):string { return locale==="ar"?`${rule.minimumDaysBeforeArrival}+ يوم قبل الوصول: ${penaltyLabel(rule.penaltyType,rule.penaltyValue,locale)}`:`${rule.minimumDaysBeforeArrival}+ day${rule.minimumDaysBeforeArrival===1?"":"s"} before arrival: ${penaltyLabel(rule.penaltyType,rule.penaltyValue,locale)}`; }
+function penaltyLabel(type:string,value:number|null|undefined,locale:Locale):string {
+  const ar=locale==="ar";
+  if(type==="NONE") return ar?"إلغاء مجاني":"free cancellation";
+  if(type==="FIRST_NIGHT") return ar?"رسوم الليلة الأولى":"first-night penalty";
+  if(type==="FULL_STAY") return ar?"رسوم كامل الإقامة":"full-stay penalty";
+  if(type==="PERCENTAGE") return ar?`رسوم ${Math.round((value??0)*100)}%`:`${Math.round((value??0)*100)}% penalty`;
+  if(type==="FIXED_AMOUNT") return ar?`رسوم ثابتة ${Number(value??0).toFixed(2)}`:`${Number(value??0).toFixed(2)} fixed penalty`;
   return type;
 }

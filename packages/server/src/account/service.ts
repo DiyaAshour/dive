@@ -1,4 +1,4 @@
-import type { ChangePasswordRequest, UpdateAccountProfileRequest } from "@platform/contracts";
+import type { ChangePasswordRequest, LocalePreferenceRequest, UpdateAccountProfileRequest } from "@platform/contracts";
 import { database } from "@platform/database";
 import { ApplicationError } from "../errors";
 import { hashPassword, verifyPassword } from "../auth/password";
@@ -92,4 +92,20 @@ export async function changeAccountPassword(userId: string, input: ChangePasswor
   ]);
 
   return createSession(userId);
+}
+
+export async function getTravelerLocale(userId: string): Promise<"en" | "ar" | null> {
+  const preference = await database().travelerPreference.findUnique({where: {userId}, select: {locale: true}});
+  if (!preference) return null;
+  return preference.locale === "AR" ? "ar" : "en";
+}
+
+export async function setTravelerLocale(userId: string, input: LocalePreferenceRequest): Promise<{locale: "en" | "ar"}> {
+  const storedLocale = input.locale === "ar" ? "AR" : "EN";
+  await database().travelerPreference.upsert({
+    where: {userId},
+    create: {userId, locale: storedLocale},
+    update: {locale: storedLocale},
+  });
+  return {locale: input.locale};
 }

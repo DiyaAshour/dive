@@ -1,0 +1,10 @@
+.languageSwitcher{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:8px 10px;background:rgba(255,255,255,.78);color:var(--ink);font-size:13px;font-weight:700}.languageSwitcher select{appearance:none;border:0;background:transparent;color:inherit;font:inherit;outline:none;cursor:pointer;padding:0 2px}.languageSwitcher.compact{padding:7px 9px}.languageSwitcher:has(select:disabled){opacity:.65}.accountLanguageCard{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff}.accountLanguageCard h3{margin:0 0 6px}.accountLanguageCard p{margin:0;color:var(--muted);max-width:650px}.accountLanguageCard .languageSwitcher{flex:none}
+
+[dir="rtl"] body{text-align:right}
+[dir="rtl"] .backLink svg,[dir="rtl"] .premiumSectionHead>a svg,[dir="rtl"] .stayCardCta svg,[dir="rtl"] .partnerBridge>a svg{transform:rotate(180deg)}
+[dir="rtl"] input,[dir="rtl"] select,[dir="rtl"] textarea{text-align:right}
+[dir="rtl"] input[type="number"],[dir="rtl"] input[type="date"],[dir="rtl"] input[type="email"]{direction:ltr;text-align:right}
+[dir="rtl"] .premiumResultPrice,[dir="rtl"] .ratePrice{text-align:left}
+[dir="rtl"] .hotelRatingSummary,[dir="rtl"] .reviewCardTop{direction:rtl}
+[dir="rtl"] .sessionRow small{direction:rtl}
+@media(max-width:760px){.accountLanguageCard{align-items:flex-start;flex-direction:column}.languageSwitcher{max-width:100%}}

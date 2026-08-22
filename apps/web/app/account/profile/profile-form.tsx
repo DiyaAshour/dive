@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { dictionary, type Locale } from "@/lib/i18n";
 
-type Props = Readonly<{displayName:string;email:string}>;
+type Props = Readonly<{displayName:string;email:string;locale:Locale}>;
 
-export function ProfileForm({displayName:initialName,email}: Props) {
+export function ProfileForm({displayName:initialName,email,locale}: Props) {
   const router = useRouter();
+  const copy = dictionary(locale);
   const [displayName,setDisplayName] = useState(initialName);
   const [saving,setSaving] = useState(false);
   const [message,setMessage] = useState<string|null>(null);
@@ -19,23 +21,23 @@ export function ProfileForm({displayName:initialName,email}: Props) {
     try {
       const response = await fetch("/api/v1/me/profile",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({displayName})});
       const payload = await response.json().catch(()=>null);
-      if(!response.ok) throw new Error(payload?.error?.message ?? "Unable to save profile");
-      setMessage("Personal details saved.");
+      if(!response.ok) throw new Error(payload?.error?.message ?? (locale === "ar" ? "تعذر حفظ الملف الشخصي" : "Unable to save profile"));
+      setMessage(copy.profile.saved);
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save profile");
+      setError(cause instanceof Error ? cause.message : (locale === "ar" ? "تعذر حفظ الملف الشخصي" : "Unable to save profile"));
     } finally { setSaving(false); }
   }
 
   return <form className="accountFormCard" onSubmit={save}>
     <div className="accountFormSection">
-      <label>Full name<input value={displayName} onChange={(event)=>setDisplayName(event.target.value)} minLength={2} maxLength={100} autoComplete="name" required/></label>
-      <label>Sign-in email<input value={email} type="email" readOnly aria-readonly="true"/></label>
+      <label>{copy.profile.fullName}<input value={displayName} onChange={(event)=>setDisplayName(event.target.value)} minLength={2} maxLength={100} autoComplete="name" required/></label>
+      <label>{copy.profile.email}<input value={email} type="email" readOnly aria-readonly="true"/></label>
     </div>
-    <div className="accountInfoNote"><strong>Email is protected.</strong><p>HandMeKey will only allow email changes after a verified-email delivery flow is connected. We do not silently replace the identity used to access bookings.</p></div>
-    <div className="accountInfoNote"><strong>Smarter checkout.</strong><p>Your account name and sign-in email are now prefilled when you book while signed in, but you can still change the guest name on an individual reservation.</p></div>
+    <div className="accountInfoNote"><strong>{copy.profile.protected}</strong><p>{copy.profile.protectedBody}</p></div>
+    <div className="accountInfoNote"><strong>{copy.profile.smart}</strong><p>{copy.profile.smartBody}</p></div>
     {message&&<p className="accountSuccess">{message}</p>}
     {error&&<p className="formError">{error}</p>}
-    <div className="accountFormActions"><button className="primaryButton" disabled={saving}>{saving?"Saving…":"Save changes"}</button></div>
+    <div className="accountFormActions"><button className="primaryButton" disabled={saving}>{saving?copy.profile.saving:copy.profile.save}</button></div>
   </form>;
 }

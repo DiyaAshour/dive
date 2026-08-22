@@ -1,11 +1,13 @@
-import Link from "next/link";
+import { CustomerHeader } from "@/components/customer-header";
+import { requestLocale } from "@/lib/request-locale";
 import { BookingStatus } from "./booking-status";
 import { GuestTools } from "./guest-tools";
 
 export default async function BookingPage({params}:{params:Promise<{bookingId:string}>}) {
-  const {bookingId}=await params;
+  const [{bookingId},locale]=await Promise.all([params,requestLocale()]);
+  const ar=locale==="ar";
   return <main className="soft">
-    <header className="shell topbar"><Link href="/" className="brand">B</Link><nav><Link href="/trips">My trips</Link><Link href="/search">Search</Link></nav></header>
-    <section className="shell section"><div className="sectionHead"><div><span className="eyebrow">Reservation center</span><h2>Your booking</h2></div></div><BookingStatus bookingId={bookingId}/><GuestTools bookingId={bookingId}/></section>
+    <CustomerHeader/>
+    <section className="shell section"><div className="sectionHead"><div><span className="eyebrow">{ar?"مركز الحجز":"Reservation center"}</span><h2>{ar?"حجزك":"Your booking"}</h2></div></div><BookingStatus bookingId={bookingId} locale={locale}/><GuestTools bookingId={bookingId} locale={locale}/></section>
   </main>;
 }
