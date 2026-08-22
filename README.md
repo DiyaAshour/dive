@@ -8,7 +8,7 @@ This project must **never** be developed through temporary patches, one-off fixe
 
 Every change must solve the underlying problem at the correct layer. If a feature exposes an architectural weakness, fix the architecture first. Do not stack another workaround on top of it.
 
-A change is not considered complete unless it is understandable without tribal knowledge, typed and validated at system boundaries, reusable where the same business rule exists, secure by default, auditable for sensitive mutations, and free of duplicated pricing, permission, payment, publishing, media, booking, operations, promotion, review, and messaging rules.
+A change is not considered complete unless it is understandable without tribal knowledge, typed and validated at system boundaries, reusable where the same business rule exists, secure by default, auditable for sensitive mutations, and free of duplicated pricing, permission, payment, publishing, media, booking, operations, promotion, review, messaging, growth, analytics, or alerting rules.
 
 **No quick patch is allowed to become production architecture.** If an emergency hotfix is ever required in production, it must be followed by a root-cause fix before normal feature development continues.
 
@@ -29,7 +29,7 @@ packages/
   server/              backend application services, authorization and provider boundaries
 ```
 
-Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, guest-trip, reservation-operations, promotion, review, messaging, or booking rules.
+Future mobile and desktop apps use the same versioned HTTP API and do not reimplement pricing, permissions, inventory, cancellation, payment, publishing, media, guest-trip, reservation-operations, promotion, review, messaging, growth-intelligence, or booking rules.
 
 ## Phase 2 foundation
 
@@ -147,6 +147,24 @@ Do not overload the booking lifecycle with check-in state or private notes. Comm
 
 The displayed deal, quoted deal, and booked deal must be derived from the same server-side promotion rule. Reviews require a completed accessible booking, and booking messages require booking access or property-scoped hotel permissions.
 
+## Phase 10 growth intelligence
+
+- First-party search demand and hotel-impression telemetry
+- Server-side hotel-view and checkout-start measurement
+- Hotel conversion funnel: impression → view → checkout → hold → confirmed booking
+- Confirmed booking counts and value remain authoritative booking-domain data, not analytics reconstruction
+- Market demand by future arrival date for the hotel's city
+- Deterministic opportunity signals for low view rate, low checkout rate, checkout abandonment, hold expiry, and strong demand dates
+- Authenticated saved searches
+- Live hotel price watches using the same promotion, service, tax, restriction, inventory, and pricing logic as booking
+- Durable in-app price-drop and target-price notifications
+- Background price-watch evaluation in the existing worker
+- Separate Prisma growth schema file loaded through the schema folder
+
+### Growth-intelligence invariant
+
+Analytics must never invent demand, ratings, traffic, or conversion. Price watches must re-price through the live booking rules, background checks must not inflate views, and analytics write failure must never block search or booking. Deterministic signals are not presented as AI.
+
 ## Current pricing default
 
 - base room rate × **1.156** = final guest price;
@@ -161,7 +179,7 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 2. Start PostgreSQL: `docker compose up -d postgres`.
 3. Install dependencies: `npm install`.
 4. Generate Prisma Client: `npm run db:generate`.
-5. Create/apply the database migration: `npm run db:migrate -- --name phase9_reviews_promotions_messaging`.
+5. Create/apply the database migration: `npm run db:migrate -- --name phase10_growth_intelligence`.
 6. Run the web app: `npm run dev`.
 7. Run the background worker separately: `npm run worker:holds`.
 
@@ -179,7 +197,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 - `docs/PHASE7.md`
 - `docs/PHASE8.md`
 - `docs/PHASE9.md`
+- `docs/PHASE10.md`
 
 ## Deferred by design
 
-Physical room assignment, housekeeping workflow, passport/ID capture, police/nationality reports, PMS and Channel Manager integrations, specialized search, dynamic pricing, rate intelligence, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary flags or duplicated business logic.
+Physical room assignment, housekeeping workflow, passport/ID capture, police/nationality reports, PMS and Channel Manager integrations, specialized search, dynamic pricing, competitor scraping, loyalty, and AI revenue features remain separate future layers. None should be simulated with temporary flags or duplicated business logic.

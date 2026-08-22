@@ -22,6 +22,8 @@ export * from "./reviews/management";
 export * from "./promotions/engine";
 export * from "./promotions/service";
 export * from "./messaging/service";
+export * from "./growth/analytics";
+export * from "./growth/watches";
 export * from "./payments/provider";
 export * from "./payments/registry";
 export * from "./payments/service";
