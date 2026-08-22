@@ -1,6 +1,7 @@
 export * from "./errors";
 export * from "./auth/service";
 export * from "./auth/session";
+export * from "./account/service";
 export * from "./admin/authorization";
 export * from "./hotels/authorization";
 export * from "./hotels/service";

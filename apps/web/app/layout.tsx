@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./phase2.css";
+import "./account.css";
 
 export const metadata: Metadata = {
   title: {default: "HandMeKey — Hotels, clearly priced", template: "%s · HandMeKey"},
