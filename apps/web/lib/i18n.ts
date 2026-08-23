@@ -22,7 +22,7 @@ const en = {
     where: "Where", whereHint: "City, area or hotel", checkIn: "Check in", checkOut: "Check out", guests: "Guests", adults: "Adults", search: "Search stays",
     liveEyebrow: "Live on HandMeKey", liveTitle: "Verified stays worth opening.", liveIntro: "Properties appear here only after platform review and with live hotel content.", explore: "Explore all stays",
     noHotels: "No verified properties are published yet", noHotelsSub: "Draft and unverified hotels stay private until they complete the publishing review.",
-    photoPending: "Photo pending", verifiedLabel: "Verified", review: "verified review", reviews: "verified reviews", checkPrice: "Check live price",
+    photoPending: "Photo pending", verifiedLabel: "Verified", demoProperty: "Demo property", review: "verified review", reviews: "verified reviews", checkPrice: "Check live price",
     valueEyebrow: "Designed around the booking", valueTitle: "Less guessing between search and confirmation.",
     finalTitle: "Final totals first", finalBody: "Service and mandatory charges stay inside the server-calculated total shown before booking.",
     policyTitle: "Policies that travel with the booking", policyBody: "The cancellation policy is snapshotted when you book so later edits cannot rewrite your original terms.",
@@ -34,10 +34,10 @@ const en = {
     filter: "Filter your stay", nightly: "Nightly total", min: "Min", max: "Max", stars: "Star rating", anyStars: "Any stars", payment: "Payment", anyPayment: "Any payment mode", payHotel: "Pay at hotel", payNow: "Pay now", sort: "Sort by", recommended: "Recommended", lowPrice: "Lowest price", highPrice: "Highest price", highStars: "Highest stars", freeCancel: "Free cancellation now", facilities: "Facilities", apply: "Apply filters",
     live: "Live availability", verifiedProperty: "verified property", verifiedProperties: "verified properties", for: "for", save: "Save search",
     badTitle: "Search details need attention", invalid: "Invalid search", noneTitle: "No live offers match this stay", noneBody: "Try different dates, guest counts or fewer filters. Incomplete rates and unavailable inventory are intentionally excluded.",
-    photoPending: "Photo pending", verified: "Verified", review: "verified review", reviews: "verified reviews", off: "off", freeNow: "Free cancellation right now", penalty: "Cancellation penalty may apply", only: "Only", roomLeft: "room left for these dates", roomsLeft: "rooms left for these dates", finalTotal: "Final stay total", average: "average / night", seeRooms: "See rooms"
+    photoPending: "Photo pending", verified: "Verified", demoProperty: "demo property", demoProperties: "demo properties", review: "verified review", reviews: "verified reviews", off: "off", freeNow: "Free cancellation right now", penalty: "Cancellation penalty may apply", only: "Only", roomLeft: "room left for these dates", roomsLeft: "rooms left for these dates", finalTotal: "Final stay total", average: "average / night", seeRooms: "See rooms"
   },
   hotel: {
-    back: "Back to {city} stays", verified: "Verified property", star: "star", guestSignal: "Excellent guest signal", stayReview: "verified stay review", stayReviews: "verified stay reviews", checkIn: "Check-in", checkOut: "Check-out", propertyPolicy: "Property policy",
+    back: "Back to {city} stays", verified: "Verified property", demoProperty: "Demo property", star: "star", guestSignal: "Excellent guest signal", stayReview: "verified stay review", stayReviews: "verified stay reviews", checkIn: "Check-in", checkOut: "Check-out", propertyPolicy: "Property policy",
     noPhotos: "Property photos are not published yet.", finalPrice: "Final price before booking", liveInventory: "Live room inventory", verifiedReviews: "Verified-stay reviews only",
     property: "The property", about: "About {hotel}", noDescription: "The property has not published a description yet.", facilities: "Facilities", noFacilities: "Facilities have not been published yet.",
     yourStay: "Your stay", chooseDates: "Choose dates and see the live total.", adults: "Adults", children: "Children", availability: "Check availability", invalidStay: "The requested stay was invalid, so HandMeKey loaded the next default dates.",
@@ -78,7 +78,7 @@ const ar: typeof en = {
     where: "الوجهة", whereHint: "مدينة أو منطقة أو فندق", checkIn: "تسجيل الوصول", checkOut: "تسجيل المغادرة", guests: "الضيوف", adults: "البالغون", search: "ابحث عن إقامة",
     liveEyebrow: "متاح الآن على HandMeKey", liveTitle: "إقامات موثقة تستحق المشاهدة.", liveIntro: "لا تظهر المنشأة هنا إلا بعد مراجعتها واعتماد محتواها على المنصة.", explore: "استعرض كل الإقامات",
     noHotels: "لا توجد منشآت موثقة منشورة بعد", noHotelsSub: "تبقى المنشآت غير المكتملة أو غير الموثقة خاصة حتى تجتاز مراجعة النشر.",
-    photoPending: "الصورة قيد الإضافة", verifiedLabel: "موثق", review: "تقييم موثق", reviews: "تقييمات موثقة", checkPrice: "اعرض السعر المباشر",
+    photoPending: "الصورة قيد الإضافة", verifiedLabel: "موثق", demoProperty: "منشأة تجريبية", review: "تقييم موثق", reviews: "تقييمات موثقة", checkPrice: "اعرض السعر المباشر",
     valueEyebrow: "تجربة مصممة حول الحجز", valueTitle: "وضوح أكبر من البحث حتى التأكيد.",
     finalTitle: "السعر النهائي أولًا", finalBody: "الخدمة والرسوم الإلزامية تدخل ضمن الإجمالي المحسوب من الخادم قبل الحجز.",
     policyTitle: "شروط محفوظة مع الحجز", policyBody: "نحفظ نسخة من سياسة الإلغاء وقت الحجز حتى لا تغيّر التعديلات اللاحقة شروطك الأصلية.",
@@ -90,10 +90,10 @@ const ar: typeof en = {
     filter: "تصفية النتائج", nightly: "إجمالي الليلة", min: "الأدنى", max: "الأعلى", stars: "تصنيف النجوم", anyStars: "أي تصنيف", payment: "الدفع", anyPayment: "أي طريقة دفع", payHotel: "الدفع في الفندق", payNow: "الدفع الآن", sort: "الترتيب", recommended: "موصى به", lowPrice: "الأقل سعرًا", highPrice: "الأعلى سعرًا", highStars: "الأعلى نجومًا", freeCancel: "إلغاء مجاني الآن", facilities: "المرافق", apply: "تطبيق الفلاتر",
     live: "توفر مباشر", verifiedProperty: "منشأة موثقة", verifiedProperties: "منشآت موثقة", for: "للفترة", save: "حفظ البحث",
     badTitle: "راجع تفاصيل البحث", invalid: "بحث غير صالح", noneTitle: "لا توجد عروض مباشرة مطابقة", noneBody: "جرّب تواريخ أو عدد ضيوف مختلفًا أو قلّل الفلاتر. الأسعار غير المكتملة والمخزون غير المتاح لا يظهران في النتائج.",
-    photoPending: "الصورة قيد الإضافة", verified: "موثق", review: "تقييم موثق", reviews: "تقييمات موثقة", off: "خصم", freeNow: "إلغاء مجاني الآن", penalty: "قد تطبق رسوم إلغاء", only: "تبقى", roomLeft: "غرفة لهذه التواريخ", roomsLeft: "غرف لهذه التواريخ", finalTotal: "السعر النهائي للإقامة", average: "متوسط الليلة", seeRooms: "عرض الغرف"
+    photoPending: "الصورة قيد الإضافة", verified: "موثق", demoProperty: "منشأة تجريبية", demoProperties: "منشآت تجريبية", review: "تقييم موثق", reviews: "تقييمات موثقة", off: "خصم", freeNow: "إلغاء مجاني الآن", penalty: "قد تطبق رسوم إلغاء", only: "تبقى", roomLeft: "غرفة لهذه التواريخ", roomsLeft: "غرف لهذه التواريخ", finalTotal: "السعر النهائي للإقامة", average: "متوسط الليلة", seeRooms: "عرض الغرف"
   },
   hotel: {
-    back: "العودة إلى إقامات {city}", verified: "منشأة موثقة", star: "نجوم", guestSignal: "تقييم ممتاز من الضيوف", stayReview: "تقييم إقامة موثق", stayReviews: "تقييمات إقامة موثقة", checkIn: "تسجيل الوصول", checkOut: "تسجيل المغادرة", propertyPolicy: "حسب سياسة المنشأة",
+    back: "العودة إلى إقامات {city}", verified: "منشأة موثقة", demoProperty: "منشأة تجريبية", star: "نجوم", guestSignal: "تقييم ممتاز من الضيوف", stayReview: "تقييم إقامة موثق", stayReviews: "تقييمات إقامة موثقة", checkIn: "تسجيل الوصول", checkOut: "تسجيل المغادرة", propertyPolicy: "حسب سياسة المنشأة",
     noPhotos: "لم تنشر المنشأة صورها بعد.", finalPrice: "السعر النهائي قبل الحجز", liveInventory: "مخزون غرف مباشر", verifiedReviews: "تقييمات من إقامات موثقة فقط",
     property: "المنشأة", about: "عن {hotel}", noDescription: "لم تنشر المنشأة وصفًا بعد.", facilities: "المرافق", noFacilities: "لم تُنشر المرافق بعد.",
     yourStay: "إقامتك", chooseDates: "اختر التواريخ وشاهد الإجمالي المباشر.", adults: "البالغون", children: "الأطفال", availability: "تحقق من التوفر", invalidStay: "كانت بيانات الإقامة المطلوبة غير صالحة، لذلك تم تحميل التواريخ الافتراضية التالية.",

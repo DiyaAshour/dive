@@ -54,6 +54,9 @@ jobs:
       - name: Execute demo catalog seed
         run: npm run db:seed-demo
 
+      - name: Verify demo catalog reseed
+        run: npm run db:seed-demo
+
       - name: Typecheck workspaces
         run: npm run typecheck
 
