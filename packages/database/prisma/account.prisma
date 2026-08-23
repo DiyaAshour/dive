@@ -1,0 +1,11 @@
+enum TravelerLocale {
+  EN
+  AR
+}
+
+model TravelerPreference {
+  userId    String         @id
+  locale    TravelerLocale @default(EN)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}

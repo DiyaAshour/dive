@@ -1,0 +1,44 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Bell, KeyRound, LayoutDashboard, Luggage, UserRound } from "lucide-react";
+import { dictionary } from "@/lib/i18n";
+import { requestLocale } from "@/lib/request-locale";
+import { CustomerHeader } from "./customer-header";
+
+type AccountSection = "overview" | "profile" | "security" | "trips" | "alerts";
+
+type Props = Readonly<{
+  active: AccountSection;
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}>;
+
+export async function AccountShell({active,eyebrow,title,description,children}: Props) {
+  const locale = await requestLocale();
+  const copy = dictionary(locale);
+  const links: Array<{key:AccountSection;href:string;label:string;icon:typeof LayoutDashboard}> = [
+    {key:"overview",href:"/account",label:copy.account.overview,icon:LayoutDashboard},
+    {key:"profile",href:"/account/profile",label:copy.account.profile,icon:UserRound},
+    {key:"security",href:"/account/security",label:copy.account.security,icon:KeyRound},
+    {key:"trips",href:"/trips",label:copy.account.trips,icon:Luggage},
+    {key:"alerts",href:"/account/alerts",label:copy.account.alerts,icon:Bell},
+  ];
+
+  return <main className="accountExperience">
+    <CustomerHeader/>
+    <div className="shell accountLayout">
+      <aside className="accountSidebar">
+        <div className="accountSidebarTitle"><UserRound size={18}/><strong>{copy.account.my}</strong></div>
+        <nav aria-label={copy.account.my}>
+          {links.map(({key,href,label,icon:Icon})=><Link className={active===key?"active":""} href={href} key={key}><Icon size={17}/><span>{label}</span></Link>)}
+        </nav>
+      </aside>
+      <section className="accountMain">
+        <header className="accountPageHead"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></header>
+        {children}
+      </section>
+    </div>
+  </main>;
+}

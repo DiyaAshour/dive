@@ -1,0 +1,14 @@
+{
+  "name": "@platform/server",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {".": "./src/index.ts"},
+  "scripts": {"typecheck": "tsc --noEmit", "bootstrap-admin": "tsx scripts/bootstrap-admin.ts", "admin-smoke": "tsx scripts/admin-smoke.ts"},
+  "dependencies": {
+    "@platform/contracts": "0.2.0",
+    "@platform/core": "0.2.0",
+    "@platform/database": "0.2.0"
+  },
+  "devDependencies": {"typescript": "5.9.2", "@types/node": "22.18.0", "dotenv": "16.6.1", "tsx": "4.23.12"}
+}

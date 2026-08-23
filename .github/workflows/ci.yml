@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hotel
+          POSTGRES_PASSWORD: hotel
+          POSTGRES_DB: hotel_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hotel -d hotel_platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://hotel:hotel@localhost:5432/hotel_platform?schema=public
+      SESSION_COOKIE_NAME: hp_session
+      SESSION_TTL_DAYS: 30
+      ADMIN_SESSION_COOKIE_NAME: hp_admin_session
+      ADMIN_SESSION_TTL_HOURS: 8
+      BOOKING_TOKEN_SECRET: phase18-ci-booking-token-secret-000000000000
+      PAYMENT_PROVIDER: none
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Audit production dependencies
+        run: node scripts/security-audit.mjs
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Validate demo seed syntax
+        run: npm run db:seed-demo:check
+
+      - name: Push schema to ephemeral PostgreSQL
+        run: npm run db:push
+
+      - name: Execute demo catalog seed
+        run: npm run db:seed-demo
+
+      - name: Verify demo catalog reseed
+        run: npm run db:seed-demo
+
+      - name: Verify secure administrator domain flow
+        run: npm run admin:smoke
+
+      - name: Typecheck workspaces
+        run: npm run typecheck
+
+      - name: Build web application
+        run: npm run build
+
+      - name: Verify administrator HTTP flow
+        run: npm run admin:http-smoke
