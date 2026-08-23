@@ -1,4 +1,8 @@
 import { fileURLToPath } from "node:url";
+
+// Phase 17 demo media uses hotlinked Unsplash images under the Unsplash License.
+// These images belong only to fictional demo-* properties and are replaced when the demo catalog is reseeded.
+// License: https://unsplash.com/license
 import dotenv from "dotenv";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -33,6 +37,28 @@ const hotels = [
   {slug:"demo-lowest-point-retreat",name:"Lowest Point Retreat",city:"Dead Sea",area:"Sweimeh",stars:4,base:121,lat:31.7110,lng:35.5840,amenities:["WIFI","BREAKFAST","POOL","FAMILY_ROOMS","PARKING"]},
 ];
 
+const demoPhotoPool = [
+  {id:"jeremy-banks-hotel-exterior",url:"https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=82",alt:"Demo hotel exterior"},
+  {id:"ralph-ravi-kayden-luxury-room",url:"https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1600&q=82",alt:"Demo king guest room"},
+  {id:"saad-khan-resort-pool",url:"https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel pool"},
+  {id:"manuel-moreno-lobby",url:"https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel lobby"},
+  {id:"edvin-johansson-resort",url:"https://images.unsplash.com/photo-1560200353-ce0a76b1d438?auto=format&fit=crop&w=1600&q=82",alt:"Demo resort terrace"},
+  {id:"visualsofdana-suite",url:"https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel suite"},
+  {id:"frames-for-your-heart-pool",url:"https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1600&q=82",alt:"Demo resort pool and terrace"},
+  {id:"runnyrem-room",url:"https://images.unsplash.com/photo-1595576508898-0ad5c879a061?auto=format&fit=crop&w=1600&q=82",alt:"Demo contemporary guest room"},
+  {id:"vojtech-bruzek-room",url:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=82",alt:"Demo premium accommodation"},
+  {id:"ahungryblonde-restaurant",url:"https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel restaurant"},
+  {id:"rhema-kallianpur-bedroom",url:"https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1600&q=82",alt:"Demo family guest room"},
+  {id:"patrick-robert-doyle-lounge",url:"https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel lounge"},
+];
+
+let demoMediaUploaderId = "";
+
+function demoPhotosFor(index) {
+  const offset=(index*3)%demoPhotoPool.length;
+  return Array.from({length:6},(_,position)=>demoPhotoPool[(offset+position)%demoPhotoPool.length]);
+}
+
 const amenityNames = {
   WIFI:"Free Wi-Fi",BREAKFAST:"Breakfast",PARKING:"Parking",GYM:"Fitness centre",POOL:"Swimming pool",SPA:"Spa",AIRPORT_SHUTTLE:"Airport shuttle",FAMILY_ROOMS:"Family rooms",BUSINESS_CENTER:"Business centre",
 };
@@ -51,6 +77,19 @@ async function seedHotel(spec,index) {
   }});
 
   await prisma.hotelAmenity.createMany({data:spec.amenities.map((code)=>({hotelId:hotel.id,code,name:amenityNames[code]??code,category:"PROPERTY"}))});
+
+  const photos=demoPhotosFor(index);
+  for (let sortOrder=0;sortOrder<photos.length;sortOrder+=1) {
+    const photo=photos[sortOrder];
+    const media=await prisma.mediaObject.create({data:{
+      hotelId:hotel.id,uploadedByUserId:demoMediaUploaderId,kind:"HOTEL_IMAGE",state:"READY",visibility:"PUBLIC",
+      objectKey:`demo/${spec.slug}/${String(sortOrder+1).padStart(2,"0")}-${photo.id}.jpg`,
+      originalFileName:`demo-${photo.id}.jpg`,contentType:"image/jpeg",expectedSizeBytes:0,
+      publicUrl:photo.url,uploadExpiresAt:new Date(now.getTime()+31_536_000_000),uploadedAt:now,
+    }});
+    await prisma.hotelPhoto.create({data:{hotelId:hotel.id,mediaObjectId:media.id,alt:`${photo.alt} for fictional property ${spec.name}`,sortOrder}});
+  }
+
 
   const roomSpecs=[
     {name:"Classic King",code:"KING",maxAdults:2,maxChildren:1,premium:0,inventory:8+(index%5)},
@@ -84,6 +123,13 @@ async function seedHotel(spec,index) {
 }
 
 try {
+  const demoMediaUploader=await prisma.user.upsert({
+    where:{email:"demo-media@handmekey.invalid"},
+    create:{email:"demo-media@handmekey.invalid",displayName:"HandMeKey Demo Media",platformRole:"PLATFORM_ADMIN"},
+    update:{displayName:"HandMeKey Demo Media"},
+    select:{id:true},
+  });
+  demoMediaUploaderId=demoMediaUploader.id;
   const demoHotels=await prisma.hotel.findMany({where:{slug:{startsWith:"demo-"}},select:{id:true}});
   if (demoHotels.length) {
     console.log(`[demo-seed] replacing ${demoHotels.length} existing demo properties; non-demo hotels are untouched`);
@@ -91,7 +137,7 @@ try {
   }
   for (let index=0;index<hotels.length;index+=1) await seedHotel(hotels[index],index);
   const count=await prisma.hotel.count({where:{slug:{startsWith:"demo-"}}});
-  console.log(`[demo-seed] complete: ${count} fictional ACTIVE + verified properties, 0 seeded photos, 0 seeded reviews`);
+  console.log(`[demo-seed] complete: ${count} fictional ACTIVE + verified properties, ${count*6} licensed demo photos, 0 seeded reviews`);
   console.log(`[demo-seed] availability seeded ${isoDate(dayAt(0))} through ${isoDate(dayAt(119))}`);
 } finally {
   await prisma.$disconnect();
