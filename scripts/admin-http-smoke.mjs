@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
+import {fileURLToPath} from "node:url";
 
 const port = "3218";
 const origin = `http://127.0.0.1:${port}`;
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-const child = spawn(npmCommand, ["run", "start", "-w", "@platform/web"], {
+const nextCli = fileURLToPath(import.meta.resolve("next/dist/bin/next"));
+const child = spawn(process.execPath, [nextCli, "start"], {
+  cwd: fileURLToPath(new URL("../apps/web", import.meta.url)),
   env: {...process.env, PORT: port},
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -50,7 +52,22 @@ try {
   console.error(output);
   throw error;
 } finally {
+  await stopServer();
+}
+
+async function stopServer() {
+  if (child.exitCode !== null) return;
+
   child.kill("SIGTERM");
+  const exited = await Promise.race([
+    new Promise((resolve) => child.once("exit", () => resolve(true))),
+    new Promise((resolve) => setTimeout(() => resolve(false), 5_000)),
+  ]);
+
+  if (!exited && child.exitCode === null) {
+    child.kill("SIGKILL");
+    await new Promise((resolve) => child.once("exit", resolve));
+  }
 }
 
 async function waitForServer() {
