@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { CheckCircle2, KeyRound, LogOut, ShieldCheck } from "lucide-react";
 import { dictionary, type Locale } from "@/lib/i18n";
 
-type SessionView = {id:string;current:boolean;createdAt:string;lastUsedAt:string;expiresAt:string};
+type SessionView = {id:string;scope:"STANDARD"|"ADMIN";current:boolean;createdAt:string;lastUsedAt:string;expiresAt:string};
 type Props = Readonly<{locale: Locale}>;
 
 export function SecurityManager({locale}: Props) {
@@ -75,7 +75,7 @@ export function SecurityManager({locale}: Props) {
       <div className="securityHeading"><span><ShieldCheck size={19}/></span><div><h2>{copy.security.sessions}</h2><p>{copy.security.sessionsBody}</p></div></div>
       {loadingSessions?<p className="muted">{copy.security.checking}</p>:<div className="sessionList">
         {sessions.map((session)=><article className="sessionRow" key={session.id}>
-          <div><strong>{session.current?copy.security.thisBrowser:copy.security.other}</strong><span>{session.current&&<em><CheckCircle2 size={13}/> {copy.security.current}</em>}</span><small>{copy.security.lastActive} {formatTime(session.lastUsedAt,locale)} · {copy.security.created} {formatDate(session.createdAt,locale)} · {copy.security.expires} {formatDate(session.expiresAt,locale)}</small></div>
+          <div><strong>{session.current?copy.security.thisBrowser:session.scope==="ADMIN"?(locale==="ar"?"جلسة بوابة الإدارة":"Admin portal session"):copy.security.other}</strong><span>{session.current&&<em><CheckCircle2 size={13}/> {copy.security.current}</em>}</span><small>{copy.security.lastActive} {formatTime(session.lastUsedAt,locale)} · {copy.security.created} {formatDate(session.createdAt,locale)} · {copy.security.expires} {formatDate(session.expiresAt,locale)}</small></div>
           {!session.current&&<button className="sessionRevoke" disabled={busySession===session.id} onClick={()=>void revokeSession(session.id)}><LogOut size={15}/>{busySession===session.id?copy.security.closing:copy.security.close}</button>}
         </article>)}
         {!sessions.length&&<p className="muted">{copy.security.none}</p>}

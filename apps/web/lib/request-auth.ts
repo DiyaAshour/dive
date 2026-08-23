@@ -1,4 +1,5 @@
-import { getSessionUser } from "@platform/server";
+import { getAdminSessionPrincipal, getSessionUser } from "@platform/server";
+import { adminSessionCookieName } from "./admin-session";
 import { sessionCookieName } from "./session";
 
 export async function requestUser(request: Request) {
@@ -6,6 +7,13 @@ export async function requestUser(request: Request) {
   const bearer = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
   const token = bearer || cookieValue(request.headers.get("cookie"), sessionCookieName()) || null;
   return getSessionUser(token);
+}
+
+export async function requestAdminUser(request: Request) {
+  const authorization = request.headers.get("authorization");
+  const bearer = authorization?.startsWith("Bearer ") ? authorization.slice(7).trim() : null;
+  const token = bearer || cookieValue(request.headers.get("cookie"), adminSessionCookieName()) || null;
+  return (await getAdminSessionPrincipal(token))?.user ?? null;
 }
 
 export function bookingToken(request: Request): string | null {

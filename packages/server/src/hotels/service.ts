@@ -121,12 +121,8 @@ export async function getHotelWorkspace(actorUserId: string, hotelId: string) {
 }
 
 export async function listUserHotels(userId: string) {
-  const user = await database().user.findUnique({where: {id: userId}, select: {platformRole: true, hotelMemberships: {where: {status: "ACTIVE"}, select: {role: true, hotel: {select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true, publishRevision: true, publishedRevision: true}}}, orderBy: {createdAt: "asc"}}}});
+  const user = await database().user.findUnique({where: {id: userId}, select: {hotelMemberships: {where: {status: "ACTIVE"}, select: {role: true, hotel: {select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true, publishRevision: true, publishedRevision: true}}}, orderBy: {createdAt: "asc"}}}});
   if (!user) notFound("User");
-  if (user.platformRole === "PLATFORM_ADMIN") {
-    const hotels = await database().hotel.findMany({select: {id: true, name: true, slug: true, city: true, countryCode: true, status: true, verified: true, publishRevision: true, publishedRevision: true}, orderBy: {createdAt: "desc"}, take: 200});
-    return hotels.map((hotel) => ({...hotel, role: "PLATFORM_ADMIN" as const}));
-  }
   return user.hotelMemberships.map((membership) => ({...membership.hotel, role: membership.role}));
 }
 

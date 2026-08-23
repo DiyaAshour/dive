@@ -6,6 +6,7 @@ import { createSession, sessionTokenHash } from "../auth/session";
 
 export type AccountSessionView = Readonly<{
   id: string;
+  scope: "STANDARD" | "ADMIN";
   current: boolean;
   createdAt: Date;
   lastUsedAt: Date;
@@ -52,7 +53,7 @@ export async function listAccountSessions(userId: string, currentToken: string |
   const currentHash = currentToken ? sessionTokenHash(currentToken) : null;
   const sessions = await database().session.findMany({
     where: {userId, expiresAt: {gt: now}},
-    select: {id: true, tokenHash: true, createdAt: true, lastUsedAt: true, expiresAt: true},
+    select: {id: true, scope: true, tokenHash: true, createdAt: true, lastUsedAt: true, expiresAt: true},
     orderBy: {lastUsedAt: "desc"},
   });
   return sessions.map(({tokenHash, ...session}) => ({...session, current: currentHash === tokenHash}));
@@ -60,20 +61,37 @@ export async function listAccountSessions(userId: string, currentToken: string |
 
 export async function revokeAccountSession(userId: string, sessionId: string, currentToken: string | null) {
   const currentHash = currentToken ? sessionTokenHash(currentToken) : null;
-  const session = await database().session.findFirst({where: {id: sessionId, userId}, select: {id: true, tokenHash: true}});
+  const session = await database().session.findFirst({where: {id: sessionId, userId}, select: {id: true, tokenHash: true, scope: true}});
   if (!session) throw new ApplicationError("SESSION_NOT_FOUND", "Session not found", 404);
   if (currentHash && session.tokenHash === currentHash) {
     throw new ApplicationError("CURRENT_SESSION", "Use Sign out to end the current session", 409);
   }
-  await database().session.delete({where: {id: session.id}});
+  await database().$transaction(async (tx) => {
+    await tx.session.delete({where: {id: session.id}});
+    if (session.scope === "ADMIN") await tx.auditLog.create({data: {
+      actorUserId: userId,
+      action: "ADMIN_SESSION_REVOKED_FROM_ACCOUNT",
+      entityType: "Session",
+      entityId: session.id,
+    }});
+  });
   return {revoked: true};
 }
 
 export async function revokeOtherAccountSessions(userId: string, currentToken: string | null) {
   if (!currentToken) throw new ApplicationError("SESSION_REQUIRED", "A current session is required", 401);
   const currentHash = sessionTokenHash(currentToken);
-  const result = await database().session.deleteMany({where: {userId, tokenHash: {not: currentHash}}});
-  return {revoked: result.count};
+  return database().$transaction(async (tx) => {
+    const adminSessions = await tx.session.count({where: {userId, scope: "ADMIN", tokenHash: {not: currentHash}}});
+    const result = await tx.session.deleteMany({where: {userId, tokenHash: {not: currentHash}}});
+    if (adminSessions > 0) await tx.auditLog.create({data: {
+      actorUserId: userId,
+      action: "ADMIN_SESSIONS_REVOKED_FROM_ACCOUNT",
+      entityType: "Session",
+      after: {count: adminSessions},
+    }});
+    return {revoked: result.count};
+  });
 }
 
 export async function changeAccountPassword(userId: string, input: ChangePasswordRequest) {

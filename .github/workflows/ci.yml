@@ -26,6 +26,9 @@ jobs:
       DATABASE_URL: postgresql://hotel:hotel@localhost:5432/hotel_platform?schema=public
       SESSION_COOKIE_NAME: hp_session
       SESSION_TTL_DAYS: 30
+      ADMIN_SESSION_COOKIE_NAME: hp_admin_session
+      ADMIN_SESSION_TTL_HOURS: 8
+      BOOKING_TOKEN_SECRET: phase18-ci-booking-token-secret-000000000000
       PAYMENT_PROVIDER: none
     steps:
       - name: Checkout
@@ -57,8 +60,14 @@ jobs:
       - name: Verify demo catalog reseed
         run: npm run db:seed-demo
 
+      - name: Verify secure administrator domain flow
+        run: npm run admin:smoke
+
       - name: Typecheck workspaces
         run: npm run typecheck
 
       - name: Build web application
         run: npm run build
+
+      - name: Verify administrator HTTP flow
+        run: npm run admin:http-smoke

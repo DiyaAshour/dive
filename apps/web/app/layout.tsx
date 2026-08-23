@@ -7,6 +7,7 @@ import "./phase2.css";
 import "./account.css";
 import "./localization.css";
 import "./booking-details.css";
+import "./admin.css";
 
 export const metadata: Metadata = {
   title: {default: "HandMeKey — Hotels, clearly priced", template: "%s · HandMeKey"},

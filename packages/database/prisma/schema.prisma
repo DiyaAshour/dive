@@ -13,6 +13,11 @@ enum PlatformRole {
   PLATFORM_ADMIN
 }
 
+enum SessionScope {
+  STANDARD
+  ADMIN
+}
+
 enum HotelRole {
   OWNER
   MANAGER
@@ -236,11 +241,14 @@ model Session {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash  String   @unique
+  scope      SessionScope @default(STANDARD)
+  userAgent  String?
+  ipAddress  String?
   expiresAt  DateTime
   lastUsedAt DateTime @default(now())
   createdAt  DateTime @default(now())
 
-  @@index([userId, expiresAt])
+  @@index([userId, scope, expiresAt])
 }
 
 model Hotel {

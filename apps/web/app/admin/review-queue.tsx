@@ -20,6 +20,8 @@ export default function ReviewQueue({reviews}: {reviews: Review[]}) {
   const [message, setMessage] = useState<string | null>(null);
 
   async function decide(reviewId: string, decision: "APPROVE" | "REJECT") {
+    const confirmation = decision === "APPROVE" ? "Approve this exact property revision and publish it?" : "Reject this submission and return the property to draft?";
+    if (!window.confirm(confirmation)) return;
     setBusy(`${reviewId}:${decision}`);
     setMessage(null);
     try {
@@ -29,6 +31,7 @@ export default function ReviewQueue({reviews}: {reviews: Review[]}) {
         body: JSON.stringify({decision, reason: reasons[reviewId]?.trim() || undefined}),
       });
       const payload = await response.json();
+      if (response.status === 401) { window.location.assign("/admin/login?next=/admin"); return; }
       if (!response.ok) throw new Error(payload?.error?.message ?? "Unable to resolve review");
       setMessage(decision === "APPROVE" ? "Property approved and published." : "Property returned to draft with review feedback.");
       router.refresh();

@@ -17,12 +17,14 @@ export default function DocumentReviewQueue({documents}: {documents: DocumentIte
   const [message, setMessage] = useState<string | null>(null);
 
   async function decide(documentId: string, decision: "APPROVE" | "REJECT") {
+    if (!window.confirm(decision === "APPROVE" ? "Approve this private verification document?" : "Reject this document and record the supplied reason?")) return;
     setBusyId(documentId);
     setMessage(null);
     try {
       const body = decision === "APPROVE" ? {decision} : {decision, reason: reasons[documentId] ?? ""};
       const response = await fetch(`/api/v1/admin/hotel-documents/${documentId}/decision`, {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body)});
       const payload = await response.json().catch(() => null);
+      if (response.status === 401) { window.location.assign("/admin/login?next=/admin"); return; }
       if (!response.ok) throw new Error(payload?.error?.message ?? "Unable to review document");
       setItems((current) => current.filter((item) => item.id !== documentId));
       setMessage(decision === "APPROVE" ? "Document approved" : "Document rejected");

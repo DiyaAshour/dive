@@ -10,20 +10,24 @@ export default function PropertyActions({hotelId,status}:{hotelId:string;status:
   const [message,setMessage]=useState<string|null>(null);
 
   async function suspend() {
+    if(!window.confirm("Suspend this property and remove it from discovery? The reason will be recorded in the audit log."))return;
     setBusy(true);setMessage(null);
     try {
       const response=await fetch(`/api/v1/admin/hotels/${hotelId}/suspend`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reason})});
       const payload=await response.json();
+      if(response.status===401){window.location.assign("/admin/login?next=/admin");return;}
       if(!response.ok) throw new Error(payload?.error?.message??"Unable to suspend property");
       setMessage("Property suspended.");router.refresh();
     } catch(error){setMessage(error instanceof Error?error.message:"Unable to suspend property");} finally {setBusy(false);}
   }
 
   async function restore() {
+    if(!window.confirm("Restore this property to draft? It must pass publishing review again before returning to discovery."))return;
     setBusy(true);setMessage(null);
     try {
       const response=await fetch(`/api/v1/admin/hotels/${hotelId}/restore`,{method:"POST"});
       const payload=await response.json();
+      if(response.status===401){window.location.assign("/admin/login?next=/admin");return;}
       if(!response.ok) throw new Error(payload?.error?.message??"Unable to restore property");
       setMessage("Property restored to draft and must pass review again.");router.refresh();
     } catch(error){setMessage(error instanceof Error?error.message:"Unable to restore property");} finally {setBusy(false);}

@@ -191,6 +191,24 @@ media.handmekey.com      public media/CDN origin
 
 Local and staging development may keep the current `/partner`, `/hotel-dashboard` and `/api/v1` paths. Hostname routing must not duplicate business rules or create a second authentication/authorization implementation.
 
+## Phase 18 secure platform administration
+
+- dedicated `/admin/login` entry with no public administrator registration;
+- one-time operator bootstrap for the first credentialed platform administrator;
+- separate `ADMIN` session scope, cookie and eight-hour default TTL;
+- standard traveler/partner sessions are rejected by administrator endpoints;
+- platform-admin role no longer bypasses hotel membership through Partner APIs;
+- HandMeKey-branded Control Center with real verification, property, access and audit sections only;
+- domain and HTTP smoke tests cover bootstrap, login, isolation, protected APIs and logout.
+
+Create a normal account, then provision the first administrator from a trusted console:
+
+```bash
+npm run admin:bootstrap -- --email you@example.com
+```
+
+See `docs/PHASE18.md` for the complete security contract.
+
 ## Current pricing default
 
 - base room rate × **1.156** = final guest price;
@@ -208,6 +226,8 @@ These values are hotel configuration and are calculated by `@platform/core`; the
 5. Create/apply the database migration: `npm run db:migrate -- --name phase10_growth_intelligence`.
 6. Run the web app: `npm run dev`.
 7. Run the background worker separately: `npm run worker:holds`.
+
+Phase 18 adds admin-session columns, so existing local databases must run `npm run db:push` once after checking out the phase branch.
 
 Phase 11 changes product UI and portal routing only, so it does not require a new database migration.
 
@@ -227,6 +247,7 @@ Phase 11 changes product UI and portal routing only, so it does not require a ne
 - `docs/PHASE9.md`
 - `docs/PHASE10.md`
 - `docs/PHASE11.md`
+- `docs/PHASE18.md`
 
 ## Deferred by design
 

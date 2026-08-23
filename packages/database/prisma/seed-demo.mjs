@@ -125,8 +125,8 @@ async function seedHotel(spec,index) {
 try {
   const demoMediaUploader=await prisma.user.upsert({
     where:{email:"demo-media@handmekey.invalid"},
-    create:{email:"demo-media@handmekey.invalid",displayName:"HandMeKey Demo Media",platformRole:"PLATFORM_ADMIN"},
-    update:{displayName:"HandMeKey Demo Media"},
+    create:{email:"demo-media@handmekey.invalid",displayName:"HandMeKey Demo Media",platformRole:"GUEST"},
+    update:{displayName:"HandMeKey Demo Media",platformRole:"GUEST"},
     select:{id:true},
   });
   demoMediaUploaderId=demoMediaUploader.id;
