@@ -38,18 +38,18 @@ const hotels = [
 ];
 
 const demoPhotoPool = [
-  {id:"jeremy-banks-hotel-exterior",url:"https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=82",alt:"Demo hotel exterior"},
-  {id:"ralph-ravi-kayden-luxury-room",url:"https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1600&q=82",alt:"Demo king guest room"},
-  {id:"saad-khan-resort-pool",url:"https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel pool"},
-  {id:"manuel-moreno-lobby",url:"https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel lobby"},
-  {id:"edvin-johansson-resort",url:"https://images.unsplash.com/photo-1560200353-ce0a76b1d438?auto=format&fit=crop&w=1600&q=82",alt:"Demo resort terrace"},
-  {id:"visualsofdana-suite",url:"https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel suite"},
-  {id:"frames-for-your-heart-pool",url:"https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1600&q=82",alt:"Demo resort pool and terrace"},
-  {id:"runnyrem-room",url:"https://images.unsplash.com/photo-1595576508898-0ad5c879a061?auto=format&fit=crop&w=1600&q=82",alt:"Demo contemporary guest room"},
-  {id:"vojtech-bruzek-room",url:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=82",alt:"Demo premium accommodation"},
-  {id:"ahungryblonde-restaurant",url:"https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel restaurant"},
-  {id:"rhema-kallianpur-bedroom",url:"https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1600&q=82",alt:"Demo family guest room"},
-  {id:"patrick-robert-doyle-lounge",url:"https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel lounge"},
+  {id:"unsplash-1566073771259",url:"https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1800&q=82",alt:"Demo resort pool and exterior"},
+  {id:"unsplash-1611892440504",url:"https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1600&q=82",alt:"Demo wood-finished guest room"},
+  {id:"unsplash-1571896349842",url:"https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel pool and exterior"},
+  {id:"unsplash-1564501049412",url:"https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1600&q=82",alt:"Demo modern resort exterior"},
+  {id:"unsplash-1560200353",url:"https://images.unsplash.com/photo-1560200353-ce0a76b1d438?auto=format&fit=crop&w=1600&q=82",alt:"Demo hotel pool at night"},
+  {id:"unsplash-1590490360182",url:"https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1600&q=82",alt:"Demo premium hotel suite"},
+  {id:"unsplash-1540541338287",url:"https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1600&q=82",alt:"Demo coastal resort and pool"},
+  {id:"unsplash-1595576508898",url:"https://images.unsplash.com/photo-1595576508898-0ad5c879a061?auto=format&fit=crop&w=1600&q=82",alt:"Demo twin guest room"},
+  {id:"unsplash-1600585154340",url:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=82",alt:"Demo contemporary accommodation exterior"},
+  {id:"unsplash-1551882547",url:"https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1600&q=82",alt:"Demo resort courtyard and pool"},
+  {id:"unsplash-1540518614846",url:"https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=1600&q=82",alt:"Demo king guest room"},
+  {id:"unsplash-1582719478250",url:"https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1600&q=82",alt:"Demo tropical guest room"},
 ];
 
 let demoMediaUploaderId = "";
@@ -133,11 +133,25 @@ try {
   const demoHotels=await prisma.hotel.findMany({where:{slug:{startsWith:"demo-"}},select:{id:true}});
   if (demoHotels.length) {
     console.log(`[demo-seed] replacing ${demoHotels.length} existing demo properties; non-demo hotels are untouched`);
-    await prisma.hotel.deleteMany({where:{slug:{startsWith:"demo-"}}});
+    const hotelIds=demoHotels.map((hotel)=>hotel.id);
+    const demoBookings=await prisma.booking.findMany({where:{hotelId:{in:hotelIds}},select:{id:true}});
+    const bookingIds=demoBookings.map((booking)=>booking.id);
+    if (bookingIds.length) {
+      await prisma.financialEvent.deleteMany({where:{hotelId:{in:hotelIds}}});
+      await prisma.refund.deleteMany({where:{bookingId:{in:bookingIds}}});
+      await prisma.paymentAttempt.deleteMany({where:{bookingId:{in:bookingIds}}});
+      await prisma.bookingEvent.deleteMany({where:{bookingId:{in:bookingIds}}});
+      await prisma.booking.deleteMany({where:{id:{in:bookingIds}}});
+      console.log(`[demo-seed] removed ${bookingIds.length} disposable demo bookings before replacing properties`);
+    }
+    await prisma.hotel.deleteMany({where:{id:{in:hotelIds}}});
   }
   for (let index=0;index<hotels.length;index+=1) await seedHotel(hotels[index],index);
-  const count=await prisma.hotel.count({where:{slug:{startsWith:"demo-"}}});
-  console.log(`[demo-seed] complete: ${count} fictional ACTIVE + verified properties, ${count*6} licensed demo photos, 0 seeded reviews`);
+  const seededHotels=await prisma.hotel.findMany({where:{slug:{startsWith:"demo-"}},select:{id:true}});
+  const count=seededHotels.length;
+  const photoCount=await prisma.hotelPhoto.count({where:{hotelId:{in:seededHotels.map((hotel)=>hotel.id)}}});
+  if (count!==hotels.length||photoCount!==hotels.length*6) throw new Error(`[demo-seed] integrity check failed: expected ${hotels.length} hotels and ${hotels.length*6} photos, received ${count} and ${photoCount}`);
+  console.log(`[demo-seed] complete: ${count} fictional ACTIVE + verified properties, ${photoCount} licensed demo photos, 0 seeded reviews`);
   console.log(`[demo-seed] availability seeded ${isoDate(dayAt(0))} through ${isoDate(dayAt(119))}`);
 } finally {
   await prisma.$disconnect();
