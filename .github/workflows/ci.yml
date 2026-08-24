@@ -63,6 +63,9 @@ jobs:
       - name: Verify secure administrator domain flow
         run: npm run admin:smoke
 
+      - name: Verify partner room product flow
+        run: npm run room-product:smoke
+
       - name: Typecheck workspaces
         run: npm run typecheck
 

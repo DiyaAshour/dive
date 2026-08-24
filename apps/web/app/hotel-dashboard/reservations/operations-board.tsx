@@ -6,7 +6,7 @@ import type {Locale} from "@/lib/i18n";
 
 type GuestRequest={id:string;category:string;message:string;status:string;createdAt:string};
 type FrontDeskNote={id:string;body:string;createdAt:string;author:{displayName:string}};
-type Reservation={id:string;reference:string;guestName:string;guestEmail:string;arrival:string;departure:string;expectedArrivalTime:string|null;arrivalStatus:string;status:string;paymentMode:string;paymentState:string;currency:string;totalAmount:number;roomType:{id:string;name:string};ratePlan:{id:string;name:string};guestRequests:GuestRequest[];frontDeskNotes:FrontDeskNote[]};
+type Reservation={id:string;reference:string;guestName:string;guestEmail:string;adults:number;children:number;arrival:string;departure:string;expectedArrivalTime:string|null;arrivalStatus:string;status:string;paymentMode:string;paymentState:string;currency:string;totalAmount:number;roomType:{id:string;name:string};ratePlan:{id:string;name:string};guestRequests:GuestRequest[];frontDeskNotes:FrontDeskNote[]};
 
 type Props={hotelId:string;initialDate:string;initialScope:"ARRIVALS"|"DEPARTURES"|"IN_HOUSE"|"ALL";initialReservations:Reservation[];locale:Locale};
 

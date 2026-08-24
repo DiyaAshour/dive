@@ -13,6 +13,7 @@ const SIGNATURE_READ_BYTES = 16;
 
 export async function createMediaUpload(actorUserId: string, hotelId: string, input: CreateMediaUploadInput) {
   await requireHotelPermission(actorUserId, hotelId, input.kind === "HOTEL_IMAGE" ? "hotel:edit" : "publishing:manage");
+  if (input.kind === "HOTEL_IMAGE" && input.roomTypeId) await requireRoomType(hotelId, input.roomTypeId);
   const storage = requireStorage();
   const extension = extensionFor(input.contentType);
   const objectKey = `hotels/${hotelId}/${input.kind === "HOTEL_IMAGE" ? "images" : "verification-documents"}/${randomUUID()}.${extension}`;
@@ -39,7 +40,7 @@ export async function createMediaUpload(actorUserId: string, hotelId: string, in
       },
     });
     if (input.kind === "HOTEL_IMAGE") {
-      await tx.hotelPhoto.create({data: {hotelId, mediaObjectId: created.id, alt: input.alt, sortOrder: input.sortOrder}});
+      await tx.hotelPhoto.create({data: {hotelId, mediaObjectId: created.id, roomTypeId: input.roomTypeId, alt: input.alt, sortOrder: input.sortOrder}});
     } else {
       await tx.hotelDocument.create({data: {hotelId, mediaObjectId: created.id, type: input.documentType}});
     }
@@ -50,7 +51,7 @@ export async function createMediaUpload(actorUserId: string, hotelId: string, in
         action: "MEDIA_UPLOAD_INITIATED",
         entityType: "MediaObject",
         entityId: created.id,
-        after: {kind: input.kind, contentType: input.contentType, sizeBytes: input.sizeBytes, documentType: input.kind === "VERIFICATION_DOCUMENT" ? input.documentType : null},
+        after: {kind: input.kind, contentType: input.contentType, sizeBytes: input.sizeBytes, documentType: input.kind === "VERIFICATION_DOCUMENT" ? input.documentType : null, roomTypeId: input.kind === "HOTEL_IMAGE" ? input.roomTypeId : null},
       },
     });
     return created;
@@ -94,7 +95,7 @@ export async function listHotelMedia(actorUserId: string, hotelId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
   const media = await database().mediaObject.findMany({
     where: {hotelId, state: {not: "DELETED"}},
-    include: {photo: true, document: true},
+    include: {photo: {include: {roomType: {select: {id: true, name: true}}}}, document: true},
     orderBy: {createdAt: "desc"},
     take: 200,
   });
@@ -103,13 +104,14 @@ export async function listHotelMedia(actorUserId: string, hotelId: string) {
 
 export async function updateHotelPhoto(actorUserId: string, hotelId: string, mediaId: string, input: UpdateHotelPhotoInput) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:edit");
+  if (input.roomTypeId) await requireRoomType(hotelId, input.roomTypeId);
   const db = database();
   const photo = await db.hotelPhoto.findFirst({where: {hotelId, mediaObjectId: mediaId, mediaObject: {state: "READY"}}, include: {mediaObject: true}});
   if (!photo) notFound("Hotel photo");
   await db.$transaction(async (tx) => {
-    await tx.hotelPhoto.update({where: {id: photo.id}, data: {...(input.alt !== undefined ? {alt: input.alt} : {}), ...(input.sortOrder !== undefined ? {sortOrder: input.sortOrder} : {})}});
+    await tx.hotelPhoto.update({where: {id: photo.id}, data: {...(input.alt !== undefined ? {alt: input.alt} : {}), ...(input.sortOrder !== undefined ? {sortOrder: input.sortOrder} : {}), ...(input.roomTypeId !== undefined ? {roomTypeId: input.roomTypeId} : {})}});
     await recordPublishMutation(tx, hotelId, actorUserId, "hotel photo metadata updated");
-    await tx.auditLog.create({data: {hotelId, actorUserId, action: "HOTEL_PHOTO_UPDATED", entityType: "HotelPhoto", entityId: photo.id, before: {alt: photo.alt, sortOrder: photo.sortOrder}, after: {alt: input.alt ?? photo.alt, sortOrder: input.sortOrder ?? photo.sortOrder}}});
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: "HOTEL_PHOTO_UPDATED", entityType: "HotelPhoto", entityId: photo.id, before: {alt: photo.alt, sortOrder: photo.sortOrder, roomTypeId: photo.roomTypeId}, after: {alt: input.alt === undefined ? photo.alt : input.alt, sortOrder: input.sortOrder ?? photo.sortOrder, roomTypeId: input.roomTypeId === undefined ? photo.roomTypeId : input.roomTypeId}}});
   });
   return getMediaForHotel(actorUserId, hotelId, mediaId);
 }
@@ -193,7 +195,7 @@ export async function createHotelDocumentDownload(actorUserId: string, documentI
 
 async function getMediaForHotel(actorUserId: string, hotelId: string, mediaId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
-  const media = await database().mediaObject.findFirst({where: {id: mediaId, hotelId}, include: {photo: true, document: true}});
+  const media = await database().mediaObject.findFirst({where: {id: mediaId, hotelId}, include: {photo: {include: {roomType: {select: {id: true, name: true}}}}, document: true}});
   if (!media) notFound("Media object");
   return mediaView(media);
 }
@@ -210,7 +212,7 @@ function mediaView(media: {
   uploadExpiresAt: Date;
   uploadedAt: Date | null;
   createdAt: Date;
-  photo: {id: string; alt: string | null; sortOrder: number} | null;
+  photo: {id: string; alt: string | null; sortOrder: number; roomTypeId: string | null; roomType?: {id: string; name: string} | null} | null;
   document: {id: string; type: string; status: string; rejectionReason: string | null; submittedAt: Date; reviewedAt: Date | null} | null;
 }) {
   return {
@@ -228,6 +230,11 @@ function mediaView(media: {
     photo: media.photo,
     document: media.document,
   };
+}
+
+async function requireRoomType(hotelId: string, roomTypeId: string) {
+  const room = await database().roomType.findFirst({where: {id: roomTypeId, hotelId}, select: {id: true}});
+  if (!room) badRequest("INVALID_ROOM_TYPE", "The selected room type does not belong to this property");
 }
 
 function requireStorage() {

@@ -79,6 +79,7 @@ async function seedHotel(spec,index) {
   await prisma.hotelAmenity.createMany({data:spec.amenities.map((code)=>({hotelId:hotel.id,code,name:amenityNames[code]??code,category:"PROPERTY"}))});
 
   const photos=demoPhotosFor(index);
+  const hotelPhotoIds=[];
   for (let sortOrder=0;sortOrder<photos.length;sortOrder+=1) {
     const photo=photos[sortOrder];
     const media=await prisma.mediaObject.create({data:{
@@ -87,17 +88,19 @@ async function seedHotel(spec,index) {
       originalFileName:`demo-${photo.id}.jpg`,contentType:"image/jpeg",expectedSizeBytes:0,
       publicUrl:photo.url,uploadExpiresAt:new Date(now.getTime()+31_536_000_000),uploadedAt:now,
     }});
-    await prisma.hotelPhoto.create({data:{hotelId:hotel.id,mediaObjectId:media.id,alt:`${photo.alt} for fictional property ${spec.name}`,sortOrder}});
+    const hotelPhoto=await prisma.hotelPhoto.create({data:{hotelId:hotel.id,mediaObjectId:media.id,alt:`${photo.alt} for fictional property ${spec.name}`,sortOrder}});
+    hotelPhotoIds.push(hotelPhoto.id);
   }
 
 
   const roomSpecs=[
-    {name:"Classic King",code:"KING",maxAdults:2,maxChildren:1,premium:0,inventory:8+(index%5)},
-    {name:"Family Suite",code:"FAMILY",maxAdults:3,maxChildren:2,premium:38,inventory:4+(index%4)},
+    {name:"Classic King",code:"KING",description:"A calm king room with a dedicated work area, private bathroom and practical comforts for a clear short or extended stay.",unitType:"ROOM",quantity:8+(index%5),maxGuests:3,maxAdults:2,maxChildren:1,maxInfants:1,bedroomCount:1,livingRoomCount:0,bathroomCount:1,sizeValue:32,extraBedCount:0,cribCount:1,beds:[{area:"Bedroom 1",type:"KING",quantity:1,sortOrder:0}],amenities:[["AIR_CONDITIONING","Air conditioning","Comfort"],["FLAT_SCREEN_TV","Flat-screen TV","Media"],["PRIVATE_ENTRANCE","Private entrance","Access"],["TEA_COFFEE","Tea/Coffee maker","Kitchen"],["WIFI","Wi-Fi","Connectivity"]],premium:0,inventory:8+(index%5)},
+    {name:"Family Suite",code:"FAMILY",description:"A spacious family suite with a separate bedroom and living area, flexible sleeping layout and room-level facilities for longer stays.",unitType:"SUITE",quantity:4+(index%4),maxGuests:5,maxAdults:3,maxChildren:2,maxInfants:1,bedroomCount:1,livingRoomCount:1,bathroomCount:1,sizeValue:58,extraBedCount:1,cribCount:1,beds:[{area:"Bedroom 1",type:"KING",quantity:1,sortOrder:0},{area:"Living room",type:"SOFA_BED",quantity:1,sortOrder:1}],amenities:[["AIR_CONDITIONING","Air conditioning","Comfort"],["FLAT_SCREEN_TV","Flat-screen TV","Media"],["SEATING_AREA","Seating area","Living"],["REFRIGERATOR","Refrigerator","Kitchen"],["WIFI","Wi-Fi","Connectivity"],["CITY_VIEW","City view","View"]],premium:38,inventory:4+(index%4)},
   ];
 
-  for (const roomSpec of roomSpecs) {
-    const room=await prisma.roomType.create({data:{hotelId:hotel.id,name:roomSpec.name,code:roomSpec.code,maxAdults:roomSpec.maxAdults,maxChildren:roomSpec.maxChildren,active:true}});
+  for (const [roomIndex,roomSpec] of roomSpecs.entries()) {
+    const room=await prisma.roomType.create({data:{hotelId:hotel.id,name:roomSpec.name,code:roomSpec.code,description:roomSpec.description,unitType:roomSpec.unitType,quantity:roomSpec.quantity,maxGuests:roomSpec.maxGuests,maxAdults:roomSpec.maxAdults,maxChildren:roomSpec.maxChildren,maxInfants:roomSpec.maxInfants,bedroomCount:roomSpec.bedroomCount,livingRoomCount:roomSpec.livingRoomCount,bathroomCount:roomSpec.bathroomCount,privateBathroom:true,sizeValue:roomSpec.sizeValue,sizeUnit:"SQM",smokingPolicy:"NON_SMOKING",extraBedCount:roomSpec.extraBedCount,cribCount:roomSpec.cribCount,allowsCribAndExtraBed:false,active:true,beds:{create:roomSpec.beds},amenities:{create:roomSpec.amenities.map(([code,name,category])=>({code,name,category}))}}});
+    if (hotelPhotoIds[roomIndex]) await prisma.hotelPhoto.update({where:{id:hotelPhotoIds[roomIndex]},data:{roomTypeId:room.id}});
     await prisma.inventoryDay.createMany({data:Array.from({length:120},(_,offset)=>({roomTypeId:room.id,date:dayAt(offset),available:roomSpec.inventory,overbookingLimit:0}))});
 
     const flexible=await prisma.ratePlan.create({data:{

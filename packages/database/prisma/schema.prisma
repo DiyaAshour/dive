@@ -27,6 +27,42 @@ enum HotelRole {
   VIEWER
 }
 
+enum RoomUnitType {
+  ROOM
+  STUDIO
+  SUITE
+  APARTMENT
+  VILLA
+  CHALET
+  BUNGALOW
+  HOLIDAY_HOME
+  DORMITORY_ROOM
+  BED_IN_DORMITORY
+}
+
+enum RoomSizeUnit {
+  SQM
+  SQFT
+}
+
+enum RoomSmokingPolicy {
+  NON_SMOKING
+  SMOKING
+  BOTH
+}
+
+enum BedType {
+  SINGLE
+  DOUBLE
+  QUEEN
+  KING
+  EXTRA_LARGE_DOUBLE
+  SOFA_BED
+  BUNK_BED
+  FUTON
+  MURPHY_BED
+}
+
 enum MembershipStatus {
   ACTIVE
   INVITED
@@ -328,6 +364,8 @@ model HotelPhoto {
   id            String      @id @default(cuid())
   hotelId       String
   hotel         Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomTypeId    String?
+  roomType      RoomType?   @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
   mediaObjectId String      @unique
   mediaObject   MediaObject @relation(fields: [mediaObjectId], references: [id], onDelete: Restrict)
   alt           String?
@@ -336,6 +374,7 @@ model HotelPhoto {
   updatedAt     DateTime    @updatedAt
 
   @@index([hotelId, sortOrder])
+  @@index([roomTypeId, sortOrder])
 }
 
 model HotelDocument {
@@ -405,23 +444,68 @@ model HotelMembership {
 }
 
 model RoomType {
-  id            String         @id @default(cuid())
-  hotelId       String
-  hotel         Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  name          String
-  code          String
-  maxAdults     Int
-  maxChildren   Int            @default(0)
-  active        Boolean        @default(true)
-  physicalRooms PhysicalRoom[]
-  ratePlans     RatePlan[]
-  inventory     InventoryDay[]
-  bookings      Booking[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                    String             @id @default(cuid())
+  hotelId               String
+  hotel                 Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name                  String
+  code                  String
+  description           String?            @db.Text
+  unitType              RoomUnitType       @default(ROOM)
+  quantity              Int                @default(1)
+  maxGuests             Int                @default(2)
+  maxAdults             Int
+  maxChildren           Int                @default(0)
+  maxInfants            Int                @default(0)
+  bedroomCount          Int                @default(1)
+  livingRoomCount       Int                @default(0)
+  bathroomCount         Int                @default(1)
+  privateBathroom       Boolean            @default(true)
+  sizeValue             Decimal?           @db.Decimal(8, 2)
+  sizeUnit              RoomSizeUnit       @default(SQM)
+  smokingPolicy         RoomSmokingPolicy  @default(NON_SMOKING)
+  extraBedCount         Int                @default(0)
+  cribCount             Int                @default(0)
+  allowsCribAndExtraBed Boolean            @default(false)
+  active                Boolean            @default(true)
+  beds                  RoomBed[]
+  amenities             RoomAmenity[]
+  photos                HotelPhoto[]
+  physicalRooms         PhysicalRoom[]
+  ratePlans             RatePlan[]
+  inventory             InventoryDay[]
+  bookings              Booking[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   @@unique([hotelId, code])
   @@index([hotelId, active])
+}
+
+model RoomBed {
+  id         String   @id @default(cuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  area       String
+  type       BedType
+  quantity   Int      @default(1)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([roomTypeId, sortOrder])
+}
+
+model RoomAmenity {
+  id         String   @id @default(cuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  code       String
+  name       String
+  category   String?
+  createdAt  DateTime @default(now())
+
+  @@unique([roomTypeId, code])
+  @@index([code])
 }
 
 model PhysicalRoom {
@@ -560,6 +644,8 @@ model Booking {
   ratePlan                         RatePlan                @relation(fields: [ratePlanId], references: [id])
   guestName                        String
   guestEmail                       String
+  adults                           Int                     @default(1)
+  children                         Int                     @default(0)
   arrival                          DateTime                @db.Date
   departure                        DateTime                @db.Date
   expectedArrivalTime              String?

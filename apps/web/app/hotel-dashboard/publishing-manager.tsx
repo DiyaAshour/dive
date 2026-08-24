@@ -58,7 +58,7 @@ export default function PublishingManager({hotelId, readiness, locale}: {hotelId
 
 function localizeCheck(check: Readiness["checks"][number], ar: boolean) {
   if (!ar) return check;
-  const labels: Record<string,string>={DESCRIPTION:"وصف المنشأة",STAR_RATING:"التصنيف الرسمي",CHECK_TIMES:"أوقات الدخول والمغادرة",PHOTOS:"صور منشأة موثقة",AMENITIES:"مرافق المنشأة",VERIFICATION_DOCUMENTS:"مستندات التحقق",ROOM_TYPES:"نوع غرفة نشط",RATE_PLANS:"خطة سعر قابلة للحجز",SELLABLE_CALENDAR:"أسعار ومخزون مباشر"};
-  const details: Record<string,string>={DESCRIPTION:"وصف لا يقل عن 80 حرفًا",STAR_RATING:"حدد تصنيفًا من نجمة إلى خمس",CHECK_TIMES:"وقت الدخول والمغادرة مطلوبان",PHOTOS:"ثلاث صور مكتملة على الأقل",AMENITIES:"ثلاثة مرافق على الأقل",VERIFICATION_DOCUMENTS:"اعتماد السجل التجاري ورخصة العمل مطلوب",ROOM_TYPES:"نوع غرفة نشط واحد على الأقل",RATE_PLANS:"خطة نشطة مع الدفع وسياسة الإلغاء",SELLABLE_CALENDAR:"سبعة أيام قابلة للبيع على الأقل خلال 30 يومًا"};
+  const labels: Record<string,string>={DESCRIPTION:"وصف المنشأة",STAR_RATING:"التصنيف الرسمي",CHECK_TIMES:"أوقات الدخول والمغادرة",PHOTOS:"صور منشأة موثقة",AMENITIES:"مرافق المنشأة",VERIFICATION_DOCUMENTS:"مستندات التحقق",ROOM_TYPES:"نوع غرفة نشط",ROOM_PRODUCTS:"بيانات الغرف المكتملة",RATE_PLANS:"خطة سعر قابلة للحجز",SELLABLE_CALENDAR:"أسعار ومخزون مباشر"};
+  const details: Record<string,string>={DESCRIPTION:"وصف لا يقل عن 80 حرفًا",STAR_RATING:"حدد تصنيفًا من نجمة إلى خمس",CHECK_TIMES:"وقت الدخول والمغادرة مطلوبان",PHOTOS:"ثلاث صور مكتملة على الأقل",AMENITIES:"ثلاثة مرافق على الأقل",VERIFICATION_DOCUMENTS:"اعتماد السجل التجاري ورخصة العمل مطلوب",ROOM_TYPES:"نوع غرفة نشط واحد على الأقل",ROOM_PRODUCTS:"كل غرفة نشطة تحتاج سعة وأسرّة ومساحة ووصفًا وثلاثة مرافق وصورة مرتبطة",RATE_PLANS:"خطة نشطة مع الدفع وسياسة الإلغاء",SELLABLE_CALENDAR:"سبعة أيام قابلة للبيع على الأقل خلال 30 يومًا"};
   return {...check,label:labels[check.code]??check.label,detail:details[check.code]??check.detail};
 }

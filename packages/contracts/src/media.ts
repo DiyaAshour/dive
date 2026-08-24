@@ -15,6 +15,7 @@ export const createMediaUploadSchema = z.discriminatedUnion("kind", [
     sizeBytes: sizeBytes.max(10 * 1024 * 1024),
     alt: z.string().trim().max(180).nullable().default(null),
     sortOrder: z.number().int().min(0).max(1000).default(0),
+    roomTypeId: z.string().min(1).nullable().default(null),
   }),
   z.object({
     kind: z.literal("VERIFICATION_DOCUMENT"),
@@ -28,7 +29,8 @@ export const createMediaUploadSchema = z.discriminatedUnion("kind", [
 export const updateHotelPhotoSchema = z.object({
   alt: z.string().trim().max(180).nullable().optional(),
   sortOrder: z.number().int().min(0).max(1000).optional(),
-}).refine((value) => value.alt !== undefined || value.sortOrder !== undefined, {message: "At least one photo field must be supplied"});
+  roomTypeId: z.string().min(1).nullable().optional(),
+}).refine((value) => value.alt !== undefined || value.sortOrder !== undefined || value.roomTypeId !== undefined, {message: "At least one photo field must be supplied"});
 
 export const documentDecisionSchema = z.discriminatedUnion("decision", [
   z.object({decision: z.literal("APPROVE")}),
