@@ -38,8 +38,26 @@ type RatePlanRow = Readonly<{
 type RoomRow = Readonly<{
   id: string;
   name: string;
+  description: string | null;
+  unitType: string;
+  quantity: number;
+  maxGuests: number;
   maxAdults: number;
   maxChildren: number;
+  maxInfants: number;
+  bedroomCount: number;
+  livingRoomCount: number;
+  bathroomCount: number;
+  privateBathroom: boolean;
+  sizeValue: unknown;
+  sizeUnit: string;
+  smokingPolicy: string;
+  extraBedCount: number;
+  cribCount: number;
+  allowsCribAndExtraBed: boolean;
+  beds: Array<Readonly<{area: string; type: string; quantity: number; sortOrder: number}>>;
+  amenities: PublicAmenity[];
+  photos: PublicPhoto[];
   inventory: InventoryRow[];
   ratePlans: RatePlanRow[];
 }>;
@@ -121,8 +139,11 @@ export async function searchHotels(input: DiscoverySearchInput) {
       photos: livePhotoQuery,
       amenities: {select: {code: true, name: true, category: true}, orderBy: {name: "asc"}},
       roomTypes: {
-        where: {active: true, maxAdults: {gte: input.adults}, maxChildren: {gte: input.children}},
+        where: {active: true, maxGuests: {gte: input.adults + input.children}, maxAdults: {gte: input.adults}, maxChildren: {gte: input.children}},
         include: {
+          beds: {select: {area: true, type: true, quantity: true, sortOrder: true}, orderBy: {sortOrder: "asc"}},
+          amenities: {select: {code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
+          photos: livePhotoQuery,
           inventory: {where: {date: {in: dates}}, select: {date: true, available: true, overbookingLimit: true}},
           ratePlans: {
             where: {active: true},
@@ -141,7 +162,7 @@ export async function searchHotels(input: DiscoverySearchInput) {
   const reviewMap = await reviewSummaries(hotels.map((hotel) => hotel.id));
   const requestedAmenities = new Set(input.amenities);
   const results = hotels.flatMap((rawHotel) => {
-    const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
+    const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos), roomTypes: rawHotel.roomTypes.map((room) => ({...room, photos: publicPhotos(room.photos)}))};
     if (requestedAmenities.size && ![...requestedAmenities].every((code) => hotel.amenities.some((amenity) => amenity.code === code))) return [];
     const offers = buildOffers(hotel, stay, input).filter((offer) => {
       if (input.freeCancellation && !offer.freeCancellationNow) return false;
@@ -183,8 +204,11 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
       photos: livePhotoQuery,
       amenities: {select: {code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
       roomTypes: {
-        where: {active: true, maxAdults: {gte: stayInput.adults}, maxChildren: {gte: stayInput.children}},
+        where: {active: true, maxGuests: {gte: stayInput.adults + stayInput.children}, maxAdults: {gte: stayInput.adults}, maxChildren: {gte: stayInput.children}},
         include: {
+          beds: {select: {area: true, type: true, quantity: true, sortOrder: true}, orderBy: {sortOrder: "asc"}},
+          amenities: {select: {code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
+          photos: livePhotoQuery,
           inventory: {where: {date: {in: dates}}, select: {date: true, available: true, overbookingLimit: true}},
           ratePlans: {
             where: {active: true},
@@ -199,7 +223,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
     },
   });
   if (!rawHotel) notFound("Hotel");
-  const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos)};
+  const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos), roomTypes: rawHotel.roomTypes.map((room) => ({...room, photos: publicPhotos(room.photos)}))};
   const offers = buildOffers(hotel, stay, stayInput).sort((a, b) => a.total - b.total);
   const reviewMap = await reviewSummaries([hotelId]);
   if (options.trackView !== false) await captureHotelView(hotelId, {arrival: stay.arrival, departure: stay.departure});
@@ -230,7 +254,7 @@ function buildOffers(hotel: HotelRow, stay: Readonly<{arrival: string; departure
   const stayLength = stay.nights.length;
   const stayDates = stay.nights.map(parseDateOnly);
   return hotel.roomTypes.flatMap((room) => {
-    if (room.maxAdults < guests.adults || room.maxChildren < guests.children) return [];
+    if (room.maxGuests < guests.adults + guests.children || room.maxAdults < guests.adults || room.maxChildren < guests.children) return [];
     if (room.inventory.length !== stayLength) return [];
     const available = room.inventory.map((row) => row.available + (hotel.overbookingEnabled ? row.overbookingLimit : 0));
     if (available.some((count) => count <= 0)) return [];
@@ -255,8 +279,26 @@ function buildOffers(hotel: HotelRow, stay: Readonly<{arrival: string; departure
       return [{
         roomTypeId: room.id,
         roomName: room.name,
+        roomDescription: room.description,
+        unitType: room.unitType,
+        quantity: room.quantity,
+        maxGuests: room.maxGuests,
         maxAdults: room.maxAdults,
         maxChildren: room.maxChildren,
+        maxInfants: room.maxInfants,
+        bedroomCount: room.bedroomCount,
+        livingRoomCount: room.livingRoomCount,
+        bathroomCount: room.bathroomCount,
+        privateBathroom: room.privateBathroom,
+        sizeValue: room.sizeValue === null ? null : Number(room.sizeValue),
+        sizeUnit: room.sizeUnit,
+        smokingPolicy: room.smokingPolicy,
+        extraBedCount: room.extraBedCount,
+        cribCount: room.cribCount,
+        allowsCribAndExtraBed: room.allowsCribAndExtraBed,
+        beds: room.beds,
+        roomAmenities: room.amenities,
+        roomPhotos: room.photos,
         ratePlanId: plan.id,
         ratePlanName: plan.name,
         ratePlanCode: plan.code,

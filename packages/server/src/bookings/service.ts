@@ -33,7 +33,7 @@ type PricedStay = Readonly<{
     code: string;
     allowPayNow: boolean;
     allowPayAtHotel: boolean;
-    roomType: Readonly<{id: string; name: string}>;
+    roomType: Readonly<{id: string; name: string; maxGuests: number; maxAdults: number; maxChildren: number}>;
   }>;
 }>;
 
@@ -42,6 +42,7 @@ export async function quoteBooking(input: BookingQuoteInput) {
   if (!hotel || hotel.status !== "ACTIVE" || !hotel.verified) conflict("HOTEL_NOT_BOOKABLE", "Hotel is not open for bookings");
   const stay = buildStayDates(input.arrival, input.departure);
   const priced = await priceStay(database(), hotel, input.roomTypeId, input.ratePlanId, stay.nights);
+  assertRoomOccupancy(priced.ratePlan.roomType, input.adults, input.children);
   const availableToSell = await availableToSellForStay(database(), input.roomTypeId, priced.nights.map((night) => night.date), hotel.overbookingEnabled);
   const totals = sumPrices(priced.nights);
   return {
@@ -50,6 +51,7 @@ export async function quoteBooking(input: BookingQuoteInput) {
     ratePlan: {id: priced.ratePlan.id, name: priced.ratePlan.name, code: priced.ratePlan.code},
     arrival: input.arrival,
     departure: input.departure,
+    occupancy: {adults: input.adults, children: input.children},
     nights: stay.nights.length,
     amounts: totals,
     promotion: priced.promotion,
@@ -79,6 +81,7 @@ export async function createBookingHold(input: CreateBookingHoldInput, context: 
       const hotel = await tx.hotel.findUnique({where: {id: input.hotelId}});
       if (!hotel || hotel.status !== "ACTIVE" || !hotel.verified) conflict("HOTEL_NOT_BOOKABLE", "Hotel is not open for bookings");
       const priced = await priceStay(tx, hotel, input.roomTypeId, input.ratePlanId, stay.nights);
+      assertRoomOccupancy(priced.ratePlan.roomType, input.adults, input.children);
       assertPaymentModeAllowed(input.paymentMode, priced.ratePlan);
       await reserveInventory(inventoryPort(tx), input.roomTypeId, priced.nights.map((night) => night.date), hotel.overbookingEnabled);
 
@@ -92,6 +95,8 @@ export async function createBookingHold(input: CreateBookingHoldInput, context: 
         ratePlanId: input.ratePlanId,
         guestName: input.guestName,
         guestEmail: input.guestEmail,
+        adults: input.adults,
+        children: input.children,
         arrival: parseDateOnly(input.arrival),
         departure: parseDateOnly(input.departure),
         paymentMode: input.paymentMode,
@@ -111,7 +116,7 @@ export async function createBookingHold(input: CreateBookingHoldInput, context: 
         accessTokenHash: bookingAccessTokenHash(accessToken),
         holdExpiresAt: holdExpiresAt(),
         nights: {create: priced.nights.map((night) => ({revision: 1, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))},
-        events: {create: {type: "HOLD_CREATED", actorUserId: context.userId ?? null, data: {arrival: input.arrival, departure: input.departure, total: totals.total, cancellationPolicy: priced.policy.name, promotion: priced.promotion}}},
+        events: {create: {type: "HOLD_CREATED", actorUserId: context.userId ?? null, data: {arrival: input.arrival, departure: input.departure, adults: input.adults, children: input.children, total: totals.total, cancellationPolicy: priced.policy.name, promotion: priced.promotion}}},
       }});
       return booking.id;
     }, {isolationLevel: "Serializable"});
@@ -170,6 +175,9 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
 
       const stay = buildStayDates(input.arrival, input.departure);
       const priced = await priceStay(tx, booking.hotel, input.roomTypeId, input.ratePlanId, stay.nights);
+      const adults = input.adults ?? booking.adults;
+      const children = input.children ?? booking.children;
+      assertRoomOccupancy(priced.ratePlan.roomType, adults, children);
       assertPaymentModeAllowed(booking.paymentMode, priced.ratePlan);
       const oldNights = await tx.bookingNight.findMany({where: {bookingId, revision: booking.revision}});
       const oldKeys = new Set(oldNights.map((night) => dateKey(night.date)));
@@ -189,6 +197,8 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
         ratePlanId: input.ratePlanId,
         arrival: parseDateOnly(input.arrival),
         departure: parseDateOnly(input.departure),
+        adults,
+        children,
         status: nextStatus,
         revision: newRevision,
         baseAmount: totals.base,
@@ -201,7 +211,7 @@ export async function modifyBooking(bookingId: string, input: ModifyBookingInput
         cancellationPolicySnapshot: policyToJson(priced.policy),
       }});
       await tx.bookingNight.createMany({data: priced.nights.map((night) => ({bookingId, revision: newRevision, date: night.date, baseAmount: night.base, serviceAmount: night.service, taxAmount: night.tax, totalAmount: night.total}))});
-      const event = await tx.bookingEvent.create({data: {bookingId, type: "MODIFIED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint, data: {fromRevision: booking.revision, toRevision: newRevision, oldTotal: Number(booking.totalAmount), newTotal: totals.total, cancellationPolicy: priced.policy.name, promotion: priced.promotion}}});
+      const event = await tx.bookingEvent.create({data: {bookingId, type: "MODIFIED", actorUserId: context.userId ?? null, idempotencyKey, requestFingerprint, data: {fromRevision: booking.revision, toRevision: newRevision, adults, children, oldTotal: Number(booking.totalAmount), newTotal: totals.total, cancellationPolicy: priced.policy.name, promotion: priced.promotion}}});
       if (booking.status !== "HOLD") {
         const deltas = financialDeltas(booking, totals, newCommission, event.id);
         if (deltas.length) await tx.financialEvent.createMany({data: deltas});
@@ -364,6 +374,7 @@ export async function bookingView(bookingId: string) {
     ratePlan: {id: booking.ratePlanId, name: booking.ratePlan.name},
     guestName: booking.guestName,
     guestEmail: booking.guestEmail,
+    occupancy: {adults: booking.adults, children: booking.children},
     arrival: dateKey(booking.arrival),
     departure: dateKey(booking.departure),
     status: booking.status,
@@ -391,7 +402,7 @@ async function priceStay(tx: TransactionLike, hotel: HotelPricing, roomTypeId: s
   const ratePlan = await tx.ratePlan.findFirst({
     where: {id: ratePlanId, roomTypeId, active: true, roomType: {hotelId: hotel.id, active: true}},
     include: {
-      roomType: {select: {id: true, name: true}},
+      roomType: {select: {id: true, name: true, maxGuests: true, maxAdults: true, maxChildren: true}},
       cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}},
       promotions: {where: {promotion: {status: "ACTIVE"}}, include: {promotion: true}},
     },
@@ -480,6 +491,12 @@ async function createAutomaticRefundIfNeeded(tx: Pick<DbClient, "refund">, booki
 function assertPaymentModeAllowed(mode: string, ratePlan: {allowPayNow: boolean; allowPayAtHotel: boolean}) {
   if (mode === "PAY_NOW" && !ratePlan.allowPayNow) conflict("PAYMENT_MODE_NOT_ALLOWED", "This rate plan does not allow pay now");
   if (mode === "PAY_AT_HOTEL" && !ratePlan.allowPayAtHotel) conflict("PAYMENT_MODE_NOT_ALLOWED", "This rate plan does not allow pay at hotel");
+}
+
+function assertRoomOccupancy(room: {maxGuests: number; maxAdults: number; maxChildren: number}, adults: number, children: number) {
+  if (adults > room.maxAdults || children > room.maxChildren || adults + children > room.maxGuests) {
+    conflict("ROOM_CAPACITY_EXCEEDED", "The selected room does not fit the requested adults and children");
+  }
 }
 
 function sumPrices(nights: readonly NightPrice[]) {

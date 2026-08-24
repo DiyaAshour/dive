@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, CalendarDays, Hotel, MessageSquare, Settings2, Star, Tags } from "lucide-react";
+import { BarChart3, BedDouble, CalendarDays, Hotel, MessageSquare, Settings2, Star, Tags } from "lucide-react";
 import { Brand } from "./brand";
 import { LanguageSwitcher } from "./language-switcher";
 import type { Locale } from "@/lib/i18n";
@@ -11,7 +11,7 @@ type PartnerSidebarProps = Readonly<{
   city?: string;
   status?: string;
   locale: Locale;
-  active: "overview" | "reservations" | "performance" | "promotions" | "messages" | "reviews";
+  active: "overview" | "rooms" | "reservations" | "performance" | "promotions" | "messages" | "reviews";
 }>;
 
 export function PartnerSidebar({hotelId, hotelName, city, status, active, locale}: PartnerSidebarProps) {
@@ -27,6 +27,7 @@ export function PartnerSidebar({hotelId, hotelName, city, status, active, locale
     <nav className="partnerNav" aria-label="Partner navigation">
       <span>{copy.operate}</span>
       <Link className={active === "overview" ? "active" : ""} href={href("/hotel-dashboard")}><Hotel size={18}/>{copy.property}</Link>
+      <Link className={active === "rooms" ? "active" : ""} href={href("/hotel-dashboard/rooms")}><BedDouble size={18}/>{copy.rooms}</Link>
       <Link className={active === "reservations" ? "active" : ""} href={href("/hotel-dashboard/reservations")}><CalendarDays size={18}/>{copy.reservations}</Link>
       <span>{copy.grow}</span>
       <Link className={active === "performance" ? "active" : ""} href={href("/hotel-dashboard/performance")}><BarChart3 size={18}/>{copy.performance}</Link>

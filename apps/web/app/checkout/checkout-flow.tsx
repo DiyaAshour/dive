@@ -10,6 +10,7 @@ type Quote = {
   ratePlan:{id:string;name:string;code:string};
   arrival:string;
   departure:string;
+  occupancy:{adults:number;children:number};
   nights:number;
   amounts:{base:number;service:number;tax:number;total:number};
   promotion:{id:string;name:string;discountPercent:number}|null;
@@ -18,7 +19,7 @@ type Quote = {
   availableToSell:number;
 };
 
-type Props = {locale:Locale;hotelId:string;roomTypeId:string;ratePlanId:string;arrival:string;departure:string;initialGuestName:string;initialGuestEmail:string};
+type Props = {locale:Locale;hotelId:string;roomTypeId:string;ratePlanId:string;arrival:string;departure:string;adults:number;children:number;initialGuestName:string;initialGuestEmail:string};
 
 export function CheckoutFlow(props: Props) {
   const copy=dictionary(props.locale).checkout;
@@ -31,12 +32,12 @@ export function CheckoutFlow(props: Props) {
   const [guestName,setGuestName] = useState(props.initialGuestName);
   const [guestEmail,setGuestEmail] = useState(props.initialGuestEmail);
   const [paymentMode,setPaymentMode] = useState<PaymentMode|null>(null);
-  const selection = {hotelId:props.hotelId,roomTypeId:props.roomTypeId,ratePlanId:props.ratePlanId,arrival:props.arrival,departure:props.departure};
+  const selection = {hotelId:props.hotelId,roomTypeId:props.roomTypeId,ratePlanId:props.ratePlanId,arrival:props.arrival,departure:props.departure,adults:props.adults,children:props.children};
 
   useEffect(() => {
     let active = true;
     Promise.all([
-      requestJson<Quote>("/api/v1/booking-quotes", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({hotelId:props.hotelId,roomTypeId:props.roomTypeId,ratePlanId:props.ratePlanId,arrival:props.arrival,departure:props.departure})}),
+      requestJson<Quote>("/api/v1/booking-quotes", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(selection)}),
       requestJson<{onlinePaymentAvailable:boolean}>("/api/v1/payment-capabilities"),
     ]).then(([nextQuote,capabilities]) => {
       if (!active) return;
@@ -47,7 +48,7 @@ export function CheckoutFlow(props: Props) {
       else if (modes.includes("PAY_NOW") && capabilities.onlinePaymentAvailable) setPaymentMode("PAY_NOW");
     }).catch((cause) => active && setError(messageFrom(cause,props.locale))).finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [props.hotelId,props.roomTypeId,props.ratePlanId,props.arrival,props.departure,props.locale]);
+  }, [props.hotelId,props.roomTypeId,props.ratePlanId,props.arrival,props.departure,props.adults,props.children,props.locale]);
 
   const canSubmit = useMemo(() => Boolean(quote && paymentMode && guestName.trim().length >= 2 && guestEmail.includes("@") && !submitting), [quote,paymentMode,guestName,guestEmail,submitting]);
 
@@ -121,7 +122,7 @@ export function CheckoutFlow(props: Props) {
       <span className="eyebrow">{copy.yourStay}</span>
       <h2>{quote.hotel.name}</h2>
       <p>{quote.roomType.name} · {quote.ratePlan.name}</p>
-      <p className="muted">{quote.arrival} — {quote.departure} · {quote.nights} {ar?(quote.nights===1?"ليلة":"ليالٍ"):`night${quote.nights===1?"":"s"}`}</p>
+      <p className="muted">{quote.arrival} — {quote.departure} · {quote.nights} {ar?(quote.nights===1?"ليلة":"ليالٍ"):`night${quote.nights===1?"":"s"}`} · {quote.occupancy.adults} {ar?"بالغ":`adult${quote.occupancy.adults===1?"":"s"}`}{quote.occupancy.children?` · ${quote.occupancy.children} ${ar?"أطفال":"children"}`:""}</p>
       {quote.promotion && <div className="alertCard" style={{marginBottom:14}}><div><strong>{quote.promotion.name}</strong><p>{quote.promotion.discountPercent}% {copy.offIncluded}</p></div></div>}
       <div className="breakdown"><span>{copy.roomBase}</span><strong>{money(quote.amounts.base,quote.hotel.currency)}</strong></div>
       <div className="breakdown"><span>{copy.service}</span><strong>{money(quote.amounts.service,quote.hotel.currency)}</strong></div>

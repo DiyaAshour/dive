@@ -13,13 +13,13 @@ type MediaItem = {
   sizeBytes: number;
   publicUrl: string | null;
   uploadedAt: string | null;
-  photo: {id: string; alt: string | null; sortOrder: number} | null;
+  photo: {id: string; alt: string | null; sortOrder: number; roomTypeId: string | null; roomType?: {id: string; name: string} | null} | null;
   document: {id: string; type: string; status: string; rejectionReason: string | null; submittedAt: string; reviewedAt: string | null} | null;
 };
 
 type UploadGrant = {method: "PUT"; url: string; headers: Record<string, string>};
 
-export default function MediaManager({hotelId, initialMedia, locale}: {hotelId: string; initialMedia: MediaItem[]; locale: Locale}) {
+export default function MediaManager({hotelId, initialMedia, roomTypes, locale}: {hotelId: string; initialMedia: MediaItem[]; roomTypes: Array<{id: string; name: string}>; locale: Locale}) {
   const ar=locale==="ar";
   const [items, setItems] = useState(initialMedia);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,6 +34,7 @@ export default function MediaManager({hotelId, initialMedia, locale}: {hotelId: 
       kind: "HOTEL_IMAGE",
       alt: textOrNull(form.get("alt")),
       sortOrder: Number(form.get("sortOrder") || 0),
+      roomTypeId: textOrNull(form.get("roomTypeId")),
     });
     event.currentTarget.reset();
   }
@@ -78,7 +79,7 @@ export default function MediaManager({hotelId, initialMedia, locale}: {hotelId: 
       await api(`/api/v1/hotels/${hotelId}/media/${mediaId}`, {
         method: "PATCH",
         headers: {"content-type": "application/json"},
-        body: JSON.stringify({alt: textOrNull(data.get("alt")), sortOrder: Number(data.get("sortOrder") || 0)}),
+        body: JSON.stringify({alt: textOrNull(data.get("alt")), sortOrder: Number(data.get("sortOrder") || 0), roomTypeId: textOrNull(data.get("roomTypeId"))}),
       });
       await refresh();
       setMessage(ar?"تم حفظ بيانات الصورة":"Photo metadata saved");
@@ -119,6 +120,7 @@ export default function MediaManager({hotelId, initialMedia, locale}: {hotelId: 
         <h3>{ar?"رفع صورة الفندق":"Upload hotel image"}</h3>
         <label>{ar?"الصورة":"Image"}<input name="image" type="file" accept="image/jpeg,image/png,image/webp" required/></label>
         <label>{ar?"النص البديل":"Alt text"}<input name="alt" maxLength={180} placeholder={ar?"واجهة الفندق عند الغروب":"Hotel exterior at sunset"}/></label>
+        <label>{ar?"معرض الصورة":"Photo gallery"}<select name="roomTypeId" defaultValue=""><option value="">{ar?"معرض المنشأة العام":"Property gallery"}</option>{roomTypes.map((room)=><option value={room.id} key={room.id}>{ar?"غرفة: ":"Room: "}{room.name}</option>)}</select></label>
         <label>{ar?"ترتيب العرض":"Display order"}<input name="sortOrder" type="number" min="0" max="1000" defaultValue="0"/></label>
         <button className="primaryButton" disabled={busy}>{ar?"رفع الصورة":"Upload image"}</button>
       </form>
@@ -132,7 +134,7 @@ export default function MediaManager({hotelId, initialMedia, locale}: {hotelId: 
 
     {message && <div className="setupMessage">{message}</div>}
 
-    <div style={{marginTop:24}}><h3>{ar?"صور الفندق":"Hotel images"}</h3>{images.length === 0 && <p className="muted">{ar?"لم ترفع صور بعد.":"No images uploaded yet."}</p>}<div className="hotelGrid">{images.map((item) => <div className="hotelCard" key={item.id}>{item.publicUrl && item.state === "READY" ? <img src={item.publicUrl} alt={item.photo?.alt ?? "Hotel"} style={{width:"100%",height:160,objectFit:"cover"}}/> : <div className="softBg" style={{height:160,display:"grid",placeItems:"center"}}>{ar?"حالة الرفع":"Upload"} {item.state.toLowerCase()}</div>}<div className="hotelCardBody"><strong>{item.originalFileName}</strong><p className="muted">{item.state} · {(item.sizeBytes/1024/1024).toFixed(1)} MB</p>{item.photo && <form className="stackForm" onSubmit={(event)=>{event.preventDefault();void savePhoto(item.id,event.currentTarget)}}><label>{ar?"النص البديل":"Alt text"}<input name="alt" defaultValue={item.photo.alt ?? ""}/></label><label>{ar?"الترتيب":"Order"}<input name="sortOrder" type="number" min="0" max="1000" defaultValue={item.photo.sortOrder}/></label><button className="secondaryButton" disabled={busy}>{ar?"حفظ الصورة":"Save photo"}</button></form>}<button type="button" className="secondaryButton" disabled={busy} onClick={()=>void remove(item.id)}>{ar?"حذف":"Remove"}</button></div></div>)}</div></div>
+    <div style={{marginTop:24}}><h3>{ar?"صور الفندق":"Hotel images"}</h3>{images.length === 0 && <p className="muted">{ar?"لم ترفع صور بعد.":"No images uploaded yet."}</p>}<div className="hotelGrid">{images.map((item) => <div className="hotelCard" key={item.id}>{item.publicUrl && item.state === "READY" ? <img src={item.publicUrl} alt={item.photo?.alt ?? "Hotel"} style={{width:"100%",height:160,objectFit:"cover"}}/> : <div className="softBg" style={{height:160,display:"grid",placeItems:"center"}}>{ar?"حالة الرفع":"Upload"} {item.state.toLowerCase()}</div>}<div className="hotelCardBody"><strong>{item.originalFileName}</strong><p className="muted">{item.state} · {(item.sizeBytes/1024/1024).toFixed(1)} MB</p>{item.photo && <form className="stackForm" onSubmit={(event)=>{event.preventDefault();void savePhoto(item.id,event.currentTarget)}}><label>{ar?"النص البديل":"Alt text"}<input name="alt" defaultValue={item.photo.alt ?? ""}/></label><label>{ar?"المعرض":"Gallery"}<select name="roomTypeId" defaultValue={item.photo.roomTypeId ?? ""}><option value="">{ar?"المنشأة العامة":"Property gallery"}</option>{roomTypes.map((room)=><option value={room.id} key={room.id}>{room.name}</option>)}</select></label><label>{ar?"الترتيب":"Order"}<input name="sortOrder" type="number" min="0" max="1000" defaultValue={item.photo.sortOrder}/></label><button className="secondaryButton" disabled={busy}>{ar?"حفظ الصورة":"Save photo"}</button></form>}<button type="button" className="secondaryButton" disabled={busy} onClick={()=>void remove(item.id)}>{ar?"حذف":"Remove"}</button></div></div>)}</div></div>
 
     <div style={{marginTop:24}}><h3>{ar?"مستندات التحقق":"Verification documents"}</h3>{documents.length === 0 && <p className="muted">{ar?"لم ترفع مستندات بعد.":"No documents uploaded yet."}</p>}<div className="adminTable">{documents.map((item)=><div className="adminRow" key={item.id}><div><strong>{item.document?.type ?? (ar?"مستند":"Document")}</strong><div className="muted">{item.originalFileName}</div></div><span>{item.state}</span><span>{item.document?.status ?? "PENDING"}</span><span>{item.document?.rejectionReason ?? (ar?"خاص · يحتاج مراجعة المنصة":"Private · platform review required")}</span></div>)}</div></div>
   </section>;

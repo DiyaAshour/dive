@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { CreateHotelRequest, CreateRatePlanRequest, CreateRoomTypeRequest, UpdateCancellationPolicyInput, UpsertCalendarRequest } from "@platform/contracts";
+import type { CreateHotelRequest, CreateRatePlanRequest, CreateRoomTypeRequest, UpdateCancellationPolicyInput, UpdateRoomTypeRequest, UpsertCalendarRequest } from "@platform/contracts";
 import { database } from "@platform/database";
+import type { Prisma } from "@platform/database";
 import { badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "./authorization";
 import { recordPublishMutation } from "./publishing-revision";
@@ -23,10 +24,49 @@ export async function createHotel(ownerUserId: string, input: CreateHotelRequest
 export async function createRoomType(actorUserId: string, hotelId: string, input: CreateRoomTypeRequest) {
   await requireHotelPermission(actorUserId, hotelId, "rooms:manage");
   return database().$transaction(async (tx) => {
-    const roomType = await tx.roomType.create({data: {hotelId, name: input.name, code: input.code, maxAdults: input.maxAdults, maxChildren: input.maxChildren}});
+    const roomType = await tx.roomType.create({data: {
+      hotelId,
+      ...roomProductData(input),
+      beds: {create: input.beds},
+      amenities: {create: input.amenities},
+    }});
     await recordPublishMutation(tx, hotelId, actorUserId, "room type created");
-    await tx.auditLog.create({data: {hotelId, actorUserId, action: "ROOM_TYPE_CREATED", entityType: "RoomType", entityId: roomType.id, after: {name: roomType.name, code: roomType.code}}});
-    return roomType;
+    const product = await tx.roomType.findUnique({where: {id: roomType.id}, select: roomProductSelect});
+    if (!product) notFound("Room type");
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: "ROOM_TYPE_CREATED", entityType: "RoomType", entityId: roomType.id, after: roomProductAuditValue(product)}});
+    return serializeRoomProduct(product);
+  });
+}
+
+export async function listRoomTypesForManagement(actorUserId: string, hotelId: string) {
+  await requireHotelPermission(actorUserId, hotelId, "hotel:view");
+  const hotel = await database().hotel.findUnique({where: {id: hotelId}, select: {id: true, name: true, city: true, status: true, roomTypes: {select: roomProductSelect, orderBy: {createdAt: "asc"}}}});
+  if (!hotel) notFound("Hotel");
+  return {...hotel, roomTypes: hotel.roomTypes.map(serializeRoomProduct)};
+}
+
+export async function getRoomTypeForManagement(actorUserId: string, hotelId: string, roomTypeId: string) {
+  await requireHotelPermission(actorUserId, hotelId, "hotel:view");
+  const roomType = await database().roomType.findFirst({where: {id: roomTypeId, hotelId}, select: roomProductSelect});
+  if (!roomType) notFound("Room type");
+  return serializeRoomProduct(roomType);
+}
+
+export async function updateRoomType(actorUserId: string, hotelId: string, roomTypeId: string, input: UpdateRoomTypeRequest) {
+  await requireHotelPermission(actorUserId, hotelId, "rooms:manage");
+  return database().$transaction(async (tx) => {
+    const before = await tx.roomType.findFirst({where: {id: roomTypeId, hotelId}, select: roomProductSelect});
+    if (!before) notFound("Room type");
+    await tx.roomType.update({where: {id: roomTypeId}, data: roomProductData(input)});
+    await tx.roomBed.deleteMany({where: {roomTypeId}});
+    await tx.roomAmenity.deleteMany({where: {roomTypeId}});
+    if (input.beds.length) await tx.roomBed.createMany({data: input.beds.map((bed) => ({roomTypeId, ...bed}))});
+    if (input.amenities.length) await tx.roomAmenity.createMany({data: input.amenities.map((amenity) => ({roomTypeId, ...amenity}))});
+    await recordPublishMutation(tx, hotelId, actorUserId, "room product updated");
+    const after = await tx.roomType.findUnique({where: {id: roomTypeId}, select: roomProductSelect});
+    if (!after) notFound("Room type");
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: "ROOM_TYPE_UPDATED", entityType: "RoomType", entityId: roomTypeId, before: roomProductAuditValue(before), after: roomProductAuditValue(after)}});
+    return serializeRoomProduct(after);
   });
 }
 
@@ -115,7 +155,7 @@ export async function upsertCalendar(actorUserId: string, hotelId: string, input
 
 export async function getHotelWorkspace(actorUserId: string, hotelId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
-  const hotel = await database().hotel.findUnique({where: {id: hotelId}, include: {roomTypes: {include: {ratePlans: {include: {cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}}}}}}, memberships: {where: {status: "ACTIVE"}, select: {id: true, role: true, user: {select: {id: true, email: true, displayName: true}}}}}});
+  const hotel = await database().hotel.findUnique({where: {id: hotelId}, include: {roomTypes: {orderBy: {createdAt: "asc"}, include: {beds: {orderBy: {sortOrder: "asc"}}, amenities: {orderBy: [{category: "asc"}, {name: "asc"}]}, photos: {where: {mediaObject: {state: "READY"}}, include: {mediaObject: {select: {publicUrl: true}}}, orderBy: {sortOrder: "asc"}}, ratePlans: {include: {cancellationPolicy: {include: {rules: {orderBy: {minimumDaysBeforeArrival: "desc"}}}}}}}}, memberships: {where: {status: "ACTIVE"}, select: {id: true, role: true, user: {select: {id: true, email: true, displayName: true}}}}}});
   if (!hotel) notFound("Hotel");
   return hotel;
 }
@@ -160,4 +200,99 @@ function defaultCancellationPolicy(refundable: boolean) {
 
 function policyAuditValue(policy: {name: string; noShowPenaltyType: string; noShowPenaltyValue: unknown; rules: Array<{minimumDaysBeforeArrival: number; penaltyType: string; penaltyValue: unknown}>}) {
   return {name: policy.name, noShowPenaltyType: policy.noShowPenaltyType, noShowPenaltyValue: policy.noShowPenaltyValue === null ? null : String(policy.noShowPenaltyValue), rules: policy.rules.map((rule) => ({minimumDaysBeforeArrival: rule.minimumDaysBeforeArrival, penaltyType: rule.penaltyType, penaltyValue: rule.penaltyValue === null ? null : String(rule.penaltyValue)}))};
+}
+
+const roomProductSelect = {
+  id: true,
+  hotelId: true,
+  name: true,
+  code: true,
+  description: true,
+  unitType: true,
+  quantity: true,
+  maxGuests: true,
+  maxAdults: true,
+  maxChildren: true,
+  maxInfants: true,
+  bedroomCount: true,
+  livingRoomCount: true,
+  bathroomCount: true,
+  privateBathroom: true,
+  sizeValue: true,
+  sizeUnit: true,
+  smokingPolicy: true,
+  extraBedCount: true,
+  cribCount: true,
+  allowsCribAndExtraBed: true,
+  active: true,
+  beds: {select: {id: true, area: true, type: true, quantity: true, sortOrder: true}, orderBy: {sortOrder: "asc" as const}},
+  amenities: {select: {id: true, code: true, name: true, category: true}, orderBy: [{category: "asc" as const}, {name: "asc" as const}]},
+  photos: {where: {mediaObject: {state: "READY" as const}}, select: {id: true, alt: true, sortOrder: true, mediaObject: {select: {publicUrl: true}}}, orderBy: {sortOrder: "asc" as const}},
+  ratePlans: {select: {id: true, name: true, code: true, active: true}},
+  _count: {select: {bookings: true, inventory: true}},
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.RoomTypeSelect;
+
+type RoomProduct = Prisma.RoomTypeGetPayload<{select: typeof roomProductSelect}>;
+
+function roomProductData(input: CreateRoomTypeRequest | UpdateRoomTypeRequest) {
+  return {
+    name: input.name,
+    code: input.code,
+    description: input.description,
+    unitType: input.unitType,
+    quantity: input.quantity,
+    maxGuests: input.maxGuests,
+    maxAdults: input.maxAdults,
+    maxChildren: input.maxChildren,
+    maxInfants: input.maxInfants,
+    bedroomCount: input.bedroomCount,
+    livingRoomCount: input.livingRoomCount,
+    bathroomCount: input.bathroomCount,
+    privateBathroom: input.privateBathroom,
+    sizeValue: input.sizeValue,
+    sizeUnit: input.sizeUnit,
+    smokingPolicy: input.smokingPolicy,
+    extraBedCount: input.extraBedCount,
+    cribCount: input.cribCount,
+    allowsCribAndExtraBed: input.allowsCribAndExtraBed,
+    active: input.active,
+  };
+}
+
+function serializeRoomProduct(room: RoomProduct) {
+  return {
+    ...room,
+    sizeValue: room.sizeValue === null ? null : Number(room.sizeValue),
+    photos: room.photos.flatMap((photo) => photo.mediaObject.publicUrl ? [{id: photo.id, url: photo.mediaObject.publicUrl, alt: photo.alt, sortOrder: photo.sortOrder}] : []),
+  };
+}
+
+function roomProductAuditValue(room: RoomProduct) {
+  const serialized = serializeRoomProduct(room);
+  return {
+    name: serialized.name,
+    code: serialized.code,
+    description: serialized.description,
+    unitType: serialized.unitType,
+    quantity: serialized.quantity,
+    maxGuests: serialized.maxGuests,
+    maxAdults: serialized.maxAdults,
+    maxChildren: serialized.maxChildren,
+    maxInfants: serialized.maxInfants,
+    bedroomCount: serialized.bedroomCount,
+    livingRoomCount: serialized.livingRoomCount,
+    bathroomCount: serialized.bathroomCount,
+    privateBathroom: serialized.privateBathroom,
+    sizeValue: serialized.sizeValue,
+    sizeUnit: serialized.sizeUnit,
+    smokingPolicy: serialized.smokingPolicy,
+    extraBedCount: serialized.extraBedCount,
+    cribCount: serialized.cribCount,
+    allowsCribAndExtraBed: serialized.allowsCribAndExtraBed,
+    active: serialized.active,
+    beds: serialized.beds.map(({area, type, quantity, sortOrder}) => ({area, type, quantity, sortOrder})),
+    amenities: serialized.amenities.map(({code, name, category}) => ({code, name, category})),
+  };
 }

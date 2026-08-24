@@ -8,6 +8,8 @@ const staySelection = z.object({
   ratePlanId: z.string().min(1),
   arrival: dateOnly,
   departure: dateOnly,
+  adults: z.coerce.number().int().min(1).max(20).default(2),
+  children: z.coerce.number().int().min(0).max(20).default(0),
 });
 
 export const bookingQuoteSchema = staySelection;
@@ -23,6 +25,8 @@ export const modifyBookingSchema = z.object({
   ratePlanId: z.string().min(1),
   arrival: dateOnly,
   departure: dateOnly,
+  adults: z.coerce.number().int().min(1).max(20).optional(),
+  children: z.coerce.number().int().min(0).max(20).optional(),
 });
 
 export const createRefundSchema = z.object({

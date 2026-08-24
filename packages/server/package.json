@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {".": "./src/index.ts"},
-  "scripts": {"typecheck": "tsc --noEmit", "bootstrap-admin": "tsx scripts/bootstrap-admin.ts", "admin-smoke": "tsx scripts/admin-smoke.ts"},
+  "scripts": {"typecheck": "tsc --noEmit", "bootstrap-admin": "tsx scripts/bootstrap-admin.ts", "admin-smoke": "tsx scripts/admin-smoke.ts", "room-product-smoke": "tsx scripts/room-product-smoke.ts"},
   "dependencies": {
     "@platform/contracts": "0.2.0",
     "@platform/core": "0.2.0",

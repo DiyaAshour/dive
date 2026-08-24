@@ -180,6 +180,17 @@ async function buildPublishingReadiness(hotelId: string) {
         where: {active: true},
         select: {
           id: true,
+          description: true,
+          maxGuests: true,
+          maxAdults: true,
+          maxChildren: true,
+          maxInfants: true,
+          unitType: true,
+          bedroomCount: true,
+          sizeValue: true,
+          beds: {select: {area: true, type: true, quantity: true}},
+          amenities: {select: {id: true}},
+          photos: {where: {mediaObject: {state: "READY"}}, select: {id: true}},
           inventory: {select: {date: true, available: true, overbookingLimit: true}},
           ratePlans: {
             where: {active: true},
@@ -222,6 +233,28 @@ async function buildPublishingReadiness(hotelId: string) {
 
   const approvedDocumentTypes = new Set(hotel.documents.map((document) => document.type));
   const missingDocuments = REQUIRED_DOCUMENT_TYPES.filter((type) => !approvedDocumentTypes.has(type));
+  const completeRoomProducts = hotel.roomTypes.filter((room) => {
+    const totalBeds = room.beds.reduce((sum, bed) => sum + bed.quantity, 0);
+    const uniqueBeds = new Set(room.beds.map((bed) => `${bed.area.trim().toLocaleLowerCase()}::${bed.type}`)).size === room.beds.length;
+    const unitRules = room.unitType === "DORMITORY_ROOM"
+      ? room.maxAdults >= 2 && totalBeds >= 2
+      : room.unitType === "BED_IN_DORMITORY"
+        ? room.maxGuests === 1 && room.maxAdults === 1 && totalBeds === 1
+        : !["SUITE", "APARTMENT", "VILLA", "CHALET", "BUNGALOW", "HOLIDAY_HOME"].includes(room.unitType) || room.bedroomCount >= 1;
+    return (
+    (room.description?.trim().length ?? 0) >= 40
+    && room.maxAdults <= room.maxGuests
+    && room.maxGuests <= room.maxAdults + room.maxChildren + room.maxInfants
+    && (room.maxChildren === 0 || room.maxChildren < room.maxGuests)
+    && (room.maxInfants === 0 || room.maxInfants < room.maxGuests)
+    && room.sizeValue !== null
+    && totalBeds > 0
+    && uniqueBeds
+    && unitRules
+    && room.amenities.length >= 3
+    && room.photos.length > 0
+    );
+  });
   const checks: ReadinessCheck[] = [
     check("DESCRIPTION", "Property description", (hotel.description?.trim().length ?? 0) >= MIN_DESCRIPTION_LENGTH, `At least ${MIN_DESCRIPTION_LENGTH} characters`),
     check("STAR_RATING", "Official star rating", hotel.starRating !== null && hotel.starRating >= 1 && hotel.starRating <= 5, "Set a star rating from 1 to 5"),
@@ -230,6 +263,7 @@ async function buildPublishingReadiness(hotelId: string) {
     check("AMENITIES", "Property amenities", hotel.amenities.length >= MIN_AMENITIES, `At least ${MIN_AMENITIES} amenities`),
     check("VERIFICATION_DOCUMENTS", "Verification documents", missingDocuments.length === 0, missingDocuments.length === 0 ? "Required verification documents approved" : `Missing approved documents: ${missingDocuments.join(", ")}`),
     check("ROOM_TYPES", "Active room type", hotel.roomTypes.length > 0, "At least one active room type"),
+    check("ROOM_PRODUCTS", "Complete room products", hotel.roomTypes.length > 0 && completeRoomProducts.length === hotel.roomTypes.length, "Every active room requires occupancy, beds, size, description, three facilities and a room photo"),
     check("RATE_PLANS", "Bookable rate plan", validPlans.length > 0, "At least one active plan with payment mode and cancellation policy"),
     check("SELLABLE_CALENDAR", "Live rates and inventory", sellableDates.size >= MIN_SELLABLE_DAYS, `At least ${MIN_SELLABLE_DAYS} sellable days in the next ${REVIEW_WINDOW_DAYS} days`),
   ];

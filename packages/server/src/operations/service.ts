@@ -55,6 +55,8 @@ export async function listMyTrips(userId: string) {
       tripState: tripState(booking.status, arrival, departure, today),
       paymentMode: booking.paymentMode,
       paymentState: booking.paymentState,
+      adults: booking.adults,
+      children: booking.children,
       currency: booking.currency,
       totalAmount: Number(booking.totalAmount),
       arrival,
@@ -264,6 +266,8 @@ export async function listHotelReservationOperations(actorUserId: string, hotelI
       reference: booking.reference,
       guestName: booking.guestName,
       guestEmail: booking.guestEmail,
+      adults: booking.adults,
+      children: booking.children,
       arrival: dateKey(booking.arrival),
       departure: dateKey(booking.departure),
       expectedArrivalTime: booking.expectedArrivalTime,
@@ -283,11 +287,13 @@ export async function listHotelReservationOperations(actorUserId: string, hotelI
 
 export async function hotelReservationCsv(actorUserId: string, hotelId: string, query: HotelReservationQuery) {
   const report = await listHotelReservationOperations(actorUserId, hotelId, query);
-  const header = ["Booking reference", "Guest", "Email", "Arrival", "Departure", "Expected arrival", "Arrival status", "Booking status", "Room type", "Rate plan", "Payment", "Open requests"];
+  const header = ["Booking reference", "Guest", "Email", "Adults", "Children", "Arrival", "Departure", "Expected arrival", "Arrival status", "Booking status", "Room type", "Rate plan", "Payment", "Open requests"];
   const rows = report.reservations.map((booking) => [
     booking.reference,
     booking.guestName,
     booking.guestEmail,
+    String(booking.adults),
+    String(booking.children),
     booking.arrival,
     booking.departure,
     booking.expectedArrivalTime ?? "",
