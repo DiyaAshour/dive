@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import {FileImage, FileLock2} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 
 type MediaItem = {
@@ -24,6 +25,8 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
   const [items, setItems] = useState(initialMedia);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [imageFileName, setImageFileName] = useState<string | null>(null);
+  const [documentFileName, setDocumentFileName] = useState<string | null>(null);
 
   async function uploadImage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +40,7 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
       roomTypeId: textOrNull(form.get("roomTypeId")),
     });
     event.currentTarget.reset();
+    setImageFileName(null);
   }
 
   async function uploadDocument(event: FormEvent<HTMLFormElement>) {
@@ -46,6 +50,7 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
     if (!(file instanceof File) || file.size === 0) return setMessage(ar?"اختر مستند تحقق أولًا":"Choose a verification document first");
     await runUpload(file, {kind: "VERIFICATION_DOCUMENT", documentType: String(form.get("documentType") || "")});
     event.currentTarget.reset();
+    setDocumentFileName(null);
   }
 
   async function runUpload(file: File, metadata: Record<string, unknown>) {
@@ -118,7 +123,12 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
     <div className="formGrid" style={{alignItems:"start"}}>
       <form className="stackForm" onSubmit={uploadImage}>
         <h3>{ar?"رفع صورة الفندق":"Upload hotel image"}</h3>
-        <label>{ar?"الصورة":"Image"}<input name="image" type="file" accept="image/jpeg,image/png,image/webp" required/></label>
+        <label className={`partnerFilePicker${imageFileName ? " hasFile" : ""}`}>
+          <input name="image" type="file" accept="image/jpeg,image/png,image/webp" required disabled={busy} aria-label={ar?"اختيار صورة الفندق":"Choose hotel image"} onChange={(event)=>setImageFileName(event.currentTarget.files?.[0]?.name ?? null)}/>
+          <span className="partnerFilePickerIcon"><FileImage size={21}/></span>
+          <span className="partnerFilePickerCopy"><strong title={imageFileName ?? undefined}>{imageFileName ?? (ar?"اختر صورة الفندق":"Choose hotel image")}</strong><small>{imageFileName ? (ar?"الصورة جاهزة للرفع":"Image ready to upload") : (ar?"JPG أو PNG أو WebP":"JPG, PNG or WebP")}</small></span>
+          <span className="partnerFilePickerAction">{imageFileName ? (ar?"تغيير":"Change") : (ar?"استعراض":"Browse")}</span>
+        </label>
         <label>{ar?"النص البديل":"Alt text"}<input name="alt" maxLength={180} placeholder={ar?"واجهة الفندق عند الغروب":"Hotel exterior at sunset"}/></label>
         <label>{ar?"معرض الصورة":"Photo gallery"}<select name="roomTypeId" defaultValue=""><option value="">{ar?"معرض المنشأة العام":"Property gallery"}</option>{roomTypes.map((room)=><option value={room.id} key={room.id}>{ar?"غرفة: ":"Room: "}{room.name}</option>)}</select></label>
         <label>{ar?"ترتيب العرض":"Display order"}<input name="sortOrder" type="number" min="0" max="1000" defaultValue="0"/></label>
@@ -127,7 +137,12 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
       <form className="stackForm" onSubmit={uploadDocument}>
         <h3>{ar?"رفع مستند تحقق":"Upload verification document"}</h3>
         <label>{ar?"نوع المستند":"Document type"}<select name="documentType" defaultValue="COMMERCIAL_REGISTRATION"><option value="COMMERCIAL_REGISTRATION">{ar?"السجل التجاري":"Commercial registration"}</option><option value="BUSINESS_LICENSE">{ar?"رخصة العمل":"Business license"}</option><option value="TAX_REGISTRATION">{ar?"التسجيل الضريبي":"Tax registration"}</option><option value="BANK_PROOF">{ar?"إثبات بنكي":"Bank proof"}</option><option value="OWNER_ID">{ar?"هوية المالك":"Owner ID"}</option><option value="OTHER">{ar?"أخرى":"Other"}</option></select></label>
-        <label>{ar?"الملف":"File"}<input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/></label>
+        <label className={`partnerFilePicker${documentFileName ? " hasFile" : ""}`}>
+          <input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required disabled={busy} aria-label={ar?"اختيار مستند التحقق":"Choose verification document"} onChange={(event)=>setDocumentFileName(event.currentTarget.files?.[0]?.name ?? null)}/>
+          <span className="partnerFilePickerIcon private"><FileLock2 size={21}/></span>
+          <span className="partnerFilePickerCopy"><strong title={documentFileName ?? undefined}>{documentFileName ?? (ar?"اختر مستند التحقق":"Choose verification document")}</strong><small>{documentFileName ? (ar?"المستند جاهز للرفع الخاص":"Document ready for private upload") : (ar?"PDF أو JPG أو PNG · يبقى خاصًا":"PDF, JPG or PNG · remains private")}</small></span>
+          <span className="partnerFilePickerAction">{documentFileName ? (ar?"تغيير":"Change") : (ar?"استعراض":"Browse")}</span>
+        </label>
         <button className="secondaryButton" disabled={busy}>{ar?"رفع مستند خاص":"Upload private document"}</button>
       </form>
     </div>
