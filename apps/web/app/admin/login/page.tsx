@@ -3,7 +3,11 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {Activity, BadgeCheck, ShieldCheck} from "lucide-react";
 import {Brand} from "@/components/brand";
+import {LanguageSwitcher} from "@/components/language-switcher";
 import {currentAdminPrincipal} from "@/lib/server-session";
+import {requestLocale} from "@/lib/request-locale";
+import {direction} from "@/lib/i18n";
+import {portalDictionary} from "@/lib/portal-i18n";
 import AdminLoginForm from "./admin-login-form";
 
 export const metadata: Metadata = {title: "Administrator sign in"};
@@ -18,20 +22,22 @@ function safeNext(value: string | string[] | undefined): string {
 export default async function AdminLoginPage({searchParams}: {searchParams: Promise<{next?: string | string[]}>}) {
   const nextPath = safeNext((await searchParams).next);
   if (await currentAdminPrincipal()) redirect(nextPath);
-  return <main className="adminLoginPage" dir="ltr">
-    <header className="adminLoginHeader"><div className="shell"><Brand inverse/><Link href="/">Return to marketplace</Link></div></header>
+  const locale = await requestLocale();
+  const copy = portalDictionary(locale).admin;
+  return <main className="adminLoginPage" dir={direction(locale)}>
+    <header className="adminLoginHeader"><div className="shell"><Brand inverse/><div className="adminLoginHeaderActions"><LanguageSwitcher locale={locale} compact/><Link href="/">{copy.returnMarketplace}</Link></div></div></header>
     <section className="shell adminLoginShell">
       <div className="adminLoginIntro">
-        <span className="adminPortalLabel">HandMeKey Control Center</span>
-        <h1>One secure door for platform decisions.</h1>
-        <p>Property publishing, private verification documents and sensitive platform actions stay behind an administrator-scoped session.</p>
+        <span className="adminPortalLabel">HandMeKey {copy.name}</span>
+        <h1>{copy.loginHero}</h1>
+        <p>{copy.loginBody}</p>
         <div className="adminLoginAssurances">
-          <div><ShieldCheck/><span><strong>Separate session scope</strong><small>A traveler login cannot authorize an administrator endpoint.</small></span></div>
-          <div><Activity/><span><strong>Audited actions</strong><small>Publishing and access decisions remain attributable.</small></span></div>
-          <div><BadgeCheck/><span><strong>No public admin registration</strong><small>The first administrator is provisioned once by an operator.</small></span></div>
+          <div><ShieldCheck/><span><strong>{copy.separateScope}</strong><small>{copy.separateScopeBody}</small></span></div>
+          <div><Activity/><span><strong>{copy.auditedActions}</strong><small>{copy.auditedActionsBody}</small></span></div>
+          <div><BadgeCheck/><span><strong>{copy.noRegistration}</strong><small>{copy.noRegistrationBody}</small></span></div>
         </div>
       </div>
-      <AdminLoginForm nextPath={nextPath}/>
+      <AdminLoginForm nextPath={nextPath} locale={locale}/>
     </section>
   </main>;
 }

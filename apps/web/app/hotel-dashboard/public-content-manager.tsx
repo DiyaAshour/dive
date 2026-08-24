@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import type {Locale} from "@/lib/i18n";
 
 type Content = {
   area: string | null;
@@ -14,7 +15,8 @@ type Content = {
   amenities: Array<{code: string; name: string; category: string | null}>;
 };
 
-export default function PublicContentManager({hotelId, content}: {hotelId: string; content: Content}) {
+export default function PublicContentManager({hotelId, content, locale}: {hotelId: string; content: Content; locale: Locale}) {
+  const ar=locale==="ar";
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +42,7 @@ export default function PublicContentManager({hotelId, content}: {hotelId: strin
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message ?? "Unable to save public content");
-      setMessage("Public hotel content saved");
+      setMessage(ar?"تم حفظ محتوى الفندق العام":"Public hotel content saved");
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : "Unable to save public content");
     } finally {
@@ -49,14 +51,14 @@ export default function PublicContentManager({hotelId, content}: {hotelId: strin
   }
 
   return <section className="panel setupPanel wideSetup" style={{marginBottom:24}}>
-    <span className="eyebrow">Customer-facing profile</span><h2>Public hotel content</h2><p className="muted">Profile fields are managed here. Photos are uploaded separately through secure object storage and are never entered as external URLs.</p>
+    <span className="eyebrow">{ar?"ملف يظهر للضيف":"Customer-facing profile"}</span><h2>{ar?"محتوى الفندق العام":"Public hotel content"}</h2><p className="muted">{ar?"تُدار بيانات الملف هنا، بينما تُرفع الصور بشكل منفصل إلى التخزين الآمن ولا تدخل كرابط خارجي.":"Profile fields are managed here. Photos are uploaded separately through secure object storage and are never entered as external URLs."}</p>
     <form className="stackForm" onSubmit={submit}>
-      <div className="formGrid"><label>Area / neighborhood<input name="area" defaultValue={content.area ?? ""} placeholder="Abdali"/></label><label>Official star rating<input name="starRating" type="number" min="1" max="5" defaultValue={content.starRating ?? ""}/></label></div>
-      <label>Description<textarea name="description" rows={5} defaultValue={content.description ?? ""} placeholder="Describe the property, location, and guest experience."/></label>
-      <div className="formGrid"><label>Latitude<input name="latitude" type="number" min="-90" max="90" step="0.000001" defaultValue={content.latitude ?? ""}/></label><label>Longitude<input name="longitude" type="number" min="-180" max="180" step="0.000001" defaultValue={content.longitude ?? ""}/></label></div>
-      <div className="formGrid"><label>Check-in time<input name="checkInTime" type="time" defaultValue={content.checkInTime ?? ""}/></label><label>Check-out time<input name="checkOutTime" type="time" defaultValue={content.checkOutTime ?? ""}/></label></div>
-      <label>Amenities <small className="muted">one per line: CODE | Display name | optional category</small><textarea name="amenities" rows={6} defaultValue={content.amenities.map((amenity)=>`${amenity.code} | ${amenity.name}${amenity.category ? ` | ${amenity.category}` : ""}`).join("\n")} placeholder={'WIFI | Wi-Fi | Connectivity\nPOOL | Swimming pool | Wellness\nPARKING | Parking | Transport'}/></label>
-      <button className="primaryButton" disabled={saving}>{saving ? "Saving…" : "Save public content"}</button>
+      <div className="formGrid"><label>{ar?"المنطقة / الحي":"Area / neighborhood"}<input name="area" defaultValue={content.area ?? ""} placeholder="Abdali"/></label><label>{ar?"التصنيف الرسمي":"Official star rating"}<input name="starRating" type="number" min="1" max="5" defaultValue={content.starRating ?? ""}/></label></div>
+      <label>{ar?"الوصف":"Description"}<textarea name="description" rows={5} defaultValue={content.description ?? ""} placeholder={ar?"صف المنشأة والموقع وتجربة الضيف.":"Describe the property, location, and guest experience."}/></label>
+      <div className="formGrid"><label>{ar?"خط العرض":"Latitude"}<input name="latitude" type="number" min="-90" max="90" step="0.000001" defaultValue={content.latitude ?? ""}/></label><label>{ar?"خط الطول":"Longitude"}<input name="longitude" type="number" min="-180" max="180" step="0.000001" defaultValue={content.longitude ?? ""}/></label></div>
+      <div className="formGrid"><label>{ar?"وقت الدخول":"Check-in time"}<input name="checkInTime" type="time" defaultValue={content.checkInTime ?? ""}/></label><label>{ar?"وقت المغادرة":"Check-out time"}<input name="checkOutTime" type="time" defaultValue={content.checkOutTime ?? ""}/></label></div>
+      <label>{ar?"المرافق":"Amenities"} <small className="muted">{ar?"كل سطر: CODE | الاسم | التصنيف اختياري":"one per line: CODE | Display name | optional category"}</small><textarea name="amenities" rows={6} defaultValue={content.amenities.map((amenity)=>`${amenity.code} | ${amenity.name}${amenity.category ? ` | ${amenity.category}` : ""}`).join("\n")} placeholder={'WIFI | Wi-Fi | Connectivity\nPOOL | Swimming pool | Wellness\nPARKING | Parking | Transport'}/></label>
+      <button className="primaryButton" disabled={saving}>{saving ? (ar?"جارٍ الحفظ…":"Saving…") : (ar?"حفظ المحتوى العام":"Save public content")}</button>
     </form>
     {message && <div className="setupMessage">{message}</div>}
   </section>;

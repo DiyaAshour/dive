@@ -71,7 +71,7 @@ export async function replyToGuestReview(actorUserId: string, hotelId: string, r
   if (!review) notFound("Review");
   return database().$transaction(async (tx) => {
     const updated = await tx.guestReview.update({where: {id: reviewId}, data: {hotelReply: input.reply, repliedByUserId: actorUserId, repliedAt: new Date()}});
-    await tx.auditLog.create({data: {hotelId, actorUserId, action: "GUEST_REVIEW_REPLIED", entityType: "GuestReview", entityId: reviewId, after: {replyLength: input.reply.length}}});
+    await tx.auditLog.create({data: {hotelId, actorUserId, action: review.hotelReply ? "GUEST_REVIEW_REPLY_UPDATED" : "GUEST_REVIEW_REPLIED", entityType: "GuestReview", entityId: reviewId, ...(review.hotelReply ? {before: {reply: review.hotelReply}} : {}), after: {reply: input.reply}}});
     return updated;
   });
 }

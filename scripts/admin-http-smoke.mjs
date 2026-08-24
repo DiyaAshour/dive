@@ -36,6 +36,21 @@ try {
   const adminApi = await fetch(`${origin}/api/v1/admin/property-reviews`, {headers: {cookie: adminCookie}});
   assert.equal(adminApi.status, 200);
 
+  const propertiesPage = await fetch(`${origin}/admin/properties`, {headers: {cookie: adminCookie}});
+  assert.equal(propertiesPage.status, 200);
+  assert.match(await propertiesPage.text(), /Find and operate every property/);
+
+  const moderationPage = await fetch(`${origin}/admin/reviews`, {headers: {cookie: adminCookie}});
+  assert.equal(moderationPage.status, 200);
+  assert.match(await moderationPage.text(), /Protect trust without rewriting guests/);
+
+  const localeResponse = await fetch(`${origin}/api/v1/preferences/locale`, {method: "POST", headers: {cookie: adminCookie, "content-type": "application/json"}, body: JSON.stringify({locale: "ar"})});
+  assert.equal(localeResponse.status, 200);
+  const localeCookie = cookiePair(localeResponse.headers.get("set-cookie"), "hmk_locale");
+  const arabicDashboard = await fetch(`${origin}/admin`, {headers: {cookie: `${adminCookie}; ${localeCookie}`}});
+  assert.equal(arabicDashboard.status, 200);
+  assert.match(await arabicDashboard.text(), /جلسة إدارية مستقلة/);
+
   const standardLogin = await jsonPost("/api/v1/auth/login", {email: "phase18-admin@handmekey.invalid", password: "Phase18-Admin-Pass!"});
   assert.equal(standardLogin.status, 200);
   const standardCookie = cookiePair(standardLogin.headers.get("set-cookie"), "hp_session");
@@ -47,7 +62,7 @@ try {
   const afterLogout = await fetch(`${origin}/admin`, {redirect: "manual", headers: {cookie: adminCookie}});
   assert.ok(afterLogout.status >= 300 && afterLogout.status < 400);
 
-  console.log("[admin-http-smoke] login, redirect, cookie scope, API guard and logout checks passed");
+  console.log("[admin-http-smoke] login, bilingual portal, operational pages, cookie scope, API guard and logout checks passed");
 } catch (error) {
   console.error(output);
   throw error;

@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { BarChart3, Hotel, ShieldCheck } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { requestLocale } from "@/lib/request-locale";
+import { direction } from "@/lib/i18n";
+import { portalDictionary } from "@/lib/portal-i18n";
 import AuthForm from "../../login/auth-form";
 
-export default function PartnerLoginPage() {
-  return <main className="partnerAuthPage">
-    <header className="partnerAuthHeader"><div className="shell"><Brand inverse/><Link href="/">Back to HandMeKey</Link></div></header>
+export default async function PartnerLoginPage() {
+  const locale=await requestLocale();const copy=portalDictionary(locale).partner;
+  return <main className="partnerAuthPage" dir={direction(locale)}>
+    <header className="partnerAuthHeader"><div className="shell"><Brand inverse/><div className="partnerHeaderTools"><LanguageSwitcher locale={locale} compact/><Link href="/">{copy.backMarketplace}</Link></div></div></header>
     <section className="shell partnerAuthShell">
-      <div className="partnerAuthIntro"><span className="partnerEyebrow">Partner access</span><h1>Your property business, behind one secure door.</h1><p>Sign in to manage listings, live rates, reservations, guest communication and performance.</p><div className="partnerAuthBenefits"><div><Hotel size={20}/><span><strong>Property control</strong><small>Manage only the hotels your account is authorized to access.</small></span></div><div><BarChart3 size={20}/><span><strong>Commercial visibility</strong><small>See conversion, demand dates and active booked value.</small></span></div><div><ShieldCheck size={20}/><span><strong>Review-gated publishing</strong><small>No property goes live until the submitted revision is approved.</small></span></div></div><p className="partnerAuthSwitch">Booking a stay instead? <Link href="/login">Use traveler sign in →</Link></p></div>
-      <AuthForm portal="partner"/>
+      <div className="partnerAuthIntro"><span className="partnerEyebrow">{copy.partnerAccess}</span><h1>{copy.authHero}</h1><p>{copy.authBody}</p><div className="partnerAuthBenefits"><div><Hotel size={20}/><span><strong>{copy.propertyControl}</strong><small>{copy.propertyControlBody}</small></span></div><div><BarChart3 size={20}/><span><strong>{copy.commercialVisibility}</strong><small>{copy.commercialVisibilityBody}</small></span></div><div><ShieldCheck size={20}/><span><strong>{copy.reviewPublishing}</strong><small>{copy.reviewPublishingBody}</small></span></div></div><p className="partnerAuthSwitch">{copy.travelerInstead} <Link href="/login">{copy.travelerSignIn} →</Link></p></div>
+      <AuthForm portal="partner" locale={locale}/>
     </section>
   </main>;
 }
