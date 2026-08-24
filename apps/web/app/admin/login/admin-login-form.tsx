@@ -3,8 +3,11 @@
 import {useState} from "react";
 import type {FormEvent} from "react";
 import {KeyRound, LockKeyhole} from "lucide-react";
+import type {Locale} from "@/lib/i18n";
+import {portalDictionary} from "@/lib/portal-i18n";
 
-export default function AdminLoginForm({nextPath}: Readonly<{nextPath: string}>) {
+export default function AdminLoginForm({nextPath, locale}: Readonly<{nextPath: string; locale: Locale}>) {
+  const copy = portalDictionary(locale).admin;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,10 +23,10 @@ export default function AdminLoginForm({nextPath}: Readonly<{nextPath: string}>)
         body: JSON.stringify({email: form.get("email"), password: form.get("password")}),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Administrator sign-in failed");
+      if (!response.ok) throw new Error(locale === "ar" && payload?.error?.code === "INVALID_ADMIN_CREDENTIALS" ? "بيانات دخول المدير غير صحيحة" : payload?.error?.message ?? copy.invalidCredentials);
       window.location.assign(nextPath);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Administrator sign-in failed");
+      setError(cause instanceof Error ? cause.message : copy.invalidCredentials);
     } finally {
       setBusy(false);
     }
@@ -31,13 +34,13 @@ export default function AdminLoginForm({nextPath}: Readonly<{nextPath: string}>)
 
   return <form className="adminLoginCard" onSubmit={submit}>
     <div className="adminLoginIcon"><LockKeyhole size={22}/></div>
-    <span className="eyebrow">Restricted access</span>
-    <h2>Administrator sign in</h2>
-    <p>Use a provisioned HandMeKey platform-administrator account. Public registration is disabled.</p>
-    <label>Email address<input name="email" type="email" autoComplete="username" required/></label>
-    <label>Password<input name="password" type="password" minLength={10} maxLength={128} autoComplete="current-password" required/></label>
+    <span className="eyebrow">{copy.restricted}</span>
+    <h2>{copy.signIn}</h2>
+    <p>{copy.loginIntro}</p>
+    <label>{copy.email}<input name="email" type="email" autoComplete="username" required/></label>
+    <label>{copy.password}<input name="password" type="password" minLength={10} maxLength={128} autoComplete="current-password" required/></label>
     {error && <div className="formError" role="alert">{error}</div>}
-    <button className="adminLoginSubmit" disabled={busy}><KeyRound size={17}/>{busy ? "Verifying access…" : "Enter Control Center"}</button>
-    <small>Admin sessions expire independently and never reuse the traveler session cookie.</small>
+    <button className="adminLoginSubmit" disabled={busy}><KeyRound size={17}/>{busy ? copy.verifying : copy.enter}</button>
+    <small>{copy.sessionNote}</small>
   </form>;
 }

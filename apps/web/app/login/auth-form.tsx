@@ -14,7 +14,7 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
   const [error,setError]=useState<string|null>(null);
   const [submitting,setSubmitting]=useState(false);
   const partner=portal==="partner";
-  const ar=!partner&&locale==="ar";
+  const ar=locale==="ar";
 
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
@@ -40,7 +40,7 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
       <button className={mode==="login"?"active":""} onClick={()=>setMode("login")} type="button">{ar?"تسجيل الدخول":"Sign in"}</button>
       <button className={mode==="register"?"active":""} onClick={()=>setMode("register")} type="button">{ar?"إنشاء حساب":"Create account"}</button>
     </div>
-    <div className="authCardHeading"><span>{partner?"Partner access":ar?"حساب HandMeKey":"HandMeKey account"}</span><h2>{mode==="login"?(ar?"مرحبًا بعودتك":"Welcome back"):(ar?"أنشئ حسابك":"Create your account")}</h2><p>{partner?"Manage properties, reservations, rates and performance from Partner Hub.":ar?"احتفظ بحجوزاتك وتنبيهات الأسعار ورسائل الحجز في مكان واحد.":"Keep your trips, price alerts and booking messages in one place."}</p></div>
+    <div className="authCardHeading"><span>{partner?(ar?"دخول الشريك":"Partner access"):ar?"حساب HandMeKey":"HandMeKey account"}</span><h2>{mode==="login"?(ar?"مرحبًا بعودتك":"Welcome back"):(ar?"أنشئ حسابك":"Create your account")}</h2><p>{partner?(ar?"أدر منشآتك وحجوزاتك وأسعارك وأداءك من بوابة الشركاء.":"Manage properties, reservations, rates and performance from Partner Hub."):ar?"احتفظ بحجوزاتك وتنبيهات الأسعار ورسائل الحجز في مكان واحد.":"Keep your trips, price alerts and booking messages in one place."}</p></div>
     <form onSubmit={submit}>
       {mode==="register"&&<label>{ar?"الاسم الكامل":"Full name"}<input name="displayName" autoComplete="name" minLength={2} placeholder={ar?"اسمك الكامل":"Your full name"} required/></label>}
       <label>{ar?"البريد الإلكتروني":"Email address"}<input name="email" type="email" autoComplete="email" placeholder="name@example.com" required/></label>
@@ -48,6 +48,6 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
       {error&&<p className="formError">{error}</p>}
       <button className="primaryButton authSubmit" disabled={submitting}>{submitting?(ar?"يرجى الانتظار…":"Please wait…"):mode==="login"?(ar?"تسجيل الدخول":"Sign in"):(ar?"إنشاء الحساب":"Create account")}</button>
     </form>
-    <small>{partner?"Property access is permission-based. Your account only sees hotels you are authorized to manage.":ar?"يبقى الوصول إلى حجوزاتك مرتبطًا بحسابك وبيانات الحجز الموثقة.":"Your booking access stays tied to your account and verified booking credentials."}</small>
+    <small>{partner?(ar?"صلاحيات المنشأة محددة؛ لا يرى حسابك إلا الفنادق المصرح له بإدارتها.":"Property access is permission-based. Your account only sees hotels you are authorized to manage."):ar?"يبقى الوصول إلى حجوزاتك مرتبطًا بحسابك وبيانات الحجز الموثقة.":"Your booking access stays tied to your account and verified booking credentials."}</small>
   </div>;
 }

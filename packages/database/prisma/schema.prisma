@@ -223,6 +223,7 @@ model User {
   frontDeskNotesAuthored   BookingFrontDeskNote[]   @relation("FrontDeskNoteAuthor")
   guestReviewsAuthored     GuestReview[]            @relation("GuestReviewAuthor")
   guestReviewReplies       GuestReview[]            @relation("GuestReviewReplyAuthor")
+  guestReviewsModerated    GuestReview[]            @relation("GuestReviewModerator")
   bookingMessagesSent      BookingMessage[]         @relation("BookingMessageSender")
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
@@ -680,6 +681,10 @@ model GuestReview {
   title             String?
   comment           String       @db.Text
   status            ReviewStatus @default(PUBLISHED)
+  moderationReason  String?      @db.Text
+  moderatedByUserId String?
+  moderatedBy       User?        @relation("GuestReviewModerator", fields: [moderatedByUserId], references: [id], onDelete: SetNull)
+  moderatedAt       DateTime?
   hotelReply        String?      @db.Text
   repliedByUserId   String?
   repliedBy         User?        @relation("GuestReviewReplyAuthor", fields: [repliedByUserId], references: [id], onDelete: SetNull)
@@ -689,6 +694,7 @@ model GuestReview {
 
   @@index([hotelId, status, createdAt])
   @@index([authorUserId, createdAt])
+  @@index([moderatedByUserId, moderatedAt])
 }
 
 model BookingConversation {
