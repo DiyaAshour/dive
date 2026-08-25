@@ -1,0 +1,44 @@
+enum LoyaltyTier {
+  MEMBER
+  GOLD
+  BLACK
+}
+
+enum LoyaltyEntryType {
+  EARN
+  ADJUSTMENT
+  REDEMPTION
+  REVERSAL
+  EXPIRY
+}
+
+model LoyaltyAccount {
+  userId               String               @id
+  tier                 LoyaltyTier          @default(MEMBER)
+  pointsBalance        Int                  @default(0)
+  lifetimePointsEarned Int                  @default(0)
+  qualifyingNights     Int                  @default(0)
+  qualifyingStays      Int                  @default(0)
+  entries              LoyaltyLedgerEntry[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+}
+
+model LoyaltyLedgerEntry {
+  id             String           @id @default(cuid())
+  userId         String
+  account        LoyaltyAccount   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  bookingId      String?
+  type           LoyaltyEntryType
+  points         Int
+  currency       String?          @db.Char(3)
+  eligibleAmount Decimal?         @db.Decimal(12, 2)
+  pointsPerUnit  Int?
+  tierAtPosting  LoyaltyTier
+  description    String
+  idempotencyKey String           @unique
+  createdAt      DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([bookingId, type])
+}

@@ -5,6 +5,7 @@ import { requestLocale } from "@/lib/request-locale";
 import "./globals.css";
 import "./phase2.css";
 import "./account.css";
+import "./rewards.css";
 import "./localization.css";
 import "./booking-details.css";
 import "./admin.css";
