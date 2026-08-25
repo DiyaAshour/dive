@@ -25,6 +25,7 @@ model BlogPost {
   featured         Boolean        @default(false)
   status           BlogPostStatus @default(DRAFT)
   authorName       String
+  readingMinutes   Int            @default(1)
   createdByUserId  String
   updatedByUserId  String
   publishedAt      DateTime?
