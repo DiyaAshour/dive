@@ -10,6 +10,7 @@ import "./rewards.css";
 import "./content.css";
 import "./hotel-vitality.css";
 import "./hotel-density.css";
+import "./hotel-trust.css";
 import "./localization.css";
 import "./booking-details.css";
 import "./admin.css";
