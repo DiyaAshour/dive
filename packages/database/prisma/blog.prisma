@@ -1,0 +1,38 @@
+enum BlogLocale {
+  EN
+  AR
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model BlogPost {
+  id               String         @id @default(cuid())
+  locale           BlogLocale
+  slug             String
+  title            String
+  excerpt          String         @db.Text
+  body             String         @db.Text
+  seoTitle         String
+  seoDescription   String         @db.Text
+  category         String
+  tags             String[]       @default([])
+  coverImageUrl    String?
+  coverImageAlt    String?
+  featured         Boolean        @default(false)
+  status           BlogPostStatus @default(DRAFT)
+  authorName       String
+  createdByUserId  String
+  updatedByUserId  String
+  publishedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([locale, slug])
+  @@index([status, locale, publishedAt])
+  @@index([locale, category, status])
+  @@index([featured, status, publishedAt])
+}
