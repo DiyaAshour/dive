@@ -3,18 +3,24 @@ import type { ReactNode } from "react";
 export function BlogArticleBody({body}: {body: string}) {
   const blocks = toBlocks(body);
   return <div className="blogArticleBody">{blocks.map((block,index) => {
-    if (block.type === "h2") return <h2 id={headingId(block.text)} key={index}>{inline(block.text)}</h2>;
-    if (block.type === "h3") return <h3 id={headingId(block.text)} key={index}>{inline(block.text)}</h3>;
-    if (block.type === "quote") return <blockquote key={index}>{inline(block.text)}</blockquote>;
-    if (block.type === "ul") return <ul key={index}>{block.items.map((item,itemIndex)=><li key={itemIndex}>{inline(item)}</li>)}</ul>;
-    if (block.type === "ol") return <ol key={index}>{block.items.map((item,itemIndex)=><li key={itemIndex}>{inline(item)}</li>)}</ol>;
-    return <p key={index}>{inline(block.text)}</p>;
+    switch (block.type) {
+      case "h2": return <h2 id={headingId(block.text)} key={index}>{inline(block.text)}</h2>;
+      case "h3": return <h3 id={headingId(block.text)} key={index}>{inline(block.text)}</h3>;
+      case "quote": return <blockquote key={index}>{inline(block.text)}</blockquote>;
+      case "ul": return <ul key={index}>{block.items.map((item,itemIndex)=><li key={itemIndex}>{inline(item)}</li>)}</ul>;
+      case "ol": return <ol key={index}>{block.items.map((item,itemIndex)=><li key={itemIndex}>{inline(item)}</li>)}</ol>;
+      case "p": return <p key={index}>{inline(block.text)}</p>;
+    }
   })}</div>;
 }
 
 type Block =
-  | {type: "h2" | "h3" | "quote" | "p"; text: string}
-  | {type: "ul" | "ol"; items: string[]};
+  | {type: "h2"; text: string}
+  | {type: "h3"; text: string}
+  | {type: "quote"; text: string}
+  | {type: "p"; text: string}
+  | {type: "ul"; items: string[]}
+  | {type: "ol"; items: string[]};
 
 function toBlocks(body: string): Block[] {
   const lines = body.replace(/\r\n/g,"\n").split("\n");
@@ -28,7 +34,8 @@ function toBlocks(body: string): Block[] {
   };
   const flushList = () => {
     if (!list) return;
-    blocks.push(list);
+    if (list.type === "ul") blocks.push({type:"ul",items:[...list.items]});
+    else blocks.push({type:"ol",items:[...list.items]});
     list = null;
   };
   for (const raw of lines) {
