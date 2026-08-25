@@ -6,6 +6,8 @@ import { listPublishedBlogPosts } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { siteUrl } from "@/lib/site-url";
 
+export const dynamic="force-dynamic";
+
 const pageCopy = {
   en: {
     title:"HandMeKey Travel Guide | Jordan hotels, stays and booking advice",
@@ -49,7 +51,7 @@ export default async function BlogLanding({params}:{params:Promise<{locale:strin
   const locale=raw as Locale; const c=pageCopy[locale]; const posts=await listPublishedBlogPosts(locale,60); const rtl=locale==="ar";
   const featured=posts.find((post)=>post.featured)??posts[0]??null; const rest=featured?posts.filter((post)=>post.id!==featured.id):posts;
   const structuredData={"@context":"https://schema.org","@type":"Blog",name:c.eyebrow,description:c.description,url:siteUrl(`/blog/${locale}`),inLanguage:locale,publisher:{"@type":"Organization",name:"HandMeKey",url:siteUrl()}};
-  return <main className="blogExperience" dir={rtl?"rtl":"ltr"}>
+  return <main className="blogExperience" dir={rtl?"rtl":"ltr"} lang={locale}>
     <CustomerHeader/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/>
     <section className="blogHero"><div className="shell blogHeroInner"><div><span className="eyebrow"><BookOpen size={16}/>{c.eyebrow}</span><h1>{c.heading}</h1><p>{c.intro}</p><div className="blogHeroLinks"><Link href={`/rewards/${locale}`}>{c.rewards}</Link><Link href="/search">{c.search}</Link></div></div><div className="blogLanguageLinks"><Link href="/blog/en" hrefLang="en">English</Link><Link href="/blog/ar" hrefLang="ar">العربية</Link></div></div></section>
