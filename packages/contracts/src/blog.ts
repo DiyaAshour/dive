@@ -3,7 +3,7 @@ import { z } from "zod";
 export const blogLocaleSchema = z.enum(["EN", "AR"]);
 export const blogPostStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);
 
-const slugSchema = z.string().trim().min(3).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers and hyphens only");
+const slugSchema = z.string().trim().min(3).max(120).regex(/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u, "Use letters, numbers and hyphens only");
 const optionalUrlSchema = z.union([z.string().trim().url().max(1200), z.literal("")]).optional();
 
 export const blogPostInputSchema = z.object({
