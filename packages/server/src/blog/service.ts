@@ -5,23 +5,28 @@ import { requirePlatformAdmin } from "../admin/authorization";
 
 export type PublicBlogLocale = "en" | "ar";
 
-const publicPostSelect = {
+const publicListSelect = {
   id: true,
   locale: true,
   slug: true,
   title: true,
   excerpt: true,
-  body: true,
-  seoTitle: true,
-  seoDescription: true,
   category: true,
   tags: true,
   coverImageUrl: true,
   coverImageAlt: true,
   featured: true,
   authorName: true,
+  readingMinutes: true,
   publishedAt: true,
   updatedAt: true,
+} as const;
+
+const publicArticleSelect = {
+  ...publicListSelect,
+  body: true,
+  seoTitle: true,
+  seoDescription: true,
 } as const;
 
 export function databaseBlogLocale(locale: PublicBlogLocale): "EN" | "AR" {
@@ -31,7 +36,7 @@ export function databaseBlogLocale(locale: PublicBlogLocale): "EN" | "AR" {
 export async function listPublishedBlogPosts(locale: PublicBlogLocale, limit = 24) {
   return database().blogPost.findMany({
     where: {locale: databaseBlogLocale(locale), status: "PUBLISHED", publishedAt: {lte: new Date()}},
-    select: publicPostSelect,
+    select: publicListSelect,
     orderBy: [{featured: "desc"}, {publishedAt: "desc"}],
     take: Math.max(1, Math.min(limit, 100)),
   });
@@ -40,7 +45,7 @@ export async function listPublishedBlogPosts(locale: PublicBlogLocale, limit = 2
 export async function getPublishedBlogPost(locale: PublicBlogLocale, slug: string) {
   const post = await database().blogPost.findFirst({
     where: {locale: databaseBlogLocale(locale), slug, status: "PUBLISHED", publishedAt: {lte: new Date()}},
-    select: publicPostSelect,
+    select: publicArticleSelect,
   });
   if (!post) notFound("Blog post");
   return post;
@@ -49,7 +54,7 @@ export async function getPublishedBlogPost(locale: PublicBlogLocale, slug: strin
 export async function listRelatedPublishedBlogPosts(locale: PublicBlogLocale, postId: string, category: string, limit = 3) {
   return database().blogPost.findMany({
     where: {id: {not: postId}, locale: databaseBlogLocale(locale), category, status: "PUBLISHED", publishedAt: {lte: new Date()}},
-    select: {id: true, slug: true, title: true, excerpt: true, coverImageUrl: true, coverImageAlt: true, publishedAt: true, category: true},
+    select: {id: true, slug: true, title: true, excerpt: true, coverImageUrl: true, coverImageAlt: true, publishedAt: true, category: true, readingMinutes: true},
     orderBy: {publishedAt: "desc"},
     take: Math.max(1, Math.min(limit, 6)),
   });
@@ -86,7 +91,7 @@ export async function listAdminBlogPosts(actorUserId: string, filters: {query?: 
         {category: {contains: filters.query.trim(), mode: "insensitive"}},
       ]} : {}),
     },
-    select: {id: true, locale: true, slug: true, title: true, excerpt: true, category: true, tags: true, featured: true, status: true, authorName: true, publishedAt: true, updatedAt: true},
+    select: {id: true, locale: true, slug: true, title: true, excerpt: true, category: true, tags: true, featured: true, status: true, authorName: true, readingMinutes: true, publishedAt: true, updatedAt: true},
     orderBy: {updatedAt: "desc"},
     take: 200,
   });
@@ -109,6 +114,7 @@ export async function createAdminBlogPost(actorUserId: string, rawInput: BlogPos
       ...input,
       coverImageUrl: input.coverImageUrl || null,
       coverImageAlt: input.coverImageAlt || null,
+      readingMinutes: estimateReadingMinutes(input.body),
       publishedAt: input.status === "PUBLISHED" ? now : null,
       createdByUserId: actor.id,
       updatedByUserId: actor.id,
@@ -137,6 +143,7 @@ export async function updateAdminBlogPost(actorUserId: string, postId: string, r
       ...input,
       coverImageUrl: input.coverImageUrl || null,
       coverImageAlt: input.coverImageAlt || null,
+      readingMinutes: estimateReadingMinutes(input.body),
       publishedAt,
       updatedByUserId: actor.id,
     }});
@@ -179,6 +186,11 @@ async function ensureSlugAvailable(locale: "EN" | "AR", slug: string, excludingI
 
 function validStatus(value: string | undefined): value is "DRAFT" | "PUBLISHED" | "ARCHIVED" {
   return value === "DRAFT" || value === "PUBLISHED" || value === "ARCHIVED";
+}
+
+function estimateReadingMinutes(body: string) {
+  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+  return Math.max(1, Math.ceil(words / 220));
 }
 
 function auditSnapshot(post: {locale: string; slug: string; title: string; status: string; featured: boolean; publishedAt: Date | null}) {
