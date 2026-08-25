@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {default: "HandMeKey — Hotels, clearly priced", template: "%s · HandMeKey"},
   description: "Search verified hotels, compare live rates and book with the final stay price visible before checkout.",
+  alternates: {types: {"application/rss+xml": siteUrl("/feed.xml")}},
 };
 
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
