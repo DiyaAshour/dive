@@ -1,0 +1,10 @@
+/* Phase 31 — keep stacked sticky booking surfaces from overlapping. */
+@media (min-width:1121px){
+  .hotelExperience .hotelBookingRail{top:190px}
+  .hotelExperience #room-offers{scroll-margin-top:190px}
+}
+
+/* On short desktop viewports, a tall sticky summary is less useful than natural flow. */
+@media (min-width:1121px) and (max-height:720px){
+  .hotelExperience .hotelBookingRail{position:static}
+}
