@@ -10,6 +10,6 @@ export async function POST(request: NextRequest) {
     if(!user)return Response.json({data:null,error:{code:"UNAUTHORIZED",message:"Authentication required"}},{status:401});
     const parsed=blogPostInputSchema.safeParse(await request.json().catch(()=>null));
     if(!parsed.success)return validationError(parsed.error);
-    return ok(await createAdminBlogPost(user.id,parsed.data),201);
+    return ok(await createAdminBlogPost(user.id,parsed.data),{status:201});
   } catch(error){return handleApiError(error);}
 }
