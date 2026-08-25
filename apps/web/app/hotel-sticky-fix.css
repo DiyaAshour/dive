@@ -1,0 +1,31 @@
+/* Phase 31 — keep the two desktop sticky booking surfaces in one safe stack. */
+@media (min-width:1121px){
+  .hotelExperience{
+    --hotel-sticky-header-offset:74px;
+    --hotel-sticky-selector-space:138px;
+  }
+
+  /* The date / guest selector owns the upper sticky layer. */
+  .hotelExperience .availabilityCard{
+    top:var(--hotel-sticky-header-offset);
+    z-index:30;
+  }
+
+  /* The live-price rail always sits below the complete selector footprint. */
+  .hotelExperience .hotelBookingRail{
+    top:calc(var(--hotel-sticky-header-offset) + var(--hotel-sticky-selector-space));
+    z-index:12;
+  }
+
+  /* Anchor jumps must also clear both sticky surfaces. */
+  .hotelExperience #room-offers{
+    scroll-margin-top:calc(var(--hotel-sticky-header-offset) + var(--hotel-sticky-selector-space) + 12px);
+  }
+}
+
+/* On short desktop viewports, a tall sticky summary is less useful than natural flow. */
+@media (min-width:1121px) and (max-height:760px){
+  .hotelExperience .hotelBookingRail{
+    position:static;
+  }
+}
