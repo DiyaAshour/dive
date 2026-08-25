@@ -66,6 +66,9 @@ jobs:
       - name: Verify partner room product flow
         run: npm run room-product:smoke
 
+      - name: Verify loyalty domain rules
+        run: npm run loyalty-rule:smoke
+
       - name: Typecheck workspaces
         run: npm run typecheck
 
