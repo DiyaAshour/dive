@@ -11,7 +11,8 @@ export const dynamic="force-dynamic";
 export default async function AdminBlogPage({searchParams}:{searchParams:Promise<{q?:string;status?:string;locale?:string}>}){
   const principal=await currentAdminPrincipal(); if(!principal)redirect("/admin/login?next=%2Fadmin%2Fblog");
   const locale=await requestLocale(); const ar=locale==="ar"; const query=await searchParams;
-  const [posts,counts]=await Promise.all([listAdminBlogPosts(principal.user.id,{query:query.q,status:query.status,locale:query.locale}),getAdminNavigationCounts(principal.user.id)]);
+  const filters:{query?:string;status?:string;locale?:string}={}; if(query.q)filters.query=query.q;if(query.status)filters.status=query.status;if(query.locale)filters.locale=query.locale;
+  const [posts,counts]=await Promise.all([listAdminBlogPosts(principal.user.id,filters),getAdminNavigationCounts(principal.user.id)]);
   return <AdminShell locale={locale} principal={principal} active="blog" counts={counts}>
     <header className="adminTopbar"><div><span className="eyebrow">{ar?"المحتوى العضوي وSEO":"Organic content & SEO"}</span><h1>{ar?"مدونة HandMeKey":"HandMeKey Blog"}</h1><p>{ar?"اكتب وانشر أدلة سفر قابلة للفهرسة مع تحكم كامل بالعنوان والوصف والرابط وحالة النشر.":"Write and publish indexable travel guides with full control over search title, description, URL and publication status."}</p></div><Link className="primaryButton" href="/admin/blog/new"><Plus size={16}/>{ar?"مقال جديد":"New article"}</Link></header>
     <section className="adminPanel adminSection">
