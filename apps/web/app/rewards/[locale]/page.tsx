@@ -134,7 +134,7 @@ export default async function RewardsLandingPage({params}: {params: Promise<{loc
       {"@type":"ListItem",position:2,name:c.eyebrow,item:siteUrl(`/rewards/${locale}`)},
     ]},
   };
-  return <main className="rewardsLanding" dir={rtl?"rtl":"ltr"}>
+  return <main className="rewardsLanding" dir={rtl?"rtl":"ltr"} lang={locale}>
     <CustomerHeader/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/>
     <section className="rewardsHero"><div className="shell rewardsHeroGrid"><div><span className="eyebrow"><Sparkles size={16}/>{c.eyebrow}</span><h1>{c.title}</h1><p>{c.intro}</p><div className="rewardsHeroActions"><Link className="primaryButton" href="/search">{c.cta}<ArrowRight size={17}/></Link><Link className="secondaryButton" href="/account/rewards">{c.account}</Link></div><div className="rewardsLanguageLinks"><Link href="/rewards/en" hrefLang="en">English</Link><Link href="/rewards/ar" hrefLang="ar">العربية</Link></div></div><div className="rewardsKeyVisual" aria-hidden="true"><div><KeyRound size={58}/><strong>10×</strong><span>Member</span></div><div><Crown size={54}/><strong>12×</strong><span>Key Gold</span></div><div><Sparkles size={54}/><strong>15×</strong><span>Key Black</span></div></div></div></section>
