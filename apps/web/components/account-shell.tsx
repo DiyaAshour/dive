@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, KeyRound, LayoutDashboard, Luggage, UserRound } from "lucide-react";
+import { Bell, Gem, KeyRound, LayoutDashboard, Luggage, UserRound } from "lucide-react";
 import { dictionary } from "@/lib/i18n";
 import { requestLocale } from "@/lib/request-locale";
 import { CustomerHeader } from "./customer-header";
 
-type AccountSection = "overview" | "profile" | "security" | "trips" | "alerts";
+type AccountSection = "overview" | "profile" | "security" | "trips" | "alerts" | "rewards";
 
 type Props = Readonly<{
   active: AccountSection;
@@ -20,6 +20,7 @@ export async function AccountShell({active,eyebrow,title,description,children}: 
   const copy = dictionary(locale);
   const links: Array<{key:AccountSection;href:string;label:string;icon:typeof LayoutDashboard}> = [
     {key:"overview",href:"/account",label:copy.account.overview,icon:LayoutDashboard},
+    {key:"rewards",href:"/account/rewards",label:locale === "ar" ? "المكافآت" : "Rewards",icon:Gem},
     {key:"profile",href:"/account/profile",label:copy.account.profile,icon:UserRound},
     {key:"security",href:"/account/security",label:copy.account.security,icon:KeyRound},
     {key:"trips",href:"/trips",label:copy.account.trips,icon:Luggage},
