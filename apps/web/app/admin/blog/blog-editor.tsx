@@ -7,7 +7,7 @@ import {CheckCircle2, ExternalLink, FileText, Search, Sparkles} from "lucide-rea
 import type {Locale} from "@/lib/i18n";
 
 type EditorPost={
-  id?:string; locale:"EN"|"AR"; slug:string; title:string; excerpt:string; body:string; seoTitle:string; seoDescription:string;
+  id:string|undefined; locale:"EN"|"AR"; slug:string; title:string; excerpt:string; body:string; seoTitle:string; seoDescription:string;
   category:string; tags:string[]; coverImageUrl:string|null; coverImageAlt:string|null; featured:boolean; status:"DRAFT"|"PUBLISHED"|"ARCHIVED"; authorName:string;
 };
 
