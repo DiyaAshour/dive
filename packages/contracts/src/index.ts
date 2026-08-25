@@ -12,3 +12,4 @@ export * from "./promotions";
 export * from "./messaging";
 export * from "./growth";
 export * from "./admin";
+export * from "./blog";
