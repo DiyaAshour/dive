@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Award, BedDouble, CircleDollarSign, Gem, Sparkles } from "lucide-react";
 import { getLoyaltyOverview } from "@platform/server";
@@ -52,7 +53,7 @@ export default async function RewardsPage() {
     </div>
 
     <section className="rewardsActivityCard">
-      <div className="rewardsSectionHead"><div><span className="accountCardLabel">{ar ? "دفتر النقاط" : "Points ledger"}</span><h2>{ar ? "آخر النشاطات" : "Recent activity"}</h2></div><span className="rewardsComing"><Sparkles size={15}/>{ar ? "استخدام النقاط في الحجز قريبًا" : "Use points at checkout coming next"}</span></div>
+      <div className="rewardsSectionHead"><div><span className="accountCardLabel">{ar ? "دفتر النقاط" : "Points ledger"}</span><h2>{ar ? "آخر النشاطات" : "Recent activity"}</h2></div><Link className="rewardsComing" href="/account/wallet"><Sparkles size={15}/>{ar ? "حوّل النقاط إلى المحفظة" : "Convert points to Wallet"}</Link></div>
       {rewards.recentActivity.length ? <div className="rewardsActivityList">
         {rewards.recentActivity.map((entry) => <div className="rewardsActivityRow" key={entry.id}>
           <div className="rewardsActivityIcon"><Gem size={17}/></div>
