@@ -4,10 +4,17 @@ html[data-home-date-intent="unselected"] .premiumSearchDock input[name="departur
   background:#fff;
 }
 
-/* Hotel entered without a selected stay: keep discovery visible, hide computed rates. */
-html[data-hotel-stay="unselected"] .hotelExperience .hotelBookingWorkspace,
-html[data-hotel-stay="unselected"] .hotelExperience .hotelDetailSection>.panel{
+/* Hotel entered without a selected stay: keep the catalog visible, but never expose computed price or inventory. */
+html[data-hotel-stay="unselected"] .hotelExperience .hotelDetailSection>.panel,
+html[data-hotel-stay="unselected"] .hotelExperience .hotelBookingRail{
   display:none!important;
+}
+
+html[data-hotel-stay="unselected"] .hotelExperience .hotelBookingWorkspace{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:0!important;
+  margin-top:10px!important;
 }
 
 html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard{
@@ -52,6 +59,123 @@ html[data-hotel-stay="unselected"] .hotelExperience .hotelTrustBar span:nth-chil
   width:100%;
 }
 
+/* Date-free rate-plan catalog. The room and plan structure stays visible; live-only signals stay hidden. */
+html[data-hotel-stay="unselected"] .hotelExperience .rateSectionHead{
+  display:block!important;
+  margin:0 0 13px!important;
+  padding:0 2px!important;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .rateSectionHead>*{
+  display:none!important;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .rateSectionHead:before{
+  content:"Available room & rate plans";
+  display:block;
+  color:#102e49;
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:-.03em;
+  line-height:1.12;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .rateSectionHead:after{
+  content:"Browse the room and plan choices now. Select your stay dates to unlock live prices, availability and date-specific cancellation details.";
+  display:block;
+  max-width:820px;
+  margin-top:7px;
+  color:#65798a;
+  font-size:11px;
+  font-weight:650;
+  line-height:1.55;
+}
+html[lang="ar"][data-hotel-stay="unselected"] .hotelExperience .rateSectionHead:before{
+  content:"الغرف وخطط الأسعار المتاحة";
+}
+html[lang="ar"][data-hotel-stay="unselected"] .hotelExperience .rateSectionHead:after{
+  content:"تصفح الغرف وخيارات خطط الأسعار الآن. اختر تاريخ الإقامة لإظهار السعر المباشر والتوفر وتفاصيل الإلغاء المرتبطة بالتاريخ.";
+}
+
+html[data-hotel-stay="unselected"] .hotelExperience .roomOfferCard{
+  box-shadow:0 8px 24px rgba(18,48,73,.055)!important;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .scarcityNote,
+html[data-hotel-stay="unselected"] .hotelExperience .rateBadges,
+html[data-hotel-stay="unselected"] .hotelExperience .dealPill,
+html[data-hotel-stay="unselected"] .hotelExperience .rateReward,
+html[data-hotel-stay="unselected"] .hotelExperience .rateInventory,
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateCell:nth-child(2)>p{
+  display:none!important;
+}
+
+/* The final-total column becomes an explicit date prompt instead of leaking the internally calculated fallback stay. */
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateHead span:last-child{
+  font-size:0!important;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateHead span:last-child:after{
+  content:"Live price";
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+html[lang="ar"][data-hotel-stay="unselected"] .hotelExperience .publicRateHead span:last-child:after{
+  content:"السعر المباشر";
+}
+
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction{
+  min-height:116px;
+  position:relative;
+  display:flex!important;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:6px;
+  padding:14px 15px!important;
+  border-inline-start:1px solid #e1e9ef;
+  background:linear-gradient(145deg,#f8fbfe,#eef6fc)!important;
+  cursor:pointer;
+  transition:border-color .16s ease,background .16s ease,transform .16s ease;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction>*{
+  display:none!important;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction:before{
+  content:"Choose dates to see price";
+  display:block;
+  color:#0b4f86;
+  font-size:14px;
+  font-weight:900;
+  line-height:1.25;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction:after{
+  content:"Select dates ↑";
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  margin-top:2px;
+  padding:6px 10px;
+  border:1px solid #bdd8eb;
+  border-radius:8px;
+  background:#fff;
+  color:#0b5d9e;
+  font-size:9px;
+  font-weight:900;
+  box-shadow:0 4px 12px rgba(12,78,127,.07);
+}
+html[lang="ar"][data-hotel-stay="unselected"] .hotelExperience .publicRateAction:before{
+  content:"اختر التاريخ لإظهار السعر";
+}
+html[lang="ar"][data-hotel-stay="unselected"] .hotelExperience .publicRateAction:after{
+  content:"اختر التواريخ ↑";
+}
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction:hover,
+html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction:focus-visible{
+  border-color:#9ec9e5;
+  background:linear-gradient(145deg,#f5faff,#eaf5fd)!important;
+  outline:2px solid rgba(19,108,173,.18);
+  outline-offset:-2px;
+}
+
 /* Search can be opened for browsing a destination, but live hotel results wait for dates. */
 html[data-search-stay="unselected"] .searchExperience .searchLayout{
   display:none!important;
@@ -75,11 +199,23 @@ html[lang="ar"][data-search-stay="unselected"] .searchExperience .searchSummaryB
   content:"اختر تاريخ الوصول والمغادرة لعرض الأسعار والتوفر المباشر.";
 }
 
+@media(max-width:900px){
+  html[data-hotel-stay="unselected"] .hotelExperience .publicRateAction{
+    grid-column:1/-1;
+    min-height:86px;
+    border-inline-start:0;
+    border-top:1px solid #e1e9ef;
+  }
+}
+
 @media(max-width:780px){
   html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard{
     grid-template-columns:1fr!important;
   }
   html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard:after{
     grid-column:1;
+  }
+  html[data-hotel-stay="unselected"] .hotelExperience .rateSectionHead:before{
+    font-size:24px;
   }
 }
