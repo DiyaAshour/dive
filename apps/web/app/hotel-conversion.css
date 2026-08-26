@@ -1,0 +1,125 @@
+/* Conversion-first hotel page flow, informed by major OTA property-page patterns. */
+.hotelExperience .hotelDetailSection{
+  display:flex;
+  flex-direction:column;
+}
+
+/* Keep identity and imagery first. */
+.hotelExperience .hotelDetailSection>.backLink{order:1}
+.hotelExperience .hotelDetailSection>.premiumHotelHead{order:2}
+.hotelExperience .hotelDetailSection>.premiumGallery,
+.hotelExperience .hotelDetailSection>.hotelMediaEmpty{order:3}
+.hotelExperience .hotelDetailSection>.hotelTrustBar{order:4}
+
+/* Put the booking decision directly after the gallery. */
+.hotelExperience .hotelDetailSection>.availabilityCard{
+  order:5;
+  position:static!important;
+  top:auto!important;
+  z-index:auto!important;
+  margin:4px 0 12px!important;
+  padding:13px 15px;
+  border-color:#cbdde9;
+  background:linear-gradient(135deg,#ffffff 0%,#f5faff 100%);
+  box-shadow:0 9px 24px rgba(15,54,84,.08);
+}
+.hotelExperience .hotelDetailSection>.inlineWarning{order:6}
+.hotelExperience .hotelDetailSection>.hotelBookingWorkspace{
+  order:7;
+  margin-top:8px!important;
+}
+
+/* Deep confidence content follows the room decision instead of blocking it. */
+.hotelExperience .hotelDetailSection>.hotelTrustLayer{
+  order:8;
+  margin-top:34px;
+  padding-top:28px;
+  border-top:1px solid #e3eaf0;
+}
+.hotelExperience .hotelTrustLayer>.liveStaySignal{display:none!important}
+
+/* Stay essentials already owns facilities, so remove the duplicated amenity card. */
+.hotelExperience .hotelDetailSection>.hotelInfoGrid{
+  order:9;
+  grid-template-columns:1fr!important;
+  margin-top:0;
+  margin-bottom:0;
+}
+.hotelExperience .hotelInfoGrid>.hotelFacilities{display:none!important}
+.hotelExperience .hotelAbout{
+  padding:20px 22px;
+  background:linear-gradient(145deg,#fff,#fbfdff)!important;
+}
+.hotelExperience .hotelAbout p{margin-bottom:0}
+
+/* Price Watch remains useful, but it becomes a compact secondary tool. */
+.hotelExperience .hotelDetailSection>.panel{
+  order:10;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto auto auto;
+  column-gap:22px;
+  align-items:center;
+  margin:14px 0 0!important;
+  padding:16px 18px!important;
+  border:1px solid #dce6ed!important;
+  border-radius:15px!important;
+  background:linear-gradient(105deg,#fbfdff,#f5faff)!important;
+  box-shadow:none!important;
+}
+.hotelExperience .hotelDetailSection>.panel>.eyebrow,
+.hotelExperience .hotelDetailSection>.panel>h3,
+.hotelExperience .hotelDetailSection>.panel>p{grid-column:1}
+.hotelExperience .hotelDetailSection>.panel>.eyebrow{grid-row:1}
+.hotelExperience .hotelDetailSection>.panel>h3{grid-row:2;margin:2px 0 4px;font-size:16px}
+.hotelExperience .hotelDetailSection>.panel>p{grid-row:3;margin:0;max-width:720px;font-size:10px;line-height:1.55}
+.hotelExperience .hotelDetailSection>.panel>div{grid-column:2;grid-row:1/4;align-self:center}
+.hotelExperience .hotelDetailSection>.panel>div label{font-size:9px;font-weight:800;color:#5f7384}
+.hotelExperience .hotelDetailSection>.panel>div input{height:38px;border:1px solid #cfdae4;border-radius:9px;padding:0 9px;background:#fff}
+.hotelExperience .hotelDetailSection>.panel>div .secondaryButton{min-height:38px;padding:8px 13px;font-size:10px}
+.hotelExperience .hotelDetailSection>.panel>.status,
+.hotelExperience .hotelDetailSection>.panel>.danger{grid-column:1/-1;grid-row:auto;margin-top:8px}
+
+.hotelExperience .hotelDetailSection>.reviewsSection{order:11}
+
+/* The sticky price rail is now the only desktop sticky booking surface. */
+@media(min-width:1121px){
+  .hotelExperience .hotelBookingRail{
+    top:92px!important;
+  }
+  .hotelExperience #room-offers{
+    scroll-margin-top:92px!important;
+  }
+}
+
+/* Tighten the transition from selector to available rooms. */
+.hotelExperience .hotelBookingWorkspace .rateSectionHead{
+  margin-top:0!important;
+}
+.hotelExperience .rateSectionHead h2{font-size:29px}
+.hotelExperience .hotelBookingWorkspace .roomOfferList{margin-top:0}
+
+/* Tablet: keep the same decision-first order without sticky surfaces. */
+@media(max-width:1120px){
+  .hotelExperience .hotelBookingRail{position:static!important}
+  .hotelExperience .hotelDetailSection>.hotelTrustLayer{margin-top:26px;padding-top:22px}
+}
+
+@media(max-width:780px){
+  .hotelExperience .hotelDetailSection>.availabilityCard{
+    margin-top:2px!important;
+  }
+  .hotelExperience .hotelDetailSection>.panel{
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  .hotelExperience .hotelDetailSection>.panel>.eyebrow,
+  .hotelExperience .hotelDetailSection>.panel>h3,
+  .hotelExperience .hotelDetailSection>.panel>p,
+  .hotelExperience .hotelDetailSection>.panel>div{
+    grid-column:1;
+    grid-row:auto;
+  }
+  .hotelExperience .hotelDetailSection>.panel>div{align-self:stretch}
+  .hotelExperience .hotelDetailSection>.panel>div label{min-width:0!important;flex:1 1 180px}
+}
