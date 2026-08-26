@@ -1,6 +1,7 @@
 import { roundMoney } from "@platform/core";
 import { database } from "@platform/database";
 import { ApplicationError, badRequest, notFound } from "../errors";
+import { cancelBooking, type BookingAccessContext } from "../bookings/service";
 import { settleCompletedStayRewards } from "../loyalty/service";
 
 export const WALLET_CURRENCY = "JOD";
@@ -10,6 +11,7 @@ export const REDEMPTION_STEP_POINTS = 20;
 const ACTIVITY_LIMIT = 30;
 
 type WalletDb = Pick<ReturnType<typeof database>, "walletAccount" | "walletLedgerEntry">;
+type WalletReconciliationDb = Pick<ReturnType<typeof database>, "walletAccount" | "walletLedgerEntry" | "refund">;
 
 export type WalletOverview = Readonly<{
   currency: string;
@@ -33,6 +35,7 @@ export type WalletOverview = Readonly<{
 
 export async function getWalletOverview(userId: string): Promise<WalletOverview> {
   await settleCompletedStayRewards(userId);
+  await reconcileWalletRefunds(userId);
   const db = database();
   const [wallet, loyalty, activity] = await Promise.all([
     db.walletAccount.upsert({where: {userId}, create: {userId, currency: WALLET_CURRENCY}, update: {}}),
@@ -174,6 +177,35 @@ export async function walletAppliedToBooking(bookingId: string): Promise<number>
   return walletAppliedToBookingWithClient(database(), bookingId);
 }
 
+export async function cancelBookingWithWallet(bookingId: string, idempotencyKey: string, context: BookingAccessContext) {
+  const result = await cancelBooking(bookingId, idempotencyKey, context);
+  const booking = await database().booking.findUnique({where: {id: bookingId}, select: {userId: true, refundableAmount: true}});
+  if (!booking?.userId) return result;
+  await reconcileBookingWalletRefund(bookingId, booking.userId, Number(booking.refundableAmount ?? 0), "Wallet credit returned after booking cancellation");
+  return result;
+}
+
+export async function reconcileWalletRefunds(userId: string): Promise<number> {
+  const db = database();
+  const debits = await db.walletLedgerEntry.findMany({
+    where: {userId, type: "BOOKING_DEBIT", bookingId: {not: null}},
+    select: {bookingId: true},
+    distinct: ["bookingId"],
+  });
+  const bookingIds = debits.flatMap((entry) => entry.bookingId ? [entry.bookingId] : []);
+  if (!bookingIds.length) return 0;
+  const bookings = await db.booking.findMany({
+    where: {id: {in: bookingIds}, userId, status: {in: ["CANCELLED", "EXPIRED"]}},
+    select: {id: true, status: true, totalAmount: true, refundableAmount: true},
+  });
+  let refunded = 0;
+  for (const booking of bookings) {
+    const cap = booking.status === "EXPIRED" ? Number(booking.totalAmount) : Number(booking.refundableAmount ?? 0);
+    refunded += await reconcileBookingWalletRefund(booking.id, userId, cap, booking.status === "EXPIRED" ? "Wallet credit returned after booking hold expired" : "Wallet credit returned after booking cancellation");
+  }
+  return roundMoney(refunded);
+}
+
 export async function refundWalletForBookingWithClient(
   tx: WalletDb,
   bookingId: string,
@@ -200,6 +232,32 @@ export async function refundWalletForBookingWithClient(
   }});
   await tx.walletAccount.update({where: {userId}, data: {balance: {increment: amount}}});
   return amount;
+}
+
+async function reconcileBookingWalletRefund(bookingId: string, userId: string, maxAmount: number, reason: string): Promise<number> {
+  if (maxAmount <= 0) return 0;
+  return database().$transaction(async (tx) => {
+    const walletRefund = await refundWalletForBookingWithClient(tx, bookingId, userId, maxAmount, reason);
+    if (walletRefund <= 0) return 0;
+
+    let toRemoveFromProviderRefund = walletRefund;
+    const automaticRefunds = await tx.refund.findMany({
+      where: {bookingId, requestedByUserId: null, status: {in: ["REQUESTED", "APPROVED"]}},
+      orderBy: {createdAt: "desc"},
+    });
+    for (const refund of automaticRefunds) {
+      if (toRemoveFromProviderRefund <= 0) break;
+      const amount = Number(refund.amount);
+      if (amount <= toRemoveFromProviderRefund + 0.0001) {
+        toRemoveFromProviderRefund = roundMoney(toRemoveFromProviderRefund - amount);
+        await tx.refund.delete({where: {id: refund.id}});
+      } else {
+        await tx.refund.update({where: {id: refund.id}, data: {amount: roundMoney(amount - toRemoveFromProviderRefund)}});
+        toRemoveFromProviderRefund = 0;
+      }
+    }
+    return walletRefund;
+  }, {isolationLevel: "Serializable"});
 }
 
 async function walletBookingSummary(bookingId: string, userId: string, justAppliedAmount: number) {
