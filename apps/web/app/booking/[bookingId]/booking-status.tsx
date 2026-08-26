@@ -9,6 +9,7 @@ type Booking = {
   arrival:string;departure:string;amounts:{base:number;service:number;tax:number;total:number};
   holdExpiresAt:string|null;confirmedAt:string|null;cancelledAt:string|null;
   cancellation:{policy:{name:string};penaltyAmount:number;refundableAmount:number|null};
+  wallet?:{appliedAmount:number;remainingAmount:number};
 };
 
 type Props={bookingId:string;locale:Locale};
@@ -30,6 +31,18 @@ export function BookingStatus({bookingId,locale}:Props) {
   if(error) return <div className="panel"><h3>{ar?"يلزم الوصول إلى الحجز":"Booking access required"}</h3><p className="danger">{error}</p><p className="muted">{ar?"افتح الصفحة من المتصفح الذي أنشأ الحجز أو سجّل الدخول إلى الحساب الذي يملكه.":"Open this page from the browser used to create the booking, or sign in to the account that owns it."}</p></div>;
   if(!booking) return null;
 
+  const walletApplied = booking.wallet?.appliedAmount ?? 0;
+  const remaining = booking.wallet?.remainingAmount ?? booking.amounts.total;
+  const paymentLabel = walletApplied > 0
+    ? remaining <= 0
+      ? (ar?"HandMeKey Wallet — مدفوع بالكامل":"HandMeKey Wallet — paid in full")
+      : booking.paymentMode === "PAY_AT_HOTEL"
+        ? (ar?"المحفظة + دفع الباقي في الفندق":"Wallet + remaining at hotel")
+        : (ar?"المحفظة + بطاقة للباقي":"Wallet + card for the remainder")
+    : booking.paymentMode==="PAY_AT_HOTEL"
+      ? (ar?"الدفع في الفندق":"Pay at hotel")
+      : (ar?"الدفع الآن":"Pay now");
+
   return <div className="checkout">
     <div className="panel">
       <span className="eyebrow">{ar?"الحجز":"Booking"} {booking.reference}</span>
@@ -37,7 +50,7 @@ export function BookingStatus({bookingId,locale}:Props) {
       <p><strong>{booking.hotel.name}</strong></p>
       <p>{booking.roomType.name} · {booking.ratePlan.name}</p>
       <p className="muted">{booking.arrival} — {booking.departure}</p>
-      {booking.status==="HOLD" && <p className="danger">{ar?`الغرفة مثبتة مؤقتًا${booking.holdExpiresAt?` حتى ${new Date(booking.holdExpiresAt).toLocaleTimeString("ar-JO")}`:""} ولم يتم تأكيد الحجز بعد.`:`Your room is temporarily held${booking.holdExpiresAt?` until ${new Date(booking.holdExpiresAt).toLocaleTimeString()}`:""}. It is not confirmed yet.`}</p>}
+      {booking.status==="HOLD" && <p className="danger">{ar?`الغرفة مثبتة مؤقتًا${booking.holdExpiresAt?` حتى ${new Date(booking.holdExpiresAt).toLocaleTimeString("ar-JO")}`:""} ولم يتم تأكيد الحجز بعد.`:`Your room is temporarily held${booking.holdExpiresAt?` until ${new Date(booking.holdExpiresAt).toLocaleTimeString()}:""}. It is not confirmed yet.`}</p>}
       {booking.paymentState==="PENDING" && <p className="muted">{ar?"الدفع الإلكتروني بانتظار إتمامه لدى مزود الدفع.":"Online payment is awaiting provider completion."}</p>}
       {booking.paymentState==="CAPTURED" && booking.status==="HOLD" && <p className="muted">{ar?"تم تحصيل الدفع ويجري انتظار تأكيد الحجز.":"Payment is captured and booking confirmation is pending."}</p>}
       {(booking.status==="CONFIRMED" || booking.status==="MODIFIED") && <p className="status">{ar?"مؤكد":"Confirmed"}</p>}
@@ -49,7 +62,11 @@ export function BookingStatus({bookingId,locale}:Props) {
       <div className="breakdown"><span>{ar?"رسوم الخدمة":"Employee service"}</span><strong>{money(booking.amounts.service,booking.currency)}</strong></div>
       <div className="breakdown"><span>{ar?"الضريبة / الرسوم":"Tax / charges"}</span><strong>{money(booking.amounts.tax,booking.currency)}</strong></div>
       <div className="breakdown total"><span>{ar?"الإجمالي":"Total"}</span><strong>{money(booking.amounts.total,booking.currency)}</strong></div>
-      <p className="muted">{ar?"طريقة الدفع":"Payment mode"}: {booking.paymentMode==="PAY_AT_HOTEL"?(ar?"الدفع في الفندق":"Pay at hotel"):(ar?"الدفع الآن":"Pay now")}</p>
+      {walletApplied > 0 && <>
+        <div className="breakdown bookingWalletLine"><span>HandMeKey Wallet</span><strong>-{money(walletApplied,booking.currency)}</strong></div>
+        <div className="breakdown bookingWalletRemaining"><span>{ar?"المتبقي":"Remaining"}</span><strong>{money(remaining,booking.currency)}</strong></div>
+      </>}
+      <p className="muted">{ar?"طريقة الدفع":"Payment mode"}: {paymentLabel}</p>
     </aside>
   </div>;
 }
