@@ -1,3 +1,4 @@
+import { roundMoney } from "@platform/core";
 import type { InitiatePaymentInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { ApplicationError, badRequest, notFound } from "../errors";
@@ -6,6 +7,7 @@ import { completeRefundRecord, recordPaymentCaptured } from "../bookings/service
 import { requireBookingAccess } from "../bookings/authorization";
 import { fingerprint } from "../bookings/security";
 import { requireHotelPermission } from "../hotels/authorization";
+import { walletAppliedToBooking } from "../wallet/service";
 import { resolveConfiguredPaymentProvider, resolvePaymentProvider } from "./registry";
 import type { ProviderCreatePaymentResult } from "./provider";
 
@@ -17,13 +19,6 @@ export async function initiatePayment(
 ) {
   await requireBookingAccess(bookingId, context);
   const provider = resolveConfiguredPaymentProvider();
-  const requestFingerprint = fingerprint({bookingId, returnUrl: input.returnUrl, provider: provider.key, action: "initiate-payment"});
-  const existing = await database().paymentAttempt.findUnique({where: {idempotencyKey}});
-  if (existing) {
-    assertFingerprint(existing.requestFingerprint, requestFingerprint);
-    return paymentAttemptView(existing.id);
-  }
-
   const booking = await database().booking.findUnique({where: {id: bookingId}});
   if (!booking) notFound("Booking");
   if (booking.paymentMode !== "PAY_NOW") badRequest("PAYMENT_NOT_REQUIRED", "This booking is configured for pay at hotel");
@@ -31,12 +26,23 @@ export async function initiatePayment(
   if (booking.status !== "HOLD") throw new ApplicationError("BOOKING_NOT_PAYABLE", "Only an active booking hold can start online payment", 409);
   if (!booking.holdExpiresAt || booking.holdExpiresAt.getTime() <= Date.now()) throw new ApplicationError("HOLD_EXPIRED", "Booking hold expired before payment could start", 409);
 
+  const walletApplied = await walletAppliedToBooking(bookingId);
+  const amountDue = Math.max(0, roundMoney(Number(booking.totalAmount) - walletApplied));
+  if (amountDue <= 0) badRequest("PAYMENT_ALREADY_COVERED", "The booking is already fully covered by HandMeKey Wallet");
+
+  const requestFingerprint = fingerprint({bookingId, returnUrl: input.returnUrl, provider: provider.key, amountDue, walletApplied, action: "initiate-payment"});
+  const existing = await database().paymentAttempt.findUnique({where: {idempotencyKey}});
+  if (existing) {
+    assertFingerprint(existing.requestFingerprint, requestFingerprint);
+    return paymentAttemptView(existing.id);
+  }
+
   let attempt: Awaited<ReturnType<typeof createPaymentAttempt>>;
   try {
     attempt = await createPaymentAttempt({
       bookingId,
       provider: provider.key,
-      amount: Number(booking.totalAmount),
+      amount: amountDue,
       currency: booking.currency,
       idempotencyKey,
       requestFingerprint,
@@ -56,7 +62,7 @@ export async function initiatePayment(
       attemptId: attempt.id,
       bookingId,
       bookingReference: booking.reference,
-      amount: Number(booking.totalAmount),
+      amount: amountDue,
       currency: booking.currency,
       returnUrl: input.returnUrl,
       guestEmail: booking.guestEmail,
@@ -74,7 +80,7 @@ export async function initiatePayment(
       redirectUrl: providerResult.redirectUrl ?? null,
       completedAt: providerResult.status === "CAPTURED" ? new Date() : null,
     }});
-    await tx.bookingEvent.create({data: {bookingId, type: "PAYMENT_INITIATED", actorUserId: context.userId ?? null, data: {attemptId: attempt.id, provider: provider.key, status: providerResult.status}}});
+    await tx.bookingEvent.create({data: {bookingId, type: "PAYMENT_INITIATED", actorUserId: context.userId ?? null, data: {attemptId: attempt.id, provider: provider.key, status: providerResult.status, walletApplied, amountDue}}});
   });
 
   if (providerResult.status === "CAPTURED") {
