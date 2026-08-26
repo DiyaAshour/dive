@@ -12,6 +12,7 @@ import "./hotel-vitality.css";
 import "./hotel-density.css";
 import "./hotel-trust.css";
 import "./hotel-essentials.css";
+import "./hotel-trust-layout.css";
 import "./hotel-sticky-fix.css";
 import "./localization.css";
 import "./booking-details.css";
