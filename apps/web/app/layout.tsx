@@ -8,6 +8,7 @@ import "./phase2.css";
 import "./account.css";
 import "./trips.css";
 import "./rewards.css";
+import "./wallet.css";
 import "./content.css";
 import "./hotel-vitality.css";
 import "./hotel-density.css";
