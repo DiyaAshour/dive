@@ -6,7 +6,7 @@ import { settleCompletedStayRewards } from "../loyalty/service";
 
 export const WALLET_CURRENCY = "JOD";
 export const REWARDS_POINTS_PER_JOD = 400;
-export const MIN_REDEMPTION_POINTS = 200;
+export const MIN_REDEMPTION_POINTS = 400;
 export const REDEMPTION_STEP_POINTS = 20;
 const ACTIVITY_LIMIT = 30;
 
