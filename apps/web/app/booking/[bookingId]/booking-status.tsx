@@ -50,7 +50,7 @@ export function BookingStatus({bookingId,locale}:Props) {
       <p><strong>{booking.hotel.name}</strong></p>
       <p>{booking.roomType.name} · {booking.ratePlan.name}</p>
       <p className="muted">{booking.arrival} — {booking.departure}</p>
-      {booking.status==="HOLD" && <p className="danger">{ar?`الغرفة مثبتة مؤقتًا${booking.holdExpiresAt?` حتى ${new Date(booking.holdExpiresAt).toLocaleTimeString("ar-JO")}`:""} ولم يتم تأكيد الحجز بعد.`:`Your room is temporarily held${booking.holdExpiresAt?` until ${new Date(booking.holdExpiresAt).toLocaleTimeString()}:""}. It is not confirmed yet.`}</p>}
+      {booking.status==="HOLD" && <p className="danger">{ar?`الغرفة مثبتة مؤقتًا${booking.holdExpiresAt?` حتى ${new Date(booking.holdExpiresAt).toLocaleTimeString("ar-JO")}`:""} ولم يتم تأكيد الحجز بعد.`:`Your room is temporarily held${booking.holdExpiresAt?` until ${new Date(booking.holdExpiresAt).toLocaleTimeString()}`:""}. It is not confirmed yet.`}</p>}
       {booking.paymentState==="PENDING" && <p className="muted">{ar?"الدفع الإلكتروني بانتظار إتمامه لدى مزود الدفع.":"Online payment is awaiting provider completion."}</p>}
       {booking.paymentState==="CAPTURED" && booking.status==="HOLD" && <p className="muted">{ar?"تم تحصيل الدفع ويجري انتظار تأكيد الحجز.":"Payment is captured and booking confirmation is pending."}</p>}
       {(booking.status==="CONFIRMED" || booking.status==="MODIFIED") && <p className="status">{ar?"مؤكد":"Confirmed"}</p>}
