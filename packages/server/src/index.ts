@@ -28,6 +28,7 @@ export * from "./messaging/service";
 export * from "./growth/analytics";
 export * from "./growth/watches";
 export * from "./loyalty/service";
+export * from "./wallet/service";
 export * from "./blog/service";
 export * from "./payments/provider";
 export * from "./payments/registry";
