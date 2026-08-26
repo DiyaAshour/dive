@@ -9,6 +9,7 @@ export * from "./hotels/service";
 export * from "./hotels/content";
 export * from "./publishing/service";
 export * from "./discovery/service";
+export * from "./discovery/destinations";
 export * from "./media/service";
 export * from "./media/cleanup";
 export * from "./storage/provider";
