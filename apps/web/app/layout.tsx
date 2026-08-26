@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { DateIntentGate } from "@/components/date-intent-gate";
 import { direction } from "@/lib/i18n";
 import { requestLocale } from "@/lib/request-locale";
 import { siteUrl } from "@/lib/site-url";
@@ -15,6 +16,7 @@ import "./hotel-essentials.css";
 import "./hotel-trust-layout.css";
 import "./hotel-sticky-fix.css";
 import "./hotel-conversion.css";
+import "./date-intent.css";
 import "./localization.css";
 import "./booking-details.css";
 import "./admin.css";
@@ -28,5 +30,5 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
   const locale = await requestLocale();
-  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body>{children}</body></html>;
+  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body><DateIntentGate/>{children}</body></html>;
 }
