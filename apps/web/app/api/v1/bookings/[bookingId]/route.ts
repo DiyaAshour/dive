@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { idempotencyKeySchema, modifyBookingSchema } from "@platform/contracts";
-import { bookingView, modifyBooking, requireBookingAccess } from "@platform/server";
+import { bookingView, modifyBooking, requireBookingAccess, walletAppliedToBooking } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
 import { bookingAccessContext, idempotencyKey } from "@/lib/request-auth";
 
@@ -8,7 +8,15 @@ export async function GET(request: NextRequest, {params}: {params: Promise<{book
   try {
     const {bookingId} = await params;
     await requireBookingAccess(bookingId, await bookingAccessContext(request));
-    return ok(await bookingView(bookingId));
+    const booking = await bookingView(bookingId);
+    const walletApplied = await walletAppliedToBooking(bookingId);
+    return ok({
+      ...booking,
+      wallet: {
+        appliedAmount: walletApplied,
+        remainingAmount: Math.max(0, Math.round((booking.amounts.total - walletApplied) * 100) / 100),
+      },
+    });
   } catch (error) {
     return handleApiError(error);
   }
