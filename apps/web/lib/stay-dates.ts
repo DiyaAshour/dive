@@ -3,7 +3,7 @@ export function defaultStayDates(now = new Date()) {
   const arrival = new Date(today);
   arrival.setUTCDate(arrival.getUTCDate() + 1);
   const departure = new Date(arrival);
-  departure.setUTCDate(departure.getUTCDate() + 2);
+  departure.setUTCDate(departure.getUTCDate() + 1);
   return {arrival: dateOnly(arrival), departure: dateOnly(departure)};
 }
 
