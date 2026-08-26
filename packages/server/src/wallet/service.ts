@@ -11,7 +11,6 @@ export const REDEMPTION_STEP_POINTS = 20;
 const ACTIVITY_LIMIT = 30;
 
 type WalletDb = Pick<ReturnType<typeof database>, "walletAccount" | "walletLedgerEntry">;
-type WalletReconciliationDb = Pick<ReturnType<typeof database>, "walletAccount" | "walletLedgerEntry" | "refund">;
 
 export type WalletOverview = Readonly<{
   currency: string;
