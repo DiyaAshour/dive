@@ -1,0 +1,111 @@
+/* Compact hotel trust layout: ratings + location + verified guest voice, then Stay essentials. */
+.hotelTrustLayer{
+  grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr) minmax(250px,.65fr);
+  align-items:stretch;
+}
+
+.hotelTrustLayer>.liveStaySignal{
+  grid-column:1/-1;
+  order:1;
+}
+
+/* Promote the useful cards into one shared top row without duplicating content. */
+.hotelTrustLayer>.trustOverviewGrid,
+.hotelTrustLayer>.locationReviewGrid{
+  display:contents;
+}
+
+.trustOverviewGrid>.ratingSnapshot{
+  grid-column:1;
+  order:2;
+  height:100%;
+}
+
+/* Stay essentials already covers these signals, so the duplicate highlights card is removed. */
+.trustOverviewGrid>.propertyHighlightsPanel{
+  display:none;
+}
+
+.locationReviewGrid>.locationDiscovery{
+  grid-column:2;
+  order:2;
+  height:100%;
+}
+
+.locationReviewGrid>.verifiedGuestVoice{
+  grid-column:3;
+  order:2;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+.locationReviewGrid>.verifiedGuestVoice>.guestQuote,
+.locationReviewGrid>.verifiedGuestVoice>.guestQuoteEmpty{
+  flex:1;
+}
+
+.hotelTrustLayer>.stayEssentials{
+  grid-column:1/-1;
+  order:3;
+}
+
+/* Keep Discover the location rich, but compact enough to sit beside the ratings card. */
+.locationReviewGrid>.locationDiscovery .locationBody{
+  grid-template-columns:minmax(180px,.72fr) minmax(0,1.28fr);
+}
+
+.locationReviewGrid>.locationDiscovery .locationMapCard{
+  min-height:190px;
+}
+
+.locationReviewGrid>.verifiedGuestVoice .guestQuoteEmpty{
+  min-height:190px;
+}
+
+@media(max-width:1050px){
+  .hotelTrustLayer{
+    grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);
+  }
+
+  .trustOverviewGrid>.ratingSnapshot{
+    grid-column:1/-1;
+    order:2;
+  }
+
+  .locationReviewGrid>.locationDiscovery{
+    grid-column:1;
+    order:3;
+  }
+
+  .locationReviewGrid>.verifiedGuestVoice{
+    grid-column:2;
+    order:3;
+  }
+
+  .hotelTrustLayer>.stayEssentials{
+    order:4;
+  }
+}
+
+@media(max-width:720px){
+  .hotelTrustLayer{
+    grid-template-columns:1fr;
+  }
+
+  .trustOverviewGrid>.ratingSnapshot,
+  .locationReviewGrid>.locationDiscovery,
+  .locationReviewGrid>.verifiedGuestVoice,
+  .hotelTrustLayer>.stayEssentials{
+    grid-column:1;
+  }
+
+  .trustOverviewGrid>.ratingSnapshot{order:2}
+  .locationReviewGrid>.locationDiscovery{order:3}
+  .locationReviewGrid>.verifiedGuestVoice{order:4}
+  .hotelTrustLayer>.stayEssentials{order:5}
+
+  .locationReviewGrid>.locationDiscovery .locationBody{
+    grid-template-columns:1fr;
+  }
+}
