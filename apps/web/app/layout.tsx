@@ -7,6 +7,7 @@ import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 import "./phase2.css";
 import "./account.css";
+import "./trips.css";
 import "./rewards.css";
 import "./content.css";
 import "./hotel-vitality.css";
