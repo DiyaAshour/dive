@@ -29,6 +29,48 @@
   margin-top:8px!important;
 }
 
+/* Make the default pricing context explicit without blocking booking. */
+.hotelExperience .availabilityCard:after{
+  content:"Default prices are shown for 1 night. To change your stay, click the check-in or check-out date.";
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  min-height:36px;
+  margin-top:3px;
+  padding:8px 11px;
+  border:1px solid #d7e6f1;
+  border-radius:10px;
+  background:rgba(255,255,255,.82);
+  color:#4b6579;
+  font-size:10px;
+  font-weight:750;
+  line-height:1.45;
+}
+html[lang="ar"] .hotelExperience .availabilityCard:after{
+  content:"السعر الافتراضي المعروض محسوب على ليلة واحدة. لتغيير تاريخ الإقامة، انقر على تاريخ الوصول أو المغادرة.";
+}
+.hotelExperience .availabilityForm input[type="date"]{
+  cursor:pointer;
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+.hotelExperience .availabilityForm input[type="date"]:hover,
+.hotelExperience .availabilityForm input[type="date"]:focus{
+  border-color:#9bc3df;
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(25,112,170,.08);
+}
+.hotelExperience .hotelRailTop:after{
+  content:"1-night default · change dates above";
+  display:block;
+  margin-top:7px;
+  color:#5f7587;
+  font-size:9px;
+  font-weight:800;
+}
+html[lang="ar"] .hotelExperience .hotelRailTop:after{
+  content:"السعر الافتراضي لليلة واحدة · غيّر التواريخ أعلاه";
+}
+
 /* Deep confidence content follows the room decision instead of blocking it. */
 .hotelExperience .hotelDetailSection>.hotelTrustLayer{
   order:8;
@@ -108,6 +150,9 @@
 @media(max-width:780px){
   .hotelExperience .hotelDetailSection>.availabilityCard{
     margin-top:2px!important;
+  }
+  .hotelExperience .availabilityCard:after{
+    grid-column:1;
   }
   .hotelExperience .hotelDetailSection>.panel{
     grid-template-columns:1fr;
