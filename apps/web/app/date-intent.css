@@ -1,0 +1,85 @@
+/* Date intent: never imply a stay length until the guest chooses dates. */
+html[data-home-date-intent="unselected"] .premiumSearchDock input[name="arrival"],
+html[data-home-date-intent="unselected"] .premiumSearchDock input[name="departure"]{
+  background:#fff;
+}
+
+/* Hotel entered without a selected stay: keep discovery visible, hide computed rates. */
+html[data-hotel-stay="unselected"] .hotelExperience .hotelBookingWorkspace,
+html[data-hotel-stay="unselected"] .hotelExperience .hotelDetailSection>.panel{
+  display:none!important;
+}
+
+html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard{
+  position:relative!important;
+  grid-template-columns:minmax(180px,.72fr) minmax(0,1.28fr)!important;
+  margin:4px 0 12px!important;
+  border:1px solid #bcd6e9!important;
+  background:linear-gradient(135deg,#fff 0%,#f3f9ff 100%)!important;
+  box-shadow:0 12px 30px rgba(12,74,121,.09)!important;
+}
+
+html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard:after{
+  content:"Choose your dates to see live availability and the exact stay total.";
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  min-height:38px;
+  margin-top:2px;
+  padding:9px 11px;
+  border:1px solid #d7e7f2;
+  border-radius:10px;
+  background:rgba(255,255,255,.78);
+  color:#4d687c;
+  font-size:10px;
+  font-weight:750;
+}
+
+html[lang="ar"][data-hotel-stay="unselected"] .hotelExperience .availabilityCard:after{
+  content:"اختر تاريخ الإقامة لعرض التوفر المباشر والإجمالي الدقيق للحجز.";
+}
+
+html[data-hotel-stay="unselected"] .hotelExperience .hotelTrustBar{
+  grid-template-columns:1fr;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .hotelTrustBar span:nth-child(1),
+html[data-hotel-stay="unselected"] .hotelExperience .hotelTrustBar span:nth-child(2){
+  display:none;
+}
+html[data-hotel-stay="unselected"] .hotelExperience .hotelTrustBar span:nth-child(3){
+  max-width:420px;
+  justify-self:center;
+  width:100%;
+}
+
+/* Search can be opened for browsing a destination, but live hotel results wait for dates. */
+html[data-search-stay="unselected"] .searchExperience .searchLayout{
+  display:none!important;
+}
+
+html[data-search-stay="unselected"] .searchExperience .searchSummaryBar .shell:after{
+  content:"Select check-in and check-out dates to see live prices and availability.";
+  display:block;
+  margin:10px 0 0;
+  padding:12px 14px;
+  border:1px solid #d7e5ef;
+  border-radius:12px;
+  background:linear-gradient(135deg,#fff,#f5faff);
+  color:#4b6579;
+  font-size:11px;
+  font-weight:800;
+  box-shadow:0 6px 18px rgba(18,59,91,.05);
+}
+
+html[lang="ar"][data-search-stay="unselected"] .searchExperience .searchSummaryBar .shell:after{
+  content:"اختر تاريخ الوصول والمغادرة لعرض الأسعار والتوفر المباشر.";
+}
+
+@media(max-width:780px){
+  html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard{
+    grid-template-columns:1fr!important;
+  }
+  html[data-hotel-stay="unselected"] .hotelExperience .availabilityCard:after{
+    grid-column:1;
+  }
+}
