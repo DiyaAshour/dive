@@ -14,6 +14,33 @@ const dateIntentScript = String.raw`(() => {
     });
   };
 
+  const decorateDateFreeRateActions = (selected) => {
+    document.querySelectorAll('.hotelExperience .publicRateAction').forEach((element) => {
+      if (!(element instanceof HTMLElement)) return;
+      if (selected) {
+        element.removeAttribute("role");
+        element.removeAttribute("tabindex");
+        element.removeAttribute("aria-label");
+        return;
+      }
+      element.setAttribute("role", "button");
+      element.setAttribute("tabindex", "0");
+      element.setAttribute("aria-label", document.documentElement.lang === "ar" ? "اختر التواريخ لإظهار السعر المباشر" : "Choose dates to reveal the live price");
+    });
+  };
+
+  const focusHotelDates = () => {
+    const card = document.querySelector('.hotelExperience .availabilityCard');
+    const arrival = document.querySelector('.hotelExperience .availabilityForm input[name="arrival"]');
+    if (card instanceof HTMLElement) card.scrollIntoView({behavior:"smooth", block:"center"});
+    window.setTimeout(() => {
+      if (arrival instanceof HTMLInputElement) {
+        arrival.focus({preventScroll:true});
+        try { arrival.showPicker?.(); } catch {}
+      }
+    }, 320);
+  };
+
   const sync = () => {
     const path = window.location.pathname;
     const selected = hasSelectedDates();
@@ -32,6 +59,9 @@ const dateIntentScript = String.raw`(() => {
 
     if (/^\/hotel\/[^/]+\/?$/.test(path)) {
       root.setAttribute("data-hotel-stay", selected ? "selected" : "unselected");
+      const syncRateActions = () => decorateDateFreeRateActions(selected);
+      requestAnimationFrame(syncRateActions);
+      window.setTimeout(syncRateActions, 40);
       if (!selected) {
         const clearHotel = () => clearDateInputs('.hotelExperience .availabilityForm input[name="arrival"], .hotelExperience .availabilityForm input[name="departure"]');
         requestAnimationFrame(clearHotel);
@@ -67,6 +97,23 @@ const dateIntentScript = String.raw`(() => {
     window.location.assign(url.pathname + (url.search ? url.search : ""));
   };
 
+  const activateDateFreeRate = (event) => {
+    if (root.getAttribute("data-hotel-stay") !== "unselected") return;
+    const target = event.target instanceof Element ? event.target.closest('.publicRateAction') : null;
+    if (!(target instanceof HTMLElement)) return;
+    event.preventDefault();
+    focusHotelDates();
+  };
+
+  const activateDateFreeRateWithKeyboard = (event) => {
+    if (root.getAttribute("data-hotel-stay") !== "unselected") return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const target = event.target instanceof Element ? event.target.closest('.publicRateAction') : null;
+    if (!(target instanceof HTMLElement)) return;
+    event.preventDefault();
+    focusHotelDates();
+  };
+
   const wrapHistory = (method) => {
     const original = history[method];
     history[method] = function(...args) {
@@ -80,6 +127,8 @@ const dateIntentScript = String.raw`(() => {
   wrapHistory("replaceState");
   window.addEventListener("popstate", sync);
   document.addEventListener("click", stripAutoDatesFromBrowseLink, true);
+  document.addEventListener("click", activateDateFreeRate, true);
+  document.addEventListener("keydown", activateDateFreeRateWithKeyboard, true);
 
   sync();
   if (document.readyState === "loading") {
