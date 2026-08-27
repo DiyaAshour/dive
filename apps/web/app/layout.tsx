@@ -11,6 +11,7 @@ import "./rewards.css";
 import "./wallet.css";
 import "./content.css";
 import "./blog-cms.css";
+import "./blog-taxonomy.css";
 import "./hotel-vitality.css";
 import "./hotel-density.css";
 import "./hotel-trust.css";
