@@ -1,0 +1,123 @@
+.bookingCenterPage{min-height:100vh;background:linear-gradient(180deg,#f7fafc 0,#fff 460px)}
+.bookingCenterSection{padding-top:34px;padding-bottom:76px;max-width:1180px}
+.bookingCenterPageHead{max-width:720px;margin-bottom:22px}
+.bookingCenterPageHead .eyebrow{color:#6f8092;letter-spacing:.14em}
+.bookingCenterPageHead h1{margin:5px 0 7px;color:var(--ink);font-size:clamp(28px,3vw,42px);line-height:1.06;letter-spacing:-.045em}
+.bookingCenterPageHead p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+
+.bookingCenterLoading,.bookingCenterError{display:flex;align-items:center;gap:15px;min-height:132px;padding:26px;border:1px solid #e0e7ee;border-radius:22px;background:#fff;box-shadow:0 14px 38px rgba(15,39,64,.06)}
+.bookingCenterLoading p,.bookingCenterError p,.bookingCenterError span{margin:5px 0 0;color:var(--muted);font-size:13px;line-height:1.6}
+.bookingLoadingPulse{width:34px;height:34px;flex:0 0 34px;border-radius:50%;border:3px solid #dbe5ed;border-top-color:var(--navy);animation:bookingSpin .85s linear infinite}
+@keyframes bookingSpin{to{transform:rotate(360deg)}}
+.bookingCenterError{display:block;border-color:#f0d5d1;background:#fffdfd}
+.bookingCenterError h3{margin:0;color:var(--danger)}
+
+.bookingCenterSummary{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,.72fr);gap:20px;align-items:start}
+.bookingHeroCard,.bookingPaymentCard{border:1px solid #dfe6ed;border-radius:24px;background:#fff;box-shadow:0 15px 42px rgba(14,38,62,.065)}
+.bookingHeroCard{overflow:hidden;padding:28px}
+.bookingHeroTopline{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px}
+.bookingStateBadge{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:#eef3f7;color:#506174;font-size:11px;font-weight:850;letter-spacing:.01em}
+.bookingStateBadge.confirmed,.bookingStateBadge.modified{background:#eaf7f0;color:#176b48}
+.bookingStateBadge.cancelled,.bookingStateBadge.expired,.bookingStateBadge.no_show{background:#fff0ee;color:#a33b32}
+.bookingStateBadge.hold{background:#fff7df;color:#8a6205}
+.bookingReference{color:#8693a1;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.bookingHeroHeadline{padding:0 0 24px;border-bottom:1px solid #edf1f4}
+.bookingPhaseEyebrow{display:block;margin-bottom:7px;color:#4b6d89;font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.bookingHeroHeadline h2{margin:0;color:var(--ink);font-size:clamp(24px,2.6vw,36px);line-height:1.1;letter-spacing:-.04em}
+.bookingHeroHeadline p{max-width:720px;margin:8px 0 0;color:#637386;font-size:13px;line-height:1.65}
+
+.bookingPropertyBlock{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:24px 0}
+.bookingPropertyBlock>div{min-width:0}
+.bookingPropertyLabel{display:block;color:#8b97a5;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.bookingPropertyBlock h1{margin:5px 0 10px;color:var(--ink);font-size:25px;line-height:1.15;letter-spacing:-.035em}
+.bookingPropertyBlock p{display:flex;align-items:center;gap:8px;margin:5px 0;color:#5c6d7e;font-size:12px;line-height:1.55}
+.bookingPropertyBlock p svg{flex:0 0 auto;color:#6f879a}
+.bookingArrivalSaved{display:flex;align-items:center;gap:7px;flex:0 0 auto;padding:9px 11px;border:1px solid #d8e6ef;border-radius:12px;background:#f4f9fc;color:#315f7f;font-size:11px;font-weight:800}
+
+.bookingStayFacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.bookingStayFacts article{display:flex;gap:10px;min-width:0;padding:13px;border:1px solid #e5ebf0;border-radius:15px;background:#fbfcfd}
+.bookingStayFacts article>span{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:#eef4f8;color:var(--navy)}
+.bookingStayFacts article>div{display:grid;min-width:0;gap:2px}
+.bookingStayFacts small{color:#8b97a5;font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.bookingStayFacts strong{color:#2f4255;font-size:11px;line-height:1.35;overflow-wrap:anywhere}
+.bookingStayFacts em{color:#8794a2;font-size:9px;font-style:normal;line-height:1.35}
+
+.bookingQuickActions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+.bookingQuickActions a{display:inline-flex;align-items:center;gap:7px;min-height:39px;padding:0 12px;border:1px solid #d9e2ea;border-radius:11px;background:#fff;color:#365169;font-size:11px;font-weight:800;text-decoration:none;transition:.18s ease}
+.bookingQuickActions a:hover{border-color:#aebfce;background:#f7fafc;color:var(--navy);transform:translateY(-1px)}
+
+.bookingCancellationState{display:grid;gap:4px;margin-top:20px;padding:14px 16px;border:1px solid #e2e8ee;border-radius:15px;background:#fafcfd}
+.bookingCancellationState span{font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.bookingCancellationState strong{font-size:12px;line-height:1.5;color:#33495c}
+.bookingCancellationState small{font-size:10px;line-height:1.5;color:#768595}
+.bookingCancellationState.free{border-color:#cce8da;background:#f2fbf6}.bookingCancellationState.free span,.bookingCancellationState.free strong{color:#176a47}
+.bookingCancellationState.penalty{border-color:#f0d3ce;background:#fff8f7}.bookingCancellationState.penalty span,.bookingCancellationState.penalty strong{color:#9b4037}
+.bookingCancellationState.closed{border-color:#e4e7eb;background:#f7f8f9}.bookingCancellationState.closed span{color:#7a8592}
+.bookingCancellationState.neutral span{color:#66788a}
+
+.bookingPaymentCard{position:sticky;top:88px;overflow:hidden}
+.bookingPaymentHead{display:flex;align-items:center;gap:11px;padding:22px 22px 17px;border-bottom:1px solid #edf1f4}
+.bookingPaymentHead>span{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#eef4f8;color:var(--navy)}
+.bookingPaymentHead div{display:grid;gap:2px}.bookingPaymentHead small{color:#8793a2;font-size:9px;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.bookingPaymentHead strong{color:var(--ink);font-size:15px}
+.bookingPaymentPrimary{display:grid;gap:4px;padding:21px 22px;background:linear-gradient(135deg,#0f2940 0%,#173b59 100%);color:#fff}
+.bookingPaymentPrimary span{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.78}
+.bookingPaymentPrimary strong{font-size:27px;line-height:1.1;letter-spacing:-.04em}
+.bookingPaymentPrimary small{font-size:10px;line-height:1.5;opacity:.72}
+.bookingPriceBreakdown{display:grid;padding:15px 22px}
+.bookingPriceBreakdown>div{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid #edf0f3;color:#526476;font-size:11px}
+.bookingPriceBreakdown>div:last-child{border-bottom:0}
+.bookingPriceBreakdown strong{color:#23384b;font-size:11px}
+.bookingPriceBreakdown .total{padding-top:12px;color:#1f3345;font-weight:850}.bookingPriceBreakdown .total strong{font-size:14px}
+.bookingPriceBreakdown .wallet{color:#23604a}.bookingPriceBreakdown .wallet span{display:inline-flex;align-items:center;gap:6px}.bookingPriceBreakdown .wallet strong{color:#176843}
+.bookingPriceBreakdown .due{font-weight:850}.bookingPriceBreakdown .due strong{font-size:13px;color:var(--navy)}
+.bookingPaymentTrust{display:flex;align-items:flex-start;gap:8px;padding:14px 22px 20px;color:#748292;font-size:10px;line-height:1.55}.bookingPaymentTrust svg{flex:0 0 auto;margin-top:1px;color:#59758b}
+
+.bookingToolsExperience{margin-top:34px}
+.bookingManageHeader{display:grid;gap:5px;margin-bottom:17px;max-width:720px}
+.bookingManageHeader h2{margin:0;color:var(--ink);font-size:25px;letter-spacing:-.035em}
+.bookingManageHeader p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+.bookingToolsDynamic{margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.bookingToolSlot{min-width:0;scroll-margin-top:92px}
+.bookingToolSlot>.bookingActionCard{height:100%}
+.bookingToolSlotWide{grid-column:1/-1}
+.bookingToolPriority .bookingActionCard{border-color:#bad6e8;box-shadow:0 18px 45px rgba(22,79,119,.10)}
+.bookingActionCardPriority:before{height:4px;background:linear-gradient(90deg,#0f2940,#2e739e 58%,#d5a53e)}
+.bookingActionCardPriority .bookingActionIcon{background:#e7f3fa;color:#215c83}
+.bookingActionCardReview{border-color:#d8e5dc;background:linear-gradient(180deg,#fff 0%,#fbfefc 100%)}
+.bookingCancellationPreview{display:grid;gap:3px;margin-bottom:12px;padding:12px 13px;border-radius:13px;border:1px solid #e6eaee;background:#fafbfc}
+.bookingCancellationPreview span{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.bookingCancellationPreview strong{font-size:18px;line-height:1.2}.bookingCancellationPreview small{font-size:10px;color:#758493}
+.bookingCancellationPreview.free{border-color:#cae9d9;background:#f2fbf6}.bookingCancellationPreview.free span,.bookingCancellationPreview.free strong{color:#176a47}
+.bookingCancellationPreview.penalty{border-color:#efd2cd;background:#fff8f7}.bookingCancellationPreview.penalty span,.bookingCancellationPreview.penalty strong{color:#9a4037}
+.bookingActionFooter a.bookingSecondaryAction{text-decoration:none}
+
+html[dir="rtl"] .bookingCenterPageHead,html[dir="rtl"] .bookingHeroHeadline,html[dir="rtl"] .bookingPropertyBlock,html[dir="rtl"] .bookingPaymentCard,html[dir="rtl"] .bookingManageHeader,html[dir="rtl"] .bookingCancellationState{text-align:right}
+html[dir="rtl"] .bookingPropertyBlock p{direction:rtl}
+
+@media(max-width:1080px){
+  .bookingCenterSummary{grid-template-columns:minmax(0,1.35fr) minmax(280px,.72fr)}
+  .bookingStayFacts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:860px){
+  .bookingCenterSection{padding-top:24px}
+  .bookingCenterSummary{grid-template-columns:1fr}
+  .bookingPaymentCard{position:relative;top:auto}
+  .bookingToolsDynamic{grid-template-columns:1fr}
+  .bookingToolSlotWide{grid-column:auto}
+}
+@media(max-width:620px){
+  .bookingCenterSection{padding-top:20px;padding-bottom:48px}
+  .bookingCenterPageHead{margin-bottom:15px}
+  .bookingCenterPageHead h1{font-size:30px}
+  .bookingHeroCard{padding:20px;border-radius:20px}
+  .bookingHeroTopline{align-items:flex-start;flex-direction:column;margin-bottom:18px}
+  .bookingReference{letter-spacing:.04em}
+  .bookingHeroHeadline{padding-bottom:19px}.bookingHeroHeadline h2{font-size:26px}
+  .bookingPropertyBlock{flex-direction:column;padding:20px 0}.bookingPropertyBlock h1{font-size:22px}
+  .bookingArrivalSaved{width:100%;justify-content:center}
+  .bookingStayFacts{grid-template-columns:1fr}.bookingStayFacts article{padding:12px}
+  .bookingQuickActions{display:grid;grid-template-columns:1fr 1fr}.bookingQuickActions a{justify-content:center}
+  .bookingPaymentCard{border-radius:20px}
+  .bookingPaymentPrimary strong{font-size:24px}
+  .bookingToolsExperience{margin-top:28px}.bookingManageHeader h2{font-size:22px}
+}
