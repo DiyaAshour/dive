@@ -1,9 +1,9 @@
 "use client";
 
-import {useMemo,useState} from "react";
+import {useMemo,useState,type DragEvent} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
-import {Archive, CheckCircle2, ExternalLink, FileText, FolderOpen, Globe2, Save, Search, Sparkles, Undo2} from "lucide-react";
+import {Archive, CheckCircle2, ExternalLink, FileText, FolderOpen, Globe2, ImagePlus, Save, Search, Sparkles, Trash2, Undo2, UploadCloud} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 
 type EditorPost={
@@ -38,6 +38,8 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
   const [persisted,setPersisted]=useState<EditorPost|null>(initial??null);
   const [tagsText,setTagsText]=useState((initial?.tags??[]).join(", "));
   const [busy,setBusy]=useState<SaveStatus|null>(null);
+  const [imageBusy,setImageBusy]=useState(false);
+  const [imageDrag,setImageDrag]=useState(false);
   const [message,setMessage]=useState<{tone:"success"|"error";text:string}|null>(null);
 
   const categoryOptions=useMemo(()=>Array.from(new Set([...(ar?defaultCategoriesAr:defaultCategoriesEn),...categories,post.category].map(v=>v.trim()).filter(Boolean))),[ar,categories,post.category]);
@@ -56,7 +58,7 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
   ],[post,words,h2Count,cleanTags]);
   const seoScore=seoChecks.filter(Boolean).length;
   const dirty=useMemo(()=>{
-    if(!persisted)return Boolean(post.title||post.body||post.slug||post.excerpt);
+    if(!persisted)return Boolean(post.title||post.body||post.slug||post.excerpt||post.coverImageUrl);
     return JSON.stringify(editorSnapshot(post,cleanTags))!==JSON.stringify(editorSnapshot(persisted,persisted.tags));
   },[post,persisted,cleanTags]);
 
@@ -86,9 +88,27 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
           : (ar?"تم حفظ المسودة بنجاح.":"Draft saved successfully.")});
       if(!initial?.id&&saved.id)router.replace(`/admin/blog/${saved.id}`);
       router.refresh();
-    }catch(error){setMessage({tone:"error",text:error instanceof Error?error.message:(ar?"تعذر حفظ المقال.":"Unable to save article.")});}
+    }catch(error){setMessage({tone:"error",text:error instanceof Error?error.message:(ar?"تعذر حفظ المقال.":"Unable to save article."));}
     finally{setBusy(null);}
   }
+
+  async function uploadCover(file:File){
+    setImageBusy(true);setMessage(null);
+    try{
+      const form=new FormData();form.append("file",file);
+      const response=await fetch("/api/v1/admin/blog/assets",{method:"POST",body:form});
+      const result=await response.json();
+      if(response.status===401){window.location.assign(`/admin/login?next=${encodeURIComponent(post.id?`/admin/blog/${post.id}`:"/admin/blog/new")}`);return;}
+      if(!response.ok)throw new Error(result?.error?.message||"Unable to upload image");
+      const url=String(result.data?.url??"");
+      if(!url)throw new Error(ar?"لم يرجع الخادم رابط الصورة.":"The server did not return an image URL.");
+      setPost(current=>({...current,coverImageUrl:url,coverImageAlt:current.coverImageAlt?.trim()?current.coverImageAlt:(current.title||file.name.replace(/\.[^.]+$/,""))}));
+      setMessage({tone:"success",text:ar?"تم رفع صورة الغلاف. احفظ المقال لتثبيتها.":"Cover image uploaded. Save the article to attach it."});
+    }catch(error){setMessage({tone:"error",text:error instanceof Error?error.message:(ar?"تعذر رفع الصورة.":"Unable to upload image.")});}
+    finally{setImageBusy(false);setImageDrag(false);}
+  }
+
+  function handleImageDrop(event:DragEvent<HTMLDivElement>){event.preventDefault();setImageDrag(false);const file=event.dataTransfer.files?.[0];if(file)void uploadCover(file);}
 
   const savedLive=Boolean(persisted?.id&&persisted.status==="PUBLISHED"&&persisted.publishedAt);
   const publicHref=savedLive&&persisted?liveHref(persisted):"";
@@ -100,9 +120,8 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
         <div><span className="eyebrow"><FileText size={15}/>{ar?"محرر HandMeKey":"HandMeKey editor"}</span><h2>{post.id?(ar?"تحرير المقال":"Edit article"):(ar?"مقال جديد":"New article")}</h2><div className="blogCmsState"><span className={`blogStatus ${currentStatus.toLowerCase()}`}>{currentStatus}</span>{dirty&&<span className="blogCmsUnsaved">{ar?"تغييرات غير محفوظة":"Unsaved changes"}</span>}</div></div>
         <div className="blogCmsActions">
           {savedLive&&publicHref&&<Link className="secondaryButton" href={publicHref} target="_blank">{ar?"فتح الصفحة المنشورة":"Open live page"}<ExternalLink size={15}/></Link>}
-          {post.id&&<button className="secondaryButton" disabled={Boolean(busy)} onClick={()=>void save("DRAFT")}><Save size={15}/>{busy==="DRAFT"?(ar?"جارٍ الحفظ…":"Saving…"):(currentStatus==="PUBLISHED"?(ar?"إلغاء النشر":"Unpublish"):(ar?"حفظ كمسودة":"Save draft"))}</button>}
-          {!post.id&&<button className="secondaryButton" disabled={Boolean(busy)} onClick={()=>void save("DRAFT")}><Save size={15}/>{busy==="DRAFT"?(ar?"جارٍ الحفظ…":"Saving…"):(ar?"حفظ المسودة":"Save draft")}</button>}
-          <button className="primaryButton" disabled={Boolean(busy)} onClick={()=>void save("PUBLISHED")}><Globe2 size={15}/>{busy==="PUBLISHED"?(ar?"جارٍ النشر…":"Publishing…"):(currentStatus==="PUBLISHED"?(ar?"حفظ وتحديث المنشور":"Update live article"):(ar?"نشر الآن":"Publish now"))}</button>
+          <button className="secondaryButton" disabled={Boolean(busy)||imageBusy} onClick={()=>void save("DRAFT")}><Save size={15}/>{busy==="DRAFT"?(ar?"جارٍ الحفظ…":"Saving…"):(post.id&&currentStatus==="PUBLISHED"?(ar?"إلغاء النشر":"Unpublish"):(ar?"حفظ كمسودة":"Save draft"))}</button>
+          <button className="primaryButton" disabled={Boolean(busy)||imageBusy} onClick={()=>void save("PUBLISHED")}><Globe2 size={15}/>{busy==="PUBLISHED"?(ar?"جارٍ النشر…":"Publishing…"):(currentStatus==="PUBLISHED"?(ar?"حفظ وتحديث المنشور":"Update live article"):(ar?"نشر الآن":"Publish now"))}</button>
         </div>
       </div>
 
@@ -110,15 +129,24 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
 
       <div className="blogEditorGrid">
         <label>{ar?"لغة المقال":"Article language"}<select value={post.locale} onChange={e=>patch("locale",e.target.value as "EN"|"AR")}><option value="AR">العربية</option><option value="EN">English</option></select></label>
-        <label>{ar?"التصنيف":"Category"}<input list="blog-category-options" value={post.category} onChange={e=>patch("category",e.target.value)} placeholder={ar?"مثال: فنادق الأردن":"Example: Jordan hotels"}/><datalist id="blog-category-options">{categoryOptions.map(category=><option value={category} key={category}/>)}</datalist><small>{ar?"اكتب تصنيفًا جديدًا أو اختر من الموجود.":"Choose an existing category or type a new one."}</small></label>
-        <div className="span2 blogCategoryPicker"><span>{ar?"تصنيفات سريعة":"Quick categories"}</span><div>{categoryOptions.slice(0,10).map(category=><button type="button" className={post.category===category?"active":""} onClick={()=>patch("category",category)} key={category}><FolderOpen size={13}/>{category}</button>)}</div></div>
+        <label>{ar?"التصنيف":"Category"}<select value={post.category} onChange={e=>patch("category",e.target.value)}><option value="">{ar?"اختر التصنيف":"Choose category"}</option>{categoryOptions.map(category=><option value={category} key={category}>{category.replaceAll(" / "," › ")}</option>)}</select><small>{ar?"يتم ترتيب التصنيفات وإضافة الفروع من صفحة استوديو المحتوى.":"Manage category order and nesting from the Content Studio."}</small></label>
+        <div className="span2 blogCategoryPicker"><span>{ar?"مسار المقال":"Article category path"}</span><div>{post.category?<button type="button" className="active"><FolderOpen size={13}/>{post.category.replaceAll(" / "," › ")}</button>:<small>{ar?"لم يتم اختيار تصنيف بعد.":"No category selected yet."}</small>}</div></div>
         <label className="span2">{ar?"عنوان المقال":"Article title"}<input value={post.title} onChange={e=>titleChanged(e.target.value)} maxLength={140}/><small>{post.title.length}/140</small></label>
         <label>{ar?"الرابط المختصر (Slug)":"URL slug"}<input dir="ltr" value={post.slug} onChange={e=>patch("slug",slugifyDraft(e.target.value))} onBlur={()=>patch("slug",slugify(post.slug))} placeholder={ar?"فنادق البحر الميت":"dead sea hotels"}/><small>{ar?"اكتب بشكل طبيعي؛ المسافة تتحول تلقائيًا إلى -":"Type naturally; spaces become hyphens automatically."} · {post.slug?`/blog/${post.locale==="AR"?"ar":"en"}/${slugify(post.slug)}`:"/blog/..."}</small></label>
         <label>{ar?"اسم الكاتب":"Author name"}<input value={post.authorName} onChange={e=>patch("authorName",e.target.value)}/></label>
         <label className="span2">{ar?"المقدمة المختصرة":"Excerpt"}<textarea rows={3} value={post.excerpt} onChange={e=>patch("excerpt",e.target.value)} maxLength={320}/><small>{post.excerpt.length}/320</small></label>
         <label className="span2">{ar?"وسوم البحث (افصل بفاصلة)":"Topic tags (comma separated)"}<input value={tagsText} onChange={e=>setTagsText(e.target.value)} placeholder={ar?"فنادق الأردن، البحر الميت، عطلة نهاية الأسبوع":"Jordan hotels, Dead Sea, weekend stay"}/><small>{cleanTags.length}/12 {ar?"وسم":"tags"}</small></label>
-        <label className="span2">{ar?"رابط صورة الغلاف":"Cover image URL"}<input dir="ltr" value={post.coverImageUrl??""} onChange={e=>patch("coverImageUrl",e.target.value)} placeholder="https://..."/></label>
-        <label className="span2">{ar?"وصف الصورة لمحركات البحث وقارئات الشاشة":"Image alt text"}<input value={post.coverImageAlt??""} onChange={e=>patch("coverImageAlt",e.target.value)} maxLength={180}/></label>
+
+        <div className="span2 blogCoverField">
+          <div className="blogCoverFieldHead"><div><strong><ImagePlus size={16}/>{ar?"صورة الغلاف":"Cover image"}</strong><small>{ar?"ارفع JPEG أو PNG أو WebP حتى 8MB. في التطوير المحلي تحفظ الصورة محليًا، وفي الإنتاج تستخدم Object Storage.":"Upload JPEG, PNG or WebP up to 8MB. Local development uses a local fallback; production uses object storage."}</small></div>{post.coverImageUrl&&<button type="button" onClick={()=>patch("coverImageUrl",null)}><Trash2 size={14}/>{ar?"إزالة":"Remove"}</button>}</div>
+          <div className={`blogCoverDrop ${imageDrag?"dragging":""}`} onDragOver={event=>{event.preventDefault();setImageDrag(true);}} onDragLeave={()=>setImageDrag(false)} onDrop={handleImageDrop}>
+            {post.coverImageUrl?<img src={post.coverImageUrl} alt={post.coverImageAlt||post.title||"Blog cover"}/>:<div className="blogCoverEmpty"><UploadCloud size={28}/><strong>{ar?"اسحب الصورة هنا":"Drop image here"}</strong><span>{ar?"أو اختر ملفًا من جهازك":"or choose a file from your computer"}</span></div>}
+            <label className="secondaryButton blogCoverChoose"><UploadCloud size={15}/>{imageBusy?(ar?"جارٍ الرفع…":"Uploading…"):(post.coverImageUrl?(ar?"استبدال الصورة":"Replace image"):(ar?"رفع صورة":"Upload image"))}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={imageBusy} onChange={event=>{const file=event.target.files?.[0];if(file)void uploadCover(file);event.currentTarget.value="";}}/></label>
+          </div>
+          <label className="blogCoverUrl">{ar?"أو رابط صورة خارجي":"Or external image URL"}<input dir="ltr" value={post.coverImageUrl??""} onChange={e=>patch("coverImageUrl",e.target.value||null)} placeholder="https://..."/></label>
+        </div>
+
+        <label className="span2">{ar?"وصف الصورة لمحركات البحث وقارئات الشاشة":"Image alt text"}<input value={post.coverImageAlt??""} onChange={e=>patch("coverImageAlt",e.target.value)} maxLength={180}/><small>{ar?"صف ما يظهر في الصورة باختصار.":"Describe what the image shows in a short sentence."}</small></label>
         <label className="blogEditorCheck span2"><input type="checkbox" checked={post.featured} onChange={e=>patch("featured",e.target.checked)}/><span>{ar?"ثبّت المقال كمقال مميز في أعلى المدونة":"Feature this article on the blog landing page"}</span></label>
       </div>
 
