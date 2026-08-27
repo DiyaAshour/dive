@@ -123,8 +123,8 @@ export async function createAdminBlogPost(actorUserId: string, rawInput: BlogPos
   const input = normalizeInput(rawInput);
   await ensureSlugAvailable(input.locale, input.slug);
   const now = new Date();
-  return database().$transaction(async (tx) => {
-    const post = await tx.blogPost.create({data: {
+  const post = await database().$transaction(async (tx) => {
+    const created = await tx.blogPost.create({data: {
       ...input,
       coverImageUrl: input.coverImageUrl || null,
       coverImageAlt: input.coverImageAlt || null,
@@ -137,11 +137,13 @@ export async function createAdminBlogPost(actorUserId: string, rawInput: BlogPos
       actorUserId: actor.id,
       action: input.status === "PUBLISHED" ? "BLOG_POST_CREATED_AND_PUBLISHED" : "BLOG_POST_CREATED",
       entityType: "BlogPost",
-      entityId: post.id,
-      after: auditSnapshot(post),
+      entityId: created.id,
+      after: auditSnapshot(created),
     }});
-    return post;
+    return created;
   });
+  if (post.status === "PUBLISHED") await assertPublishedPostResolvable(post.locale, post.slug);
+  return post;
 }
 
 export async function updateAdminBlogPost(actorUserId: string, postId: string, rawInput: BlogPostInput) {
@@ -152,8 +154,8 @@ export async function updateAdminBlogPost(actorUserId: string, postId: string, r
   if (existing.slug !== input.slug || existing.locale !== input.locale) await ensureSlugAvailable(input.locale, input.slug, postId);
   const now = new Date();
   const publishedAt = input.status === "PUBLISHED" ? (existing.publishedAt ?? now) : input.status === "DRAFT" ? null : existing.publishedAt;
-  return database().$transaction(async (tx) => {
-    const post = await tx.blogPost.update({where: {id: postId}, data: {
+  const post = await database().$transaction(async (tx) => {
+    const updated = await tx.blogPost.update({where: {id: postId}, data: {
       ...input,
       coverImageUrl: input.coverImageUrl || null,
       coverImageAlt: input.coverImageAlt || null,
@@ -161,20 +163,22 @@ export async function updateAdminBlogPost(actorUserId: string, postId: string, r
       publishedAt,
       updatedByUserId: actor.id,
     }});
-    const action = existing.status !== "PUBLISHED" && post.status === "PUBLISHED" ? "BLOG_POST_PUBLISHED"
-      : existing.status === "PUBLISHED" && post.status !== "PUBLISHED" ? "BLOG_POST_UNPUBLISHED"
-      : post.status === "ARCHIVED" && existing.status !== "ARCHIVED" ? "BLOG_POST_ARCHIVED"
+    const action = existing.status !== "PUBLISHED" && updated.status === "PUBLISHED" ? "BLOG_POST_PUBLISHED"
+      : existing.status === "PUBLISHED" && updated.status !== "PUBLISHED" ? "BLOG_POST_UNPUBLISHED"
+      : updated.status === "ARCHIVED" && existing.status !== "ARCHIVED" ? "BLOG_POST_ARCHIVED"
       : "BLOG_POST_UPDATED";
     await tx.auditLog.create({data: {
       actorUserId: actor.id,
       action,
       entityType: "BlogPost",
-      entityId: post.id,
+      entityId: updated.id,
       before: auditSnapshot(existing),
-      after: auditSnapshot(post),
+      after: auditSnapshot(updated),
     }});
-    return post;
+    return updated;
   });
+  if (post.status === "PUBLISHED") await assertPublishedPostResolvable(post.locale, post.slug);
+  return post;
 }
 
 function normalizeInput(input: BlogPostInput) {
@@ -196,6 +200,14 @@ function normalizeInput(input: BlogPostInput) {
 async function ensureSlugAvailable(locale: "EN" | "AR", slug: string, excludingId?: string) {
   const conflict = await database().blogPost.findFirst({where: {locale, slug, ...(excludingId ? {id: {not: excludingId}} : {})}, select: {id: true}});
   if (conflict) throw new ApplicationError("BLOG_SLUG_TAKEN", "This slug is already used for the selected language", 409);
+}
+
+async function assertPublishedPostResolvable(locale: "EN" | "AR", slug: string) {
+  const published = await database().blogPost.findFirst({
+    where: {locale, slug, status: "PUBLISHED", publishedAt: {lte: new Date()}},
+    select: {id: true},
+  });
+  if (!published) throw new ApplicationError("BLOG_PUBLISH_NOT_VISIBLE", "Article was saved but is not publicly resolvable", 500);
 }
 
 function validStatus(value: string | undefined): value is "DRAFT" | "PUBLISHED" | "ARCHIVED" {
