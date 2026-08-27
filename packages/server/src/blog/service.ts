@@ -77,24 +77,38 @@ export async function listBlogFeedEntries(limit = 30) {
   });
 }
 
-export async function listAdminBlogPosts(actorUserId: string, filters: {query?: string; status?: string; locale?: string} = {}) {
+export async function listAdminBlogPosts(actorUserId: string, filters: {query?: string; status?: string; locale?: string; category?: string} = {}) {
   await requirePlatformAdmin(actorUserId);
   const status = validStatus(filters.status) ? filters.status : undefined;
   const locale = filters.locale === "AR" || filters.locale === "EN" ? filters.locale : undefined;
+  const category = filters.category?.trim() || undefined;
   return database().blogPost.findMany({
     where: {
       ...(status ? {status} : {}),
       ...(locale ? {locale} : {}),
+      ...(category ? {category} : {}),
       ...(filters.query?.trim() ? {OR: [
         {title: {contains: filters.query.trim(), mode: "insensitive"}},
         {slug: {contains: filters.query.trim(), mode: "insensitive"}},
         {category: {contains: filters.query.trim(), mode: "insensitive"}},
+        {tags: {has: filters.query.trim()}},
       ]} : {}),
     },
     select: {id: true, locale: true, slug: true, title: true, excerpt: true, category: true, tags: true, featured: true, status: true, authorName: true, readingMinutes: true, publishedAt: true, updatedAt: true},
     orderBy: {updatedAt: "desc"},
     take: 200,
   });
+}
+
+export async function listAdminBlogCategories(actorUserId: string) {
+  await requirePlatformAdmin(actorUserId);
+  const rows = await database().blogPost.groupBy({
+    by: ["category"],
+    _count: {_all: true},
+    _max: {updatedAt: true},
+    orderBy: {_count: {category: "desc"}},
+  });
+  return rows.map((row) => ({name: row.category, count: row._count._all, updatedAt: row._max.updatedAt}));
 }
 
 export async function getAdminBlogPost(actorUserId: string, postId: string) {
