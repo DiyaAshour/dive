@@ -77,9 +77,9 @@
 .bookingManageHeader h2{margin:0;color:var(--ink);font-size:25px;letter-spacing:-.035em}
 .bookingManageHeader p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
 .bookingToolsDynamic{margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.bookingToolsDynamic .bookingToolsLane{display:grid;gap:18px;align-content:start;min-width:0}
 .bookingToolSlot{min-width:0;scroll-margin-top:92px}
-.bookingToolSlot>.bookingActionCard{height:100%}
-.bookingToolSlotWide{grid-column:1/-1}
+.bookingToolSlot>.bookingActionCard{height:auto}
 .bookingToolPriority .bookingActionCard{border-color:#bad6e8;box-shadow:0 18px 45px rgba(22,79,119,.10)}
 .bookingActionCardPriority:before{height:4px;background:linear-gradient(90deg,#0f2940,#2e739e 58%,#d5a53e)}
 .bookingActionCardPriority .bookingActionIcon{background:#e7f3fa;color:#215c83}
@@ -103,7 +103,6 @@ html[dir="rtl"] .bookingPropertyBlock p{direction:rtl}
   .bookingCenterSummary{grid-template-columns:1fr}
   .bookingPaymentCard{position:relative;top:auto}
   .bookingToolsDynamic{grid-template-columns:1fr}
-  .bookingToolSlotWide{grid-column:auto}
 }
 @media(max-width:620px){
   .bookingCenterSection{padding-top:20px;padding-bottom:48px}
