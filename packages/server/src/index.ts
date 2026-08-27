@@ -18,6 +18,7 @@ export * from "./bookings/security";
 export * from "./bookings/inventory";
 export * from "./bookings/authorization";
 export * from "./bookings/service";
+export * from "./bookings/experience";
 export * from "./operations/service";
 export * from "./operations/guest-view";
 export * from "./reviews/service";
