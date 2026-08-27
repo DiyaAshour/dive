@@ -159,10 +159,11 @@ export function GuestTools({bookingId,locale}:Props) {
     try {
       const preview=await api<{penaltyAmount:number;refundableAmount:number;alreadyCancelled:boolean}>(`/api/v1/bookings/${bookingId}/cancellation`,{headers:accessHeaders(bookingId)});
       if(preview.alreadyCancelled){setNotice("cancel","success",ar?"هذا الحجز ملغى بالفعل.":"This reservation is already cancelled.");return;}
+      const currency=bookingMeta?.currency??"";
       const payAtHotel=bookingMeta?.paymentMode==="PAY_AT_HOTEL";
       const summary=payAtHotel
-        ? (ar?`رسوم الإلغاء الحالية: ${money(preview.penaltyAmount,bookingMeta?.currency??"")}. هل تريد المتابعة؟`:`Current cancellation penalty: ${money(preview.penaltyAmount,bookingMeta?.currency??"")}. Continue?`)
-        : (ar?`رسوم الإلغاء: ${money(preview.penaltyAmount,bookingMeta?.currency??"")}. المبلغ القابل للاسترداد: ${money(preview.refundableAmount,bookingMeta?.currency??"")}. هل تريد المتابعة؟`:`Cancellation penalty: ${money(preview.penaltyAmount,bookingMeta?.currency??"")}. Refundable amount: ${money(preview.refundableAmount,bookingMeta?.currency??"")}. Continue?`);
+        ? (ar?`رسوم الإلغاء الحالية: ${money(preview.penaltyAmount,currency)}. هل تريد المتابعة؟`:`Current cancellation penalty: ${money(preview.penaltyAmount,currency)}. Continue?`)
+        : (ar?`رسوم الإلغاء: ${money(preview.penaltyAmount,currency)}. المبلغ القابل للاسترداد: ${money(preview.refundableAmount,currency)}. هل تريد المتابعة؟`:`Cancellation penalty: ${money(preview.penaltyAmount,currency)}. Refundable amount: ${money(preview.refundableAmount,currency)}. Continue?`);
       if(!window.confirm(summary))return;
       await api(`/api/v1/bookings/${bookingId}/cancel`,{method:"POST",headers:{...accessHeaders(bookingId),"idempotency-key":crypto.randomUUID()}});
       setNotice("cancel","success",ar?"تم إلغاء الحجز. جارٍ تحديث الحالة…":"Reservation cancelled. Reloading booking status…");
@@ -176,115 +177,88 @@ export function GuestTools({bookingId,locale}:Props) {
   function setNotice(scope:ActionScope,tone:NoticeContent["tone"],text:string){setNotices((current)=>({...current,[scope]:{tone,text}}));}
   function fail(scope:ActionScope,error:unknown,fallback:string){setNotice(scope,"error",error instanceof Error?error.message:fallback);}
 
+  const arrivalCard = showArrival ? <div className={`bookingToolSlot ${phase==="ARRIVAL_DAY"?"bookingToolPriority":""}`} id="arrival">
+    <BookingActionCard
+      icon={Clock3}
+      eyebrow={ar?"الوصول":"Arrival"}
+      title={phase==="ARRIVAL_DAY"?(ar?"حدد وقت وصولك اليوم":"Set today's arrival time"):(ar?"وقت الوصول المتوقع":"Expected arrival time")}
+      description={phase==="ARRIVAL_DAY"?(ar?"ساعد الفندق على الاستعداد قبل وصولك اليوم.":"Help the property prepare before you arrive today."):(ar?"ساعد الفندق على الاستعداد لاستقبالك. يُحفظ الوقت حسب المنطقة الزمنية المحلية للفندق.":"Help the property prepare for your arrival. Time is stored in the hotel's local timezone.")}
+      className={phase==="ARRIVAL_DAY"?"bookingActionCardPriority":""}
+    >
+      <form onSubmit={saveArrival}>
+        <label className="bookingField"><span className="bookingFieldLabel">{ar?"وقت الوصول":"Arrival time"}</span><input type="time" value={arrivalDraft} onChange={(event)=>setArrivalDraft(event.target.value)} disabled={arrived||isBusy("arrival")}/></label>
+        <div className="bookingQuickTimes" aria-label={ar?"أوقات وصول سريعة":"Quick arrival times"}>{quickArrivalTimes.map((time)=><button className={`bookingQuickTime ${arrivalDraft===time?"active":""}`} type="button" onClick={()=>setArrivalDraft(time)} disabled={arrived||isBusy("arrival")} key={time}>{formatClock(time,locale)}</button>)}</div>
+        {arrival?.expectedArrivalTime && <div className="bookingSavedValue"><CheckCircle2 size={15}/><span>{ar?"الوقت المحفوظ:":"Saved arrival:"} <strong>{formatClock(arrival.expectedArrivalTime,locale)}</strong></span></div>}
+        <button className="bookingPrimaryAction bookingFullAction" type="submit" disabled={!arrivalChanged||arrived||isBusy("arrival")}>{arrived?(ar?"تم تسجيل وصول الضيف":"Guest marked arrived"):isBusy("arrival")?(ar?"جارٍ الحفظ…":"Saving…"):(ar?"حفظ وقت الوصول":"Save arrival time")}</button>
+      </form>
+      <InlineNotice notice={notices.arrival}/>
+    </BookingActionCard>
+  </div> : null;
+
+  const requestsCard = activeStay ? <div className="bookingToolSlot" id="requests">
+    <BookingActionCard icon={BedDouble} eyebrow={ar?"طلبات الضيف":"Guest requests"} title={ar?"طلبات للفندق":"Requests for the hotel"} description={ar?"أرسل احتياجًا واضحًا للفندق واحتفظ بحالته مع الحجز.":"Send a clear request to the property and keep its status attached to this stay."}>
+      {loadingTools ? <EmptyState text={ar?"جارٍ تحميل طلبات الحجز…":"Loading booking requests…"}/> : recentRequests.length ? <div className="bookingRequestHistory">{recentRequests.map((request)=><article className="bookingRequestItem" key={request.id}><div className="bookingRequestTop"><strong>{categoryLabel(request.category,locale)}</strong><span className={`bookingStatusPill ${request.status.toLowerCase()}`}>{requestStatusLabel(request.status,locale)}</span></div><p>{request.message}</p></article>)}</div> : <EmptyState text={ar?"لا توجد طلبات بعد. يمكنك إرسال أول طلب من النموذج أدناه.":"No requests yet. You can send the first one below."}/>} 
+      <form onSubmit={addRequest}>
+        <label className="bookingField"><span className="bookingFieldLabel">{ar?"نوع الطلب":"Request type"}</span><select value={requestCategory} onChange={(event)=>setRequestCategory(event.target.value)} disabled={isBusy("request")}><option value="ARRIVAL">{categoryLabel("ARRIVAL",locale)}</option><option value="BEDDING">{categoryLabel("BEDDING",locale)}</option><option value="ACCESSIBILITY">{categoryLabel("ACCESSIBILITY",locale)}</option><option value="TRANSPORT">{categoryLabel("TRANSPORT",locale)}</option><option value="OTHER">{categoryLabel("OTHER",locale)}</option></select></label>
+        <label className="bookingField"><span className="bookingFieldLabel">{ar?"تفاصيل الطلب":"Request details"}</span><textarea value={requestText} onChange={(event)=>setRequestText(event.target.value)} maxLength={2000} disabled={isBusy("request")} placeholder={ar?"مثال: أحتاج سريرًا إضافيًا لطفل، إن كان متاحًا.":"Example: I need an extra bed for a child, if available."}/><span className="bookingComposerMeta"><span>{ar?"سيصل الطلب مباشرة ضمن هذا الحجز.":"This request stays attached to the booking."}</span><span>{requestText.length}/2000</span></span></label>
+        <button className="bookingPrimaryAction bookingFullAction" disabled={!requestValid||isBusy("request")} type="submit"><Send size={16}/>{isBusy("request")?(ar?"جارٍ الإرسال…":"Sending…"):(ar?"إرسال الطلب":"Send request")}</button>
+      </form>
+      <InlineNotice notice={notices.request}/>
+    </BookingActionCard>
+  </div> : null;
+
+  const messagesCard = <div className="bookingToolSlot" id="messages">
+    <BookingActionCard icon={MessageSquareText} eyebrow={ar?"الرسائل":"Messages"} title={ar?"راسل الفندق":"Message the hotel"} description={ar?"احتفظ بالمحادثة المتعلقة بالحجز في مكان واحد بدل رسائل منفصلة.":"Keep reservation-specific communication in one thread instead of scattered messages."}>
+      {loadingTools ? <EmptyState text={ar?"جارٍ تحميل المحادثة…":"Loading conversation…"}/> : messages.length ? <div className="bookingMessageThread">{messages.map((item)=><article className={`bookingMessageBubble ${item.senderKind==="GUEST"?"mine":"theirs"}`} key={item.id}><div className="bookingMessageMeta"><strong>{item.senderKind==="HOTEL"?(ar?"الفندق":"Hotel"):(ar?"أنت":"You")}</strong><time>{formatMessageTime(item.createdAt,locale)}</time></div><p>{item.body}</p></article>)}</div> : <EmptyState text={ar?"لا توجد رسائل بعد. ابدأ المحادثة بخصوص هذه الإقامة.":"No messages yet. Start the conversation about this stay."}/>} 
+      <form onSubmit={sendMessage}>
+        <label className="bookingField"><span className="bookingFieldLabel">{ar?"رسالتك":"Your message"}</span><textarea value={messageText} onChange={(event)=>setMessageText(event.target.value)} required maxLength={4000} disabled={isBusy("message")} placeholder={ar?"اكتب رسالتك إلى الفندق…":"Write your message to the hotel…"}/><span className="bookingComposerMeta"><span>{ar?"لا ترسل معلومات دفع أو بيانات حساسة في الرسائل.":"Do not send payment details or sensitive information in messages."}</span><span>{messageText.length}/4000</span></span></label>
+        <button className="bookingPrimaryAction bookingFullAction" type="submit" disabled={!messageValid||isBusy("message")}><Send size={16}/>{isBusy("message")?(ar?"جارٍ الإرسال…":"Sending…"):(ar?"إرسال الرسالة":"Send message")}</button>
+      </form>
+      <InlineNotice notice={notices.message}/>
+    </BookingActionCard>
+  </div>;
+
+  const reviewCard = showReview ? <div className="bookingToolSlot" id="review">
+    <BookingActionCard icon={Star} eyebrow={ar?"تقييم إقامة موثق":"Verified stay review"} title={reviewEligibility?.alreadyReviewed?(ar?"شكرًا على تقييمك":"Thanks for your review"):(ar?"قيّم إقامتك":"Rate your stay")} description={ar?"التقييم مرتبط بحجز مكتمل وموثق.":"Your review remains tied to a completed, verified booking."} className={reviewEligibility?.eligible?"bookingActionCardReview":""}>
+      {reviewEligibility?.alreadyReviewed ? <div className="bookingNotice success"><CheckCircle2 size={16}/><span>{ar?"لقد قيّمت هذه الإقامة بالفعل.":"You already reviewed this stay."}</span></div> : reviewEligibility?.eligible ? <form onSubmit={submitReview}>
+        <div className="bookingReviewScores">{["overall","cleanliness","staff","location","facilities","comfort","value"].map((field)=><label className="bookingField" key={field}><span className="bookingFieldLabel">{reviewLabel(field,locale)}</span><select name={field} defaultValue="10">{Array.from({length:10},(_,index)=>10-index).map((score)=><option key={score} value={score}>{score}/10</option>)}</select></label>)}</div>
+        <label className="bookingField"><span className="bookingFieldLabel">{ar?"عنوان مختصر":"Short title"}</span><input name="title" maxLength={120}/></label>
+        <label className="bookingField"><span className="bookingFieldLabel">{ar?"تقييمك":"Your review"}</span><textarea name="comment" minLength={10} maxLength={5000} required placeholder={ar?"شارك ما كان جيدًا وما يمكن تحسينه…":"Share what worked well and what could improve…"}/></label>
+        <button className="bookingPrimaryAction bookingFullAction" type="submit" disabled={isBusy("review")}>{isBusy("review")?(ar?"جارٍ النشر…":"Publishing…"):(ar?"نشر التقييم الموثق":"Publish verified review")}</button>
+      </form> : null}
+      <InlineNotice notice={notices.review}/>
+    </BookingActionCard>
+  </div> : null;
+
+  const linkCard = showLink ? <div className="bookingToolSlot" id="keep-trip">
+    <BookingActionCard icon={Link2} eyebrow={ar?"الحساب":"Account"} title={ar?"احتفظ بهذا الحجز":"Keep this trip"} description={bookingMeta?.viewer.signedIn?(ar?"اربط حجز الضيف بحسابك حتى يظهر ضمن حجوزاتي على كل أجهزتك.":"Link this guest booking to your account so it stays in My Trips across devices."):(ar?"سجّل الدخول أولًا لإضافة هذا الحجز إلى حجوزاتي.":"Sign in first to save this booking to My Trips.")} compact footer={bookingMeta?.viewer.signedIn ? <button className="bookingSecondaryAction" type="button" onClick={()=>void linkAccount()} disabled={isBusy("link")}>{isBusy("link")?(ar?"جارٍ الربط…":"Linking…"):(ar?"إضافة إلى حجوزاتي":"Add to My Trips")}</button> : <a className="bookingSecondaryAction" href={`/login?next=${encodeURIComponent(`/booking/${bookingId}`)}`}><LogIn size={15}/>{ar?"تسجيل الدخول للحفظ":"Sign in to save"}</a>}>
+      <p className="bookingCompactCopy">{ar?"الربط لا يغيّر السعر أو شروط الحجز؛ فقط يحفظه داخل حسابك.":"Linking does not change the price or booking terms; it only saves the trip to your account."}</p><InlineNotice notice={notices.link}/>
+    </BookingActionCard>
+  </div> : null;
+
+  const cancellationCard = showCancellation && currentCancellation ? <div className="bookingToolSlot" id="cancellation">
+    <BookingActionCard icon={Ban} eyebrow={ar?"إدارة الحجز":"Booking management"} title={ar?"الإلغاء":"Cancellation"} description={currentCancellation.penaltyAmount<=0?(ar?"الإلغاء متاح حاليًا بدون رسوم.":"Cancellation is currently free."):(ar?"اعرض نتيجة الإلغاء الحالية قبل تنفيذ أي تغيير.":"Review the current cancellation outcome before anything changes.")} tone="danger" compact footer={<button className="bookingDangerAction" type="button" onClick={()=>void cancelReservation()} disabled={isBusy("cancel")}>{isBusy("cancel")?(ar?"جارٍ التحقق…":"Checking…"):(ar?"معاينة وإلغاء الحجز":"Preview cancellation")}</button>}>
+      <div className={`bookingCancellationPreview ${currentCancellation.penaltyAmount<=0?"free":"penalty"}`}><span>{currentCancellation.penaltyAmount<=0?(ar?"بدون رسوم الآن":"No fee right now"):(ar?"رسوم الإلغاء الحالية":"Current cancellation penalty")}</span><strong>{money(currentCancellation.penaltyAmount,bookingMeta?.currency??"")}</strong>{bookingMeta?.paymentMode!=="PAY_AT_HOTEL" && <small>{ar?"قابل للاسترداد حاليًا":"Currently refundable"}: {money(currentCancellation.refundableAmount,bookingMeta?.currency??"")}</small>}</div>
+      <p className="bookingCompactCopy">{ar?"فتح المعاينة لا يلغي الحجز. ستؤكد القرار فقط بعد رؤية الأرقام المحدثة.":"Opening the preview does not cancel the booking. You confirm only after seeing the refreshed amounts."}</p><InlineNotice notice={notices.cancel}/>
+    </BookingActionCard>
+  </div> : null;
+
+  const leftLane = phase==="COMPLETED"
+    ? <>{reviewCard??messagesCard}{reviewCard?null:linkCard}</>
+    : phase==="CLOSED"
+      ? <>{messagesCard}</>
+      : <>{arrivalCard??requestsCard}{messagesCard}</>;
+  const rightLane = phase==="COMPLETED"
+    ? <>{reviewCard?messagesCard:null}{linkCard}</>
+    : phase==="CLOSED"
+      ? <>{linkCard}</>
+      : <>{arrivalCard?requestsCard:null}{reviewCard}{linkCard}{cancellationCard}</>;
+
   return <div className="bookingToolsExperience">
-    <header className="bookingManageHeader">
-      <span className="eyebrow">{manageCopy.eyebrow}</span>
-      <h2>{manageCopy.title}</h2>
-      <p>{manageCopy.body}</p>
-    </header>
-
+    <header className="bookingManageHeader"><span className="eyebrow">{manageCopy.eyebrow}</span><h2>{manageCopy.title}</h2><p>{manageCopy.body}</p></header>
     <div className={`bookingToolsGrid bookingToolsDynamic bookingToolsPhase-${phase.toLowerCase()}`}>
-      {showArrival && <div className={`bookingToolSlot ${phase==="ARRIVAL_DAY"?"bookingToolPriority":""}`} id="arrival">
-        <BookingActionCard
-          icon={Clock3}
-          eyebrow={ar?"الوصول":"Arrival"}
-          title={phase==="ARRIVAL_DAY"?(ar?"حدد وقت وصولك اليوم":"Set today's arrival time"):(ar?"وقت الوصول المتوقع":"Expected arrival time")}
-          description={phase==="ARRIVAL_DAY"?(ar?"ساعد الفندق على الاستعداد قبل وصولك اليوم.":"Help the property prepare before you arrive today."):(ar?"ساعد الفندق على الاستعداد لاستقبالك. يُحفظ الوقت حسب المنطقة الزمنية المحلية للفندق.":"Help the property prepare for your arrival. Time is stored in the hotel's local timezone.")}
-          className={phase==="ARRIVAL_DAY"?"bookingActionCardPriority":""}
-        >
-          <form onSubmit={saveArrival}>
-            <label className="bookingField"><span className="bookingFieldLabel">{ar?"وقت الوصول":"Arrival time"}</span><input type="time" value={arrivalDraft} onChange={(event)=>setArrivalDraft(event.target.value)} disabled={arrived||isBusy("arrival")}/></label>
-            <div className="bookingQuickTimes" aria-label={ar?"أوقات وصول سريعة":"Quick arrival times"}>{quickArrivalTimes.map((time)=><button className={`bookingQuickTime ${arrivalDraft===time?"active":""}`} type="button" onClick={()=>setArrivalDraft(time)} disabled={arrived||isBusy("arrival")} key={time}>{formatClock(time,locale)}</button>)}</div>
-            {arrival?.expectedArrivalTime && <div className="bookingSavedValue"><CheckCircle2 size={15}/><span>{ar?"الوقت المحفوظ:":"Saved arrival:"} <strong>{formatClock(arrival.expectedArrivalTime,locale)}</strong></span></div>}
-            <button className="bookingPrimaryAction bookingFullAction" type="submit" disabled={!arrivalChanged||arrived||isBusy("arrival")}>{arrived?(ar?"تم تسجيل وصول الضيف":"Guest marked arrived"):isBusy("arrival")?(ar?"جارٍ الحفظ…":"Saving…"):(ar?"حفظ وقت الوصول":"Save arrival time")}</button>
-          </form>
-          <InlineNotice notice={notices.arrival}/>
-        </BookingActionCard>
-      </div>}
-
-      {activeStay && <div className="bookingToolSlot" id="requests">
-        <BookingActionCard
-          icon={BedDouble}
-          eyebrow={ar?"طلبات الضيف":"Guest requests"}
-          title={ar?"طلبات للفندق":"Requests for the hotel"}
-          description={ar?"أرسل احتياجًا واضحًا للفندق واحتفظ بحالته مع الحجز.":"Send a clear request to the property and keep its status attached to this stay."}
-        >
-          {loadingTools ? <EmptyState text={ar?"جارٍ تحميل طلبات الحجز…":"Loading booking requests…"}/> : recentRequests.length ? <div className="bookingRequestHistory">{recentRequests.map((request)=><article className="bookingRequestItem" key={request.id}><div className="bookingRequestTop"><strong>{categoryLabel(request.category,locale)}</strong><span className={`bookingStatusPill ${request.status.toLowerCase()}`}>{requestStatusLabel(request.status,locale)}</span></div><p>{request.message}</p></article>)}</div> : <EmptyState text={ar?"لا توجد طلبات بعد. يمكنك إرسال أول طلب من النموذج أدناه.":"No requests yet. You can send the first one below."}/>} 
-          <form onSubmit={addRequest}>
-            <label className="bookingField"><span className="bookingFieldLabel">{ar?"نوع الطلب":"Request type"}</span><select value={requestCategory} onChange={(event)=>setRequestCategory(event.target.value)} disabled={isBusy("request")}><option value="ARRIVAL">{categoryLabel("ARRIVAL",locale)}</option><option value="BEDDING">{categoryLabel("BEDDING",locale)}</option><option value="ACCESSIBILITY">{categoryLabel("ACCESSIBILITY",locale)}</option><option value="TRANSPORT">{categoryLabel("TRANSPORT",locale)}</option><option value="OTHER">{categoryLabel("OTHER",locale)}</option></select></label>
-            <label className="bookingField"><span className="bookingFieldLabel">{ar?"تفاصيل الطلب":"Request details"}</span><textarea value={requestText} onChange={(event)=>setRequestText(event.target.value)} maxLength={2000} disabled={isBusy("request")} placeholder={ar?"مثال: أحتاج سريرًا إضافيًا لطفل، إن كان متاحًا.":"Example: I need an extra bed for a child, if available."}/><span className="bookingComposerMeta"><span>{ar?"سيصل الطلب مباشرة ضمن هذا الحجز.":"This request stays attached to the booking."}</span><span>{requestText.length}/2000</span></span></label>
-            <button className="bookingPrimaryAction bookingFullAction" disabled={!requestValid||isBusy("request")} type="submit"><Send size={16}/>{isBusy("request")?(ar?"جارٍ الإرسال…":"Sending…"):(ar?"إرسال الطلب":"Send request")}</button>
-          </form>
-          <InlineNotice notice={notices.request}/>
-        </BookingActionCard>
-      </div>}
-
-      <div className="bookingToolSlot" id="messages">
-        <BookingActionCard
-          icon={MessageSquareText}
-          eyebrow={ar?"الرسائل":"Messages"}
-          title={ar?"راسل الفندق":"Message the hotel"}
-          description={ar?"احتفظ بالمحادثة المتعلقة بالحجز في مكان واحد بدل رسائل منفصلة.":"Keep reservation-specific communication in one thread instead of scattered messages."}
-        >
-          {loadingTools ? <EmptyState text={ar?"جارٍ تحميل المحادثة…":"Loading conversation…"}/> : messages.length ? <div className="bookingMessageThread">{messages.map((item)=><article className={`bookingMessageBubble ${item.senderKind==="GUEST"?"mine":"theirs"}`} key={item.id}><div className="bookingMessageMeta"><strong>{item.senderKind==="HOTEL"?(ar?"الفندق":"Hotel"):(ar?"أنت":"You")}</strong><time>{formatMessageTime(item.createdAt,locale)}</time></div><p>{item.body}</p></article>)}</div> : <EmptyState text={ar?"لا توجد رسائل بعد. ابدأ المحادثة بخصوص هذه الإقامة.":"No messages yet. Start the conversation about this stay."}/>} 
-          <form onSubmit={sendMessage}>
-            <label className="bookingField"><span className="bookingFieldLabel">{ar?"رسالتك":"Your message"}</span><textarea value={messageText} onChange={(event)=>setMessageText(event.target.value)} required maxLength={4000} disabled={isBusy("message")} placeholder={ar?"اكتب رسالتك إلى الفندق…":"Write your message to the hotel…"}/><span className="bookingComposerMeta"><span>{ar?"لا ترسل معلومات دفع أو بيانات حساسة في الرسائل.":"Do not send payment details or sensitive information in messages."}</span><span>{messageText.length}/4000</span></span></label>
-            <button className="bookingPrimaryAction bookingFullAction" type="submit" disabled={!messageValid||isBusy("message")}><Send size={16}/>{isBusy("message")?(ar?"جارٍ الإرسال…":"Sending…"):(ar?"إرسال الرسالة":"Send message")}</button>
-          </form>
-          <InlineNotice notice={notices.message}/>
-        </BookingActionCard>
-      </div>
-
-      {showReview && <div className={`bookingToolSlot ${reviewEligibility?.eligible?"bookingToolSlotWide":""}`} id="review">
-        <BookingActionCard
-          icon={Star}
-          eyebrow={ar?"تقييم إقامة موثق":"Verified stay review"}
-          title={reviewEligibility?.alreadyReviewed?(ar?"شكرًا على تقييمك":"Thanks for your review"):(ar?"قيّم إقامتك":"Rate your stay")}
-          description={ar?"التقييم مرتبط بحجز مكتمل وموثق.":"Your review remains tied to a completed, verified booking."}
-          className={reviewEligibility?.eligible?"bookingActionCardReview":""}
-        >
-          {reviewEligibility?.alreadyReviewed ? <div className="bookingNotice success"><CheckCircle2 size={16}/><span>{ar?"لقد قيّمت هذه الإقامة بالفعل.":"You already reviewed this stay."}</span></div> : reviewEligibility?.eligible ? <form onSubmit={submitReview}>
-            <div className="bookingReviewScores">{["overall","cleanliness","staff","location","facilities","comfort","value"].map((field)=><label className="bookingField" key={field}><span className="bookingFieldLabel">{reviewLabel(field,locale)}</span><select name={field} defaultValue="10">{Array.from({length:10},(_,index)=>10-index).map((score)=><option key={score} value={score}>{score}/10</option>)}</select></label>)}</div>
-            <label className="bookingField"><span className="bookingFieldLabel">{ar?"عنوان مختصر":"Short title"}</span><input name="title" maxLength={120}/></label>
-            <label className="bookingField"><span className="bookingFieldLabel">{ar?"تقييمك":"Your review"}</span><textarea name="comment" minLength={10} maxLength={5000} required placeholder={ar?"شارك ما كان جيدًا وما يمكن تحسينه…":"Share what worked well and what could improve…"}/></label>
-            <button className="bookingPrimaryAction bookingFullAction" type="submit" disabled={isBusy("review")}>{isBusy("review")?(ar?"جارٍ النشر…":"Publishing…"):(ar?"نشر التقييم الموثق":"Publish verified review")}</button>
-          </form> : null}
-          <InlineNotice notice={notices.review}/>
-        </BookingActionCard>
-      </div>}
-
-      {showLink && <div className="bookingToolSlot" id="keep-trip">
-        <BookingActionCard
-          icon={Link2}
-          eyebrow={ar?"الحساب":"Account"}
-          title={ar?"احتفظ بهذا الحجز":"Keep this trip"}
-          description={bookingMeta?.viewer.signedIn?(ar?"اربط حجز الضيف بحسابك حتى يظهر ضمن حجوزاتي على كل أجهزتك.":"Link this guest booking to your account so it stays in My Trips across devices."):(ar?"سجّل الدخول أولًا لإضافة هذا الحجز إلى حجوزاتي.":"Sign in first to save this booking to My Trips.")}
-          compact
-          footer={bookingMeta?.viewer.signedIn
-            ? <button className="bookingSecondaryAction" type="button" onClick={()=>void linkAccount()} disabled={isBusy("link")}>{isBusy("link")?(ar?"جارٍ الربط…":"Linking…"):(ar?"إضافة إلى حجوزاتي":"Add to My Trips")}</button>
-            : <a className="bookingSecondaryAction" href={`/login?next=${encodeURIComponent(`/booking/${bookingId}`)}`}><LogIn size={15}/>{ar?"تسجيل الدخول للحفظ":"Sign in to save"}</a>}
-        ><p className="bookingCompactCopy">{ar?"الربط لا يغيّر السعر أو شروط الحجز؛ فقط يحفظه داخل حسابك.":"Linking does not change the price or booking terms; it only saves the trip to your account."}</p><InlineNotice notice={notices.link}/></BookingActionCard>
-      </div>}
-
-      {showCancellation && currentCancellation && <div className="bookingToolSlot" id="cancellation">
-        <BookingActionCard
-          icon={Ban}
-          eyebrow={ar?"إدارة الحجز":"Booking management"}
-          title={ar?"الإلغاء":"Cancellation"}
-          description={currentCancellation.penaltyAmount<=0?(ar?"الإلغاء متاح حاليًا بدون رسوم.":"Cancellation is currently free."):(ar?"اعرض نتيجة الإلغاء الحالية قبل تنفيذ أي تغيير.":"Review the current cancellation outcome before anything changes.")}
-          tone="danger"
-          compact
-          footer={<button className="bookingDangerAction" type="button" onClick={()=>void cancelReservation()} disabled={isBusy("cancel")}>{isBusy("cancel")?(ar?"جارٍ التحقق…":"Checking…"):(ar?"معاينة وإلغاء الحجز":"Preview cancellation")}</button>}
-        >
-          <div className={`bookingCancellationPreview ${currentCancellation.penaltyAmount<=0?"free":"penalty"}`}>
-            <span>{currentCancellation.penaltyAmount<=0?(ar?"بدون رسوم الآن":"No fee right now"):(ar?"رسوم الإلغاء الحالية":"Current cancellation penalty")}</span>
-            <strong>{money(currentCancellation.penaltyAmount,bookingMeta?.currency??"")}</strong>
-            {bookingMeta?.paymentMode!=="PAY_AT_HOTEL" && <small>{ar?"قابل للاسترداد حاليًا":"Currently refundable"}: {money(currentCancellation.refundableAmount,bookingMeta?.currency??"")}</small>}
-          </div>
-          <p className="bookingCompactCopy">{ar?"فتح المعاينة لا يلغي الحجز. ستؤكد القرار فقط بعد رؤية الأرقام المحدثة.":"Opening the preview does not cancel the booking. You confirm only after seeing the refreshed amounts."}</p>
-          <InlineNotice notice={notices.cancel}/>
-        </BookingActionCard>
-      </div>}
+      <div className="bookingToolsColumn bookingToolsLane">{leftLane}</div>
+      <div className="bookingToolsColumn bookingToolsLane">{rightLane}</div>
     </div>
   </div>;
 }
