@@ -52,7 +52,7 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
     h2Count>=3,
     cleanTags.length>=3,
     !post.coverImageUrl||Boolean(post.coverImageAlt?.trim()),
-    post.slug.length>=3&&post.category.trim().length>=2,
+    slugify(post.slug).length>=3&&post.category.trim().length>=2,
   ],[post,words,h2Count,cleanTags]);
   const seoScore=seoChecks.filter(Boolean).length;
   const dirty=useMemo(()=>{
@@ -65,7 +65,7 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
 
   async function save(targetStatus:SaveStatus){
     setBusy(targetStatus);setMessage(null);
-    const payload={...post,status:targetStatus,tags:cleanTags,coverImageUrl:post.coverImageUrl??"",coverImageAlt:post.coverImageAlt??""};
+    const payload={...post,slug:slugify(post.slug),status:targetStatus,tags:cleanTags,coverImageUrl:post.coverImageUrl??"",coverImageAlt:post.coverImageAlt??""};
     try{
       const response=await fetch(post.id?`/api/v1/admin/blog/${post.id}`:"/api/v1/admin/blog",{method:post.id?"PATCH":"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
       const result=await response.json();
@@ -113,7 +113,7 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
         <label>{ar?"التصنيف":"Category"}<input list="blog-category-options" value={post.category} onChange={e=>patch("category",e.target.value)} placeholder={ar?"مثال: فنادق الأردن":"Example: Jordan hotels"}/><datalist id="blog-category-options">{categoryOptions.map(category=><option value={category} key={category}/>)}</datalist><small>{ar?"اكتب تصنيفًا جديدًا أو اختر من الموجود.":"Choose an existing category or type a new one."}</small></label>
         <div className="span2 blogCategoryPicker"><span>{ar?"تصنيفات سريعة":"Quick categories"}</span><div>{categoryOptions.slice(0,10).map(category=><button type="button" className={post.category===category?"active":""} onClick={()=>patch("category",category)} key={category}><FolderOpen size={13}/>{category}</button>)}</div></div>
         <label className="span2">{ar?"عنوان المقال":"Article title"}<input value={post.title} onChange={e=>titleChanged(e.target.value)} maxLength={140}/><small>{post.title.length}/140</small></label>
-        <label>{ar?"الرابط المختصر (Slug)":"URL slug"}<input dir="ltr" value={post.slug} onChange={e=>patch("slug",slugify(e.target.value))} placeholder={ar?"فنادق-البحر-الميت":"dead-sea-hotels"}/><small>{post.slug?`/blog/${post.locale==="AR"?"ar":"en"}/${post.slug}`:"/blog/..."}</small></label>
+        <label>{ar?"الرابط المختصر (Slug)":"URL slug"}<input dir="ltr" value={post.slug} onChange={e=>patch("slug",slugifyDraft(e.target.value))} onBlur={()=>patch("slug",slugify(post.slug))} placeholder={ar?"فنادق البحر الميت":"dead sea hotels"}/><small>{ar?"اكتب بشكل طبيعي؛ المسافة تتحول تلقائيًا إلى -":"Type naturally; spaces become hyphens automatically."} · {post.slug?`/blog/${post.locale==="AR"?"ar":"en"}/${slugify(post.slug)}`:"/blog/..."}</small></label>
         <label>{ar?"اسم الكاتب":"Author name"}<input value={post.authorName} onChange={e=>patch("authorName",e.target.value)}/></label>
         <label className="span2">{ar?"المقدمة المختصرة":"Excerpt"}<textarea rows={3} value={post.excerpt} onChange={e=>patch("excerpt",e.target.value)} maxLength={320}/><small>{post.excerpt.length}/320</small></label>
         <label className="span2">{ar?"وسوم البحث (افصل بفاصلة)":"Topic tags (comma separated)"}<input value={tagsText} onChange={e=>setTagsText(e.target.value)} placeholder={ar?"فنادق الأردن، البحر الميت، عطلة نهاية الأسبوع":"Jordan hotels, Dead Sea, weekend stay"}/><small>{cleanTags.length}/12 {ar?"وسم":"tags"}</small></label>
@@ -139,11 +139,12 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
         ar?"الرابط والتصنيف جاهزان":"Slug and category are ready",
       ].map((label,index)=><li className={seoChecks[index]?"pass":""} key={label}><CheckCircle2 size={15}/>{label}</li>)}</ul></section>
 
-      <section className="adminPanel seoFields"><span className="eyebrow"><Sparkles size={15}/>{ar?"مظهر Google":"Search appearance"}</span><label>{ar?"عنوان SEO":"SEO title"}<input value={post.seoTitle} onChange={e=>patch("seoTitle",e.target.value)} maxLength={70}/><small>{post.seoTitle.length}/70</small></label><label>{ar?"وصف SEO":"SEO description"}<textarea rows={5} value={post.seoDescription} onChange={e=>patch("seoDescription",e.target.value)} maxLength={170}/><small>{post.seoDescription.length}/170</small></label><div className="searchPreview"><small>handmekey.com › blog › {post.locale==="AR"?"ar":"en"} › {post.slug||"article"}</small><strong>{post.seoTitle||post.title||"SEO title"}</strong><p>{post.seoDescription||post.excerpt||"Search description"}</p></div></section>
+      <section className="adminPanel seoFields"><span className="eyebrow"><Sparkles size={15}/>{ar?"مظهر Google":"Search appearance"}</span><label>{ar?"عنوان SEO":"SEO title"}<input value={post.seoTitle} onChange={e=>patch("seoTitle",e.target.value)} maxLength={70}/><small>{post.seoTitle.length}/70</small></label><label>{ar?"وصف SEO":"SEO description"}<textarea rows={5} value={post.seoDescription} onChange={e=>patch("seoDescription",e.target.value)} maxLength={170}/><small>{post.seoDescription.length}/170</small></label><div className="searchPreview"><small>handmekey.com › blog › {post.locale==="AR"?"ar":"en"} › {slugify(post.slug)||"article"}</small><strong>{post.seoTitle||post.title||"SEO title"}</strong><p>{post.seoDescription||post.excerpt||"Search description"}</p></div></section>
     </aside>
   </div>;
 }
 
-function liveHref(post:Pick<EditorPost,"locale"|"slug">){return `/blog/${post.locale==="AR"?"ar":"en"}/${post.slug}`;}
-function editorSnapshot(post:EditorPost,tags:string[]){return {locale:post.locale,slug:post.slug,title:post.title,excerpt:post.excerpt,body:post.body,seoTitle:post.seoTitle,seoDescription:post.seoDescription,category:post.category,tags,coverImageUrl:post.coverImageUrl??"",coverImageAlt:post.coverImageAlt??"",featured:post.featured,authorName:post.authorName,status:post.status};}
-function slugify(value:string){return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+|-+$/g,"").slice(0,120);}
+function liveHref(post:Pick<EditorPost,"locale"|"slug">){return `/blog/${post.locale==="AR"?"ar":"en"}/${slugify(post.slug)}`;}
+function editorSnapshot(post:EditorPost,tags:string[]){return {locale:post.locale,slug:slugify(post.slug),title:post.title,excerpt:post.excerpt,body:post.body,seoTitle:post.seoTitle,seoDescription:post.seoDescription,category:post.category,tags,coverImageUrl:post.coverImageUrl??"",coverImageAlt:post.coverImageAlt??"",featured:post.featured,authorName:post.authorName,status:post.status};}
+function slugifyDraft(value:string){return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+/g,"").replace(/-{2,}/g,"-").slice(0,120);}
+function slugify(value:string){return slugifyDraft(value).replace(/-+$/g,"");}
