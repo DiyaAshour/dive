@@ -37,6 +37,7 @@ export async function GET(request: NextRequest, {params}: {params: Promise<{book
       ...booking,
       hotel: {...booking.hotel, ...experience.hotel},
       account: experience.account,
+      viewer: {signedIn: Boolean(access.userId)},
       arrivalInfo: experience.arrivalInfo,
       today: experience.today,
       stayPhase: experience.stayPhase,
