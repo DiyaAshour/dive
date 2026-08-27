@@ -19,6 +19,7 @@ import "./hotel-sticky-fix.css";
 import "./hotel-conversion.css";
 import "./localization.css";
 import "./booking-details.css";
+import "./booking-center.css";
 import "./admin.css";
 
 export const metadata: Metadata = {
