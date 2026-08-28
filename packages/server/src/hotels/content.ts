@@ -1,6 +1,7 @@
 import type { UpdateHotelPublicContentInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { notFound } from "../errors";
+import { syncHotelDestinationLinks } from "../discovery/destinations";
 import { requireHotelPermission } from "./authorization";
 import { recordPublishMutation } from "./publishing-revision";
 
@@ -32,8 +33,8 @@ export async function updateHotelPublicContent(actorUserId: string, hotelId: str
   await requireHotelPermission(actorUserId, hotelId, "hotel:edit");
   const db = database();
   const before = await getHotelPublicContentForManagement(actorUserId, hotelId);
-  return db.$transaction(async (tx) => {
-    const hotel = await tx.hotel.update({
+  const hotel = await db.$transaction(async (tx) => {
+    const updated = await tx.hotel.update({
       where: {id: hotelId},
       data: {
         area: input.area,
@@ -57,13 +58,15 @@ export async function updateHotelPublicContent(actorUserId: string, hotelId: str
         actorUserId,
         action: "HOTEL_PUBLIC_CONTENT_UPDATED",
         entityType: "Hotel",
-        entityId: hotel.id,
+        entityId: updated.id,
         before: auditValue(before),
         after: auditValue(input),
       },
     });
-    return hotel;
+    return updated;
   });
+  await syncHotelDestinationLinks(hotelId);
+  return hotel;
 }
 
 function auditValue(value: {
