@@ -1,8 +1,8 @@
-import { upsertCalendarRequestSchema } from "@platform/contracts";
-import { getCalendar, getSessionUser, unauthorized, upsertCalendar } from "@platform/server";
-import { NextRequest } from "next/server";
-import { handleApiError, ok, validationError } from "@/lib/api";
-import { readSessionToken } from "@/lib/session";
+import {bulkCalendarUpdateRequestSchema, upsertCalendarRequestSchema} from "@platform/contracts";
+import {bulkUpdateRateCalendar, getCalendar, getSessionUser, unauthorized, upsertCalendar} from "@platform/server";
+import {NextRequest} from "next/server";
+import {handleApiError, ok, validationError} from "@/lib/api";
+import {readSessionToken} from "@/lib/session";
 
 async function requireUser(request: NextRequest) {
   const user = await getSessionUser(readSessionToken(request));
@@ -27,5 +27,15 @@ export async function PUT(request: NextRequest, {params}: {params: Promise<{hote
     if (!parsed.success) return validationError(parsed.error);
     const {hotelId} = await params;
     return ok(await upsertCalendar(user.id, hotelId, parsed.data));
+  } catch (error) { return handleApiError(error); }
+}
+
+export async function PATCH(request: NextRequest, {params}: {params: Promise<{hotelId: string}>}) {
+  try {
+    const user = await requireUser(request);
+    const parsed = bulkCalendarUpdateRequestSchema.safeParse(await request.json());
+    if (!parsed.success) return validationError(parsed.error);
+    const {hotelId} = await params;
+    return ok(await bulkUpdateRateCalendar(user.id, hotelId, parsed.data));
   } catch (error) { return handleApiError(error); }
 }

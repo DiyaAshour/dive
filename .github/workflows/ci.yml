@@ -72,6 +72,9 @@ jobs:
       - name: Verify partner room product flow
         run: npm run room-product:smoke
 
+      - name: Verify partner rate management flow
+        run: npm run rate-management:smoke
+
       - name: Verify loyalty domain rules
         run: npm run loyalty-rule:smoke
 

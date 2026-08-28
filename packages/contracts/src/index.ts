@@ -1,5 +1,6 @@
 export * from "./auth";
 export * from "./hotels";
+export * from "./rate-management";
 export * from "./bookings";
 export * from "./cancellation";
 export * from "./discovery";

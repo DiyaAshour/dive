@@ -7,6 +7,7 @@ export * from "./admin/authorization";
 export * from "./admin/service";
 export * from "./hotels/authorization";
 export * from "./hotels/service";
+export * from "./hotels/rate-management";
 export * from "./hotels/content";
 export * from "./publishing/service";
 export * from "./discovery/service";
