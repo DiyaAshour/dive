@@ -25,6 +25,7 @@ import "./booking-center.css";
 import "./admin.css";
 import "./admin-email.css";
 import "./production-ops.css";
+import "./search-v2.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
