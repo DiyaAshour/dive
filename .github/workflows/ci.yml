@@ -81,6 +81,9 @@ jobs:
       - name: Verify partner settlement and payout flow
         run: npm run finance-settlement:smoke
 
+      - name: Torture booking and payment concurrency
+        run: npm run reliability-torture:smoke
+
       - name: Verify loyalty domain rules
         run: npm run loyalty-rule:smoke
 
