@@ -4,7 +4,7 @@ import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
 import { guestDictionary } from "@/lib/guest-i18n";
-import { requestGuestMarket } from "@/lib/guest-market";
+import { requestGuestMarket } from "@/lib/request-guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
 import destinationStyles from "./city-discovery.module.css";
 
