@@ -237,7 +237,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
     area: hotel.area,
     description: hotel.description,
     starRating: hotel.starRating,
-    reviewSummary: reviewMap.get(hotelId) ?? {count: 0, overall: null},
+    reviewSummary: reviewMap.get(hotel.id) ?? {count: 0, overall: null},
     location: hotel.latitude === null || hotel.longitude === null ? null : {latitude: Number(hotel.latitude), longitude: Number(hotel.longitude)},
     checkInTime: hotel.checkInTime,
     checkOutTime: hotel.checkOutTime,
