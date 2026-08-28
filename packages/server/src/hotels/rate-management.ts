@@ -69,7 +69,7 @@ export async function bulkUpdateRateCalendar(actorUserId: string, hotelId: strin
     badRequest("INVENTORY_EXCEEDS_ROOM_QUANTITY", `Availability cannot exceed the room type quantity of ${roomType.quantity}`);
   }
 
-  const touchesRate = input.rate !== undefined || input.minStay !== undefined || input.maxStay !== undefined || input.closed !== undefined || input.stopSell !== undefined;
+  const touchesRate = input.rate !== undefined || input.minStay !== undefined || input.maxStay !== undefined || input.minAdvanceBookingDays !== undefined || input.maxAdvanceBookingDays !== undefined || input.closedToArrival !== undefined || input.closedToDeparture !== undefined || input.closed !== undefined || input.stopSell !== undefined;
   const touchesInventory = input.available !== undefined || input.overbookingLimit !== undefined;
   const [existingRates, existingInventory] = await Promise.all([
     touchesRate ? db.dailyRate.findMany({where: {ratePlanId: input.ratePlanId, date: {in: dates}}}) : Promise.resolve([]),
@@ -93,7 +93,10 @@ export async function bulkUpdateRateCalendar(actorUserId: string, hotelId: strin
         const baseRate = input.rate ? adjustedRate(current ? Number(current.baseRate) : null, input.rate, key) : Number(current!.baseRate);
         const minStay = input.minStay ?? current?.minStay ?? 1;
         const maxStay = input.maxStay !== undefined ? input.maxStay : current?.maxStay ?? null;
+        const minAdvanceBookingDays = input.minAdvanceBookingDays ?? current?.minAdvanceBookingDays ?? 0;
+        const maxAdvanceBookingDays = input.maxAdvanceBookingDays !== undefined ? input.maxAdvanceBookingDays : current?.maxAdvanceBookingDays ?? null;
         if (maxStay !== null && maxStay < minStay) badRequest("INVALID_STAY_LIMIT", `maxStay cannot be lower than minStay on ${key}`);
+        if (maxAdvanceBookingDays !== null && maxAdvanceBookingDays < minAdvanceBookingDays) badRequest("INVALID_ADVANCE_BOOKING_WINDOW", `maxAdvanceBookingDays cannot be lower than minAdvanceBookingDays on ${key}`);
         await tx.dailyRate.upsert({
           where: {ratePlanId_date: {ratePlanId: input.ratePlanId, date}},
           create: {
@@ -102,6 +105,10 @@ export async function bulkUpdateRateCalendar(actorUserId: string, hotelId: strin
             baseRate,
             minStay,
             maxStay,
+            minAdvanceBookingDays,
+            maxAdvanceBookingDays,
+            closedToArrival: input.closedToArrival ?? false,
+            closedToDeparture: input.closedToDeparture ?? false,
             closed: input.closed ?? false,
             stopSell: input.stopSell ?? false,
           },
@@ -109,6 +116,10 @@ export async function bulkUpdateRateCalendar(actorUserId: string, hotelId: strin
             baseRate,
             minStay,
             maxStay,
+            minAdvanceBookingDays,
+            maxAdvanceBookingDays,
+            closedToArrival: input.closedToArrival ?? current?.closedToArrival ?? false,
+            closedToDeparture: input.closedToDeparture ?? current?.closedToDeparture ?? false,
             closed: input.closed ?? current?.closed ?? false,
             stopSell: input.stopSell ?? current?.stopSell ?? false,
           },
@@ -149,6 +160,10 @@ export async function bulkUpdateRateCalendar(actorUserId: string, hotelId: strin
             overbookingLimit: input.overbookingLimit ?? null,
             minStay: input.minStay ?? null,
             maxStay: input.maxStay === undefined ? "UNCHANGED" : input.maxStay,
+            minAdvanceBookingDays: input.minAdvanceBookingDays ?? null,
+            maxAdvanceBookingDays: input.maxAdvanceBookingDays === undefined ? "UNCHANGED" : input.maxAdvanceBookingDays,
+            closedToArrival: input.closedToArrival ?? null,
+            closedToDeparture: input.closedToDeparture ?? null,
             closed: input.closed ?? null,
             stopSell: input.stopSell ?? null,
           },
