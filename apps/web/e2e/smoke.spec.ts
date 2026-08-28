@@ -22,7 +22,7 @@ test("traveler can move from marketplace search to a canonical hotel slug", asyn
   await page.goto(href!);
   await expect(page.locator("h1").first()).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/hotel\/demo-/);
-  await expect(page.locator('script[type="application/ld+json"]')).toContainText('"Hotel"');
+  await expect(page.locator('script[type="application/ld+json"]').filter({hasText: '"Hotel"'}).first()).toContainText('"Hotel"');
   await expect(page.locator("body")).toContainText(/final|price|rate|السعر|الإجمالي/i);
 });
 
@@ -44,7 +44,7 @@ test("destination landing is indexable and links canonical hotel slugs", async (
   await expect(page.locator("h1")).toContainText(/Aqaba|العقبة/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/hotels\/jordan\/aqaba$/);
   await expect(page.locator('a[href^="/hotel/demo-"]').first()).toBeVisible();
-  await expect(page.locator('script[type="application/ld+json"]')).toContainText("CollectionPage");
+  await expect(page.locator('script[type="application/ld+json"]').filter({hasText: "CollectionPage"}).first()).toContainText("CollectionPage");
 });
 
 test("sitemap publishes destination and hotel commerce URLs", async ({request}) => {
