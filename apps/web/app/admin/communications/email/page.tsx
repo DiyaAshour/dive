@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Clock3, Mail, RefreshCcw, Send, ServerCog } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Mail, RefreshCcw, ServerCog } from "lucide-react";
 import { ADMIN_EMAIL_KINDS, ADMIN_EMAIL_STATUSES, getAdminEmailOperations, getAdminNavigationCounts } from "@platform/server";
 import { AdminShell } from "@/components/admin-shell";
 import { currentAdminPrincipal } from "@/lib/server-session";
@@ -77,16 +77,15 @@ export default async function AdminEmailOperationsPage({searchParams}: Readonly<
             {(email.bookingReference || email.hotelName) && <div className="emailOpsContext">{email.bookingReference && <span>{ar ? "الحجز" : "Booking"} <strong>{email.bookingReference}</strong></span>}{email.hotelName && <span>{ar ? "الفندق" : "Property"} <strong>{email.hotelName}</strong></span>}</div>}
             {email.lastError && <div className="emailOpsError"><AlertTriangle size={16}/><span><strong>{ar ? "آخر خطأ" : "Last error"}</strong>{email.lastError}</span></div>}
             <details className="emailOpsDetails">
-              <summary>{ar ? "عرض تفاصيل الرسالة" : "View delivery details"}</summary>
+              <summary>{ar ? "عرض تفاصيل التسليم" : "View delivery details"}</summary>
               <div className="emailOpsDetailGrid">
-                <span><b>ID</b>{email.id}</span><span><b>{ar ? "المزود" : "Provider"}</b>{email.provider ?? "—"}</span><span><b>Provider message ID</b>{email.providerMessageId ?? "—"}</span><span><b>{ar ? "الإرسال" : "Sent at"}</b>{email.sentAt ? formatDateTime(email.sentAt, locale) : "—"}</span><span><b>{ar ? "المحاولة التالية" : "Next attempt"}</b>{email.status === "SENT" || email.status === "DEAD" ? "—" : formatDateTime(email.nextAttemptAt, locale)}</span>
+                <span><b>ID</b>{email.id}</span><span><b>{ar ? "المزود" : "Provider"}</b>{email.provider ?? "—"}</span><span><b>Provider message ID</b>{email.providerMessageId ?? "—"}</span><span><b>{ar ? "الإرسال" : "Sent at"}</b>{email.sentAt ? formatDateTime(email.sentAt, locale) : "—"}</span><span><b>{ar ? "المحاولة التالية" : "Next attempt"}</b>{email.status === "SENT" || email.status === "DEAD" ? "—" : formatDateTime(email.nextAttemptAt, locale)}</span><span><b>{ar ? "آخر تحديث" : "Updated"}</b>{formatDateTime(email.updatedAt, locale)}</span>
               </div>
-              <pre>{email.textBody}</pre>
+              <p className="emailOpsPrivacyNote">{ar ? "محتوى الرسالة وروابط الاستعادة الحساسة لا تظهر في لوحة التشغيل لحماية رموز الدخول." : "Message bodies and sensitive recovery links are intentionally hidden from the operations console to protect authentication tokens."}</p>
             </details>
           </div>
           <div className="emailOpsActions">
             {(email.status === "FAILED" || email.status === "DEAD") && <EmailRetryButton emailId={email.id} locale={locale}/>} 
-            {email.bookingId && <Link className="secondaryButton" href={`/booking/${email.bookingId}`}>{ar ? "فتح الحجز" : "Open booking"}</Link>}
           </div>
         </article>)}
       </div>

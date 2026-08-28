@@ -58,7 +58,6 @@ export async function getAdminEmailOperations(actorUserId: string, filters: Admi
         toEmail: true,
         toName: true,
         subject: true,
-        textBody: true,
         status: true,
         attempts: true,
         nextAttemptAt: true,
