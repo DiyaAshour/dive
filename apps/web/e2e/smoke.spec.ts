@@ -57,6 +57,32 @@ test("sitemap publishes destination and hotel commerce URLs", async ({request}) 
   expect(xml).toMatch(/\/hotel\/demo-/);
 });
 
+test("Google Hotel List and landing feeds are generated automatically", async ({request}) => {
+  const hotelList = await request.get("/api/v1/integrations/google-hotels/hotel-list.xml");
+  expect(hotelList.ok()).toBeTruthy();
+  expect(hotelList.headers()["content-type"]).toContain("application/xml");
+  const hotelXml = await hotelList.text();
+  expect(hotelXml).toContain("<listings");
+  expect(hotelXml).toContain("<country>JO</country>");
+  const hotelId = hotelXml.match(/<id>([^<]+)<\/id>/)?.[1];
+  expect(hotelId).toBeTruthy();
+
+  const landingPages = await request.get("/api/v1/integrations/google-hotels/landing-pages.xml");
+  expect(landingPages.ok()).toBeTruthy();
+  const landingXml = await landingPages.text();
+  expect(landingXml).toContain("<PointsOfSale>");
+  expect(landingXml).toContain("(PARTNER-HOTEL-ID)");
+  expect(landingXml).toContain("/google/hotel");
+
+  const deepLink = await request.get(`/google/hotel?hotel_id=${encodeURIComponent(hotelId!)}&checkin=2026-09-10&checkout=2026-09-12&adults=2&children=1`, {maxRedirects: 0});
+  expect(deepLink.status()).toBe(302);
+  const location = deepLink.headers()["location"] ?? "";
+  expect(location).toMatch(/\/hotel\/demo-/);
+  expect(location).toContain("arrival=2026-09-10");
+  expect(location).toContain("departure=2026-09-12");
+  expect(location).toContain("utm_source=google");
+});
+
 test("account recovery surface is available", async ({page}) => {
   await page.goto("/forgot-password");
   await expect(page.locator('input[type="email"]')).toBeVisible();
@@ -71,5 +97,10 @@ test("search result pages are noindex but public content remains followable", as
 
 test("email operations requires an administrator session", async ({page}) => {
   await page.goto("/admin/communications/email");
+  await expect(page).toHaveURL(/\/admin\/login\?next=/);
+});
+
+test("Google distribution console requires an administrator session", async ({page}) => {
+  await page.goto("/admin/distribution/google-hotels");
   await expect(page).toHaveURL(/\/admin\/login\?next=/);
 });
