@@ -13,6 +13,8 @@ permissions:
 jobs:
   baseline:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://baseline:baseline@localhost:5432/baseline?schema=public
     if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
