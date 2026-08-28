@@ -13,6 +13,7 @@ export * from "./discovery/service";
 export * from "./discovery/destinations";
 export * from "./discovery/search-v2";
 export * from "./discovery/seo";
+export * from "./distribution/google-hotels";
 export * from "./media/service";
 export * from "./media/cleanup";
 export * from "./storage/provider";
