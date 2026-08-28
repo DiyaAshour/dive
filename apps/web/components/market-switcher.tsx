@@ -1,6 +1,6 @@
 "use client";
 
-import {ChevronDown, Coins, Globe2, Languages, MapPin} from "lucide-react";
+import {ChevronDown, Coins, Languages, MapPin} from "lucide-react";
 import {useEffect, useMemo, useRef, useState} from "react";
 import {currencyDisplayName, hasReferenceRate} from "@/lib/guest-currency";
 import {GUEST_CURRENCIES, GUEST_LOCALE_OPTIONS, guestIntlLocale, type GuestCurrency, type GuestLocale} from "@/lib/guest-market";
@@ -10,6 +10,7 @@ type Props = Readonly<{
   locale: GuestLocale;
   currency: GuestCurrency;
   countryCode?: string | null;
+  edge?: "left" | "right";
 }>;
 
 const LANGUAGE_FLAGS: Readonly<Record<GuestLocale,string>> = {
@@ -36,7 +37,7 @@ function uiCopy(locale:GuestLocale) {
   return {title:"Language & currency",subtitle:"Choose how HandMeKey is shown to you",language:"Language",currency:"Currency",detected:"Detected market",cancel:"Cancel",apply:"Apply",saving:"Saving…",error:"Could not save your preferences. Try again."};
 }
 
-export function MarketSwitcher({locale,currency,countryCode=null}:Props) {
+export function MarketSwitcher({locale,currency,countryCode=null,edge}:Props) {
   const rootRef=useRef<HTMLDivElement>(null);
   const [open,setOpen]=useState(false);
   const [localeValue,setLocaleValue]=useState<GuestLocale>(locale);
@@ -45,7 +46,6 @@ export function MarketSwitcher({locale,currency,countryCode=null}:Props) {
   const [error,setError]=useState(false);
   const copy=uiCopy(locale);
 
-  const languageLabel=useMemo(()=>GUEST_LOCALE_OPTIONS.find((option)=>option.code===locale)?.label ?? locale.toUpperCase(),[locale]);
   const currencies=useMemo(()=>{
     const rank=new Map(priority.map((code,index)=>[code,index]));
     return [...GUEST_CURRENCIES].sort((a,b)=>{
@@ -108,17 +108,17 @@ export function MarketSwitcher({locale,currency,countryCode=null}:Props) {
     }
   }
 
-  return <div className={styles.root} ref={rootRef}>
-    <button className={styles.trigger} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={()=>open?resetAndClose():setOpen(true)}>
-      <Globe2 className={styles.globe} size={16}/>
+  const edgeClass=edge==="left"?styles.edgeLeft:edge==="right"?styles.edgeRight:"";
+
+  return <div className={`${styles.root} ${edgeClass}`} ref={rootRef}>
+    <button className={styles.trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={copy.title} onClick={()=>open?resetAndClose():setOpen(true)}>
       <span className={styles.flag}>{LANGUAGE_FLAGS[locale]}</span>
-      <span className={styles.language}>{languageLabel}</span>
-      <span className={styles.separator}/>
+      <span className={styles.dot}>·</span>
       <span className={styles.currency}>{currency}</span>
-      <ChevronDown className={`${styles.chevron} ${open?styles.chevronOpen:""}`} size={15}/>
+      <ChevronDown className={`${styles.chevron} ${open?styles.chevronOpen:""}`} size={13}/>
     </button>
 
-    {open&&<div className={styles.panel} role="dialog" aria-label={copy.title}>
+    {open&&<div className={styles.panel} role="dialog" aria-label={copy.title} dir={locale==="ar"?"rtl":"ltr"}>
       <div className={styles.head}>
         <div>
           <h3>{copy.title}</h3>
