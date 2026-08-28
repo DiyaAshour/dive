@@ -63,12 +63,13 @@ try {
   await database().hotel.update({where: {id: hotel.id}, data: {status: "ACTIVE", verified: true}});
 
   const noShowArrival = utcDay(-1);
-  const noShowDeparture = utcDay(1);
+  const noShowBookableArrival = today;
+  const noShowDeparture = utcDay(2);
   const noShowHold = await server.createBookingHold({
     hotelId: hotel.id,
     roomTypeId: roomA.id,
     ratePlanId: rateA.id,
-    arrival: noShowArrival,
+    arrival: noShowBookableArrival,
     departure: noShowDeparture,
     adults: 2,
     children: 0,
@@ -78,6 +79,7 @@ try {
   }, {idempotencyKey: "reservation-smoke-no-show-hold"});
   const noShowBooking = await server.confirmBooking(noShowHold.booking.id, "reservation-smoke-no-show-confirm", {userId: registered.user.id});
   assert.equal(noShowBooking.status, "CONFIRMED");
+  await database().booking.update({where: {id: noShowBooking.id}, data: {arrival: new Date(`${noShowArrival}T00:00:00.000Z`)}});
 
   const futureArrival = utcDay(3);
   const futureDeparture = utcDay(5);
