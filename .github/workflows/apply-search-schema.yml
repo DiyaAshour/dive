@@ -1,0 +1,79 @@
+name: Apply Search Schema
+
+on:
+  push:
+    branches:
+      - build/launch-readiness-search-seo
+    paths:
+      - .github/workflows/apply-search-schema.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migration:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hotel
+          POSTGRES_PASSWORD: hotel
+          POSTGRES_DB: hotel_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hotel -d hotel_platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://hotel:hotel@localhost:5432/hotel_platform?schema=public
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: build/launch-readiness-search-seo
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - name: Add Hotel reverse destination relation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('packages/database/prisma/schema.prisma')
+          text = path.read_text()
+          marker = '  auditLogs          AuditLog[]\n'
+          if 'destinationLinks   HotelDestination[]' not in text:
+              if marker not in text:
+                  raise SystemExit('Hotel auditLogs marker not found')
+              text = text.replace(marker, marker + '  destinationLinks   HotelDestination[]\n', 1)
+              path.write_text(text)
+          PY
+      - name: Apply committed baseline to migration database
+        working-directory: packages/database
+        run: npx prisma migrate deploy --config prisma.config.ts
+      - name: Generate Search 2 migration
+        working-directory: packages/database
+        run: |
+          mkdir -p prisma/migrations/20260828001000_search_2
+          npx prisma migrate diff --from-config-datasource --to-schema prisma --script > prisma/migrations/20260828001000_search_2/migration.sql
+          cat >> prisma/migrations/20260828001000_search_2/migration.sql <<'SQL'
+
+          -- Search 2 ranking support. Prisma does not model PostgreSQL trigram operator classes.
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
+          CREATE INDEX IF NOT EXISTS "DestinationAlias_normalized_trgm_idx" ON "DestinationAlias" USING GIN ("normalized" gin_trgm_ops);
+          CREATE INDEX IF NOT EXISTS "Destination_nameEn_trgm_idx" ON "Destination" USING GIN (LOWER("nameEn") gin_trgm_ops);
+          CREATE INDEX IF NOT EXISTS "Destination_nameAr_trgm_idx" ON "Destination" USING GIN (LOWER(COALESCE("nameAr", '')) gin_trgm_ops);
+          CREATE INDEX IF NOT EXISTS "Hotel_name_trgm_idx" ON "Hotel" USING GIN (LOWER("name") gin_trgm_ops);
+          SQL
+          test -s prisma/migrations/20260828001000_search_2/migration.sql
+      - name: Commit generated schema and migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/database/prisma/schema.prisma packages/database/prisma/discovery.prisma packages/database/prisma/migrations
+          git commit -m "feat: add versioned Search 2 migration"
+          git push origin HEAD:build/launch-readiness-search-seo
