@@ -110,32 +110,54 @@ export async function resolveDestinationQuery(query: string, countryCode?: strin
   });
   if (prefixAlias) return publicDestination(prefixAlias.destination);
 
-  const rows = await db.$queryRawUnsafe<DestinationRankRow[]>(
-    `SELECT d."id",
-      GREATEST(
-        similarity(LOWER(d."nameEn"), $1),
-        similarity(LOWER(COALESCE(d."nameAr", '')), $1),
-        COALESCE(MAX(similarity(a."normalized", $1)), 0)
-      )::float8 AS score
-     FROM "Destination" d
-     LEFT JOIN "DestinationAlias" a ON a."destinationId" = d."id"
-     WHERE d."active" = true
-       AND ($2::text IS NULL OR d."countryCode" = $2)
-     GROUP BY d."id"
-     HAVING GREATEST(
-       similarity(LOWER(d."nameEn"), $1),
-       similarity(LOWER(COALESCE(d."nameAr", '')), $1),
-       COALESCE(MAX(similarity(a."normalized", $1)), 0)
-     ) >= 0.22
-     ORDER BY score DESC, d."sortOrder" ASC
-     LIMIT 1`,
-    normalized,
-    country ?? null,
-  );
+  let rows: DestinationRankRow[] = [];
+  try {
+    rows = await db.$queryRawUnsafe<DestinationRankRow[]>(
+      `SELECT d."id",
+        GREATEST(
+          similarity(LOWER(d."nameEn"), $1),
+          similarity(LOWER(COALESCE(d."nameAr", '')), $1),
+          COALESCE(MAX(similarity(a."normalized", $1)), 0)
+        )::float8 AS score
+       FROM "Destination" d
+       LEFT JOIN "DestinationAlias" a ON a."destinationId" = d."id"
+       WHERE d."active" = true
+         AND ($2::text IS NULL OR d."countryCode" = $2)
+       GROUP BY d."id"
+       HAVING GREATEST(
+         similarity(LOWER(d."nameEn"), $1),
+         similarity(LOWER(COALESCE(d."nameAr", '')), $1),
+         COALESCE(MAX(similarity(a."normalized", $1)), 0)
+       ) >= 0.22
+       ORDER BY score DESC, d."sortOrder" ASC
+       LIMIT 1`,
+      normalized,
+      country ?? null,
+    );
+  } catch (error) {
+    if (!isMissingSimilarityFunction(error)) throw error;
+  }
+
   const id = rows[0]?.id;
-  if (!id) return null;
-  const fuzzy = await db.destination.findUnique({where: {id}});
-  return fuzzy ? publicDestination(fuzzy) : null;
+  if (id) {
+    const fuzzy = await db.destination.findUnique({where: {id}});
+    if (fuzzy) return publicDestination(fuzzy);
+  }
+
+  const fallback = await db.destination.findFirst({
+    where: {
+      active: true,
+      ...(country ? {countryCode: country} : {}),
+      OR: [
+        {nameEn: {contains: query.trim(), mode: "insensitive"}},
+        {nameAr: {contains: query.trim(), mode: "insensitive"}},
+        {slug: {contains: normalized.replace(/\s+/g, "-")}},
+        {aliases: {some: {normalized: {contains: normalized}}}},
+      ],
+    },
+    orderBy: [{sortOrder: "asc"}, {nameEn: "asc"}],
+  });
+  return fallback ? publicDestination(fallback) : null;
 }
 
 export async function destinationScope(destinationId: string): Promise<{ids: string[]; destinations: ResolvedDestination[]}> {
@@ -170,27 +192,33 @@ export async function searchDestinationSuggestions(query: string, locale: "ar" |
   for (const row of destinationRows) destinations.set(row.destination.id, publicDestination(row.destination));
 
   if (normalized && destinations.size < take) {
-    const fuzzy = await db.$queryRawUnsafe<DestinationRankRow[]>(
-      `SELECT d."id",
-        GREATEST(
-          similarity(LOWER(d."nameEn"), $1),
-          similarity(LOWER(COALESCE(d."nameAr", '')), $1),
-          COALESCE(MAX(similarity(a."normalized", $1)), 0)
-        )::float8 AS score
-       FROM "Destination" d
-       LEFT JOIN "DestinationAlias" a ON a."destinationId" = d."id"
-       WHERE d."active" = true
-       GROUP BY d."id"
-       HAVING GREATEST(
-         similarity(LOWER(d."nameEn"), $1),
-         similarity(LOWER(COALESCE(d."nameAr", '')), $1),
-         COALESCE(MAX(similarity(a."normalized", $1)), 0)
-       ) >= 0.18
-       ORDER BY score DESC, d."sortOrder" ASC
-       LIMIT $2`,
-      normalized,
-      take,
-    );
+    let fuzzy: DestinationRankRow[] = [];
+    try {
+      fuzzy = await db.$queryRawUnsafe<DestinationRankRow[]>(
+        `SELECT d."id",
+          GREATEST(
+            similarity(LOWER(d."nameEn"), $1),
+            similarity(LOWER(COALESCE(d."nameAr", '')), $1),
+            COALESCE(MAX(similarity(a."normalized", $1)), 0)
+          )::float8 AS score
+         FROM "Destination" d
+         LEFT JOIN "DestinationAlias" a ON a."destinationId" = d."id"
+         WHERE d."active" = true
+         GROUP BY d."id"
+         HAVING GREATEST(
+           similarity(LOWER(d."nameEn"), $1),
+           similarity(LOWER(COALESCE(d."nameAr", '')), $1),
+           COALESCE(MAX(similarity(a."normalized", $1)), 0)
+         ) >= 0.18
+         ORDER BY score DESC, d."sortOrder" ASC
+         LIMIT $2`,
+        normalized,
+        take,
+      );
+    } catch (error) {
+      if (!isMissingSimilarityFunction(error)) throw error;
+    }
+
     if (fuzzy.length) {
       const extra = await db.destination.findMany({where: {id: {in: fuzzy.map((item) => item.id)}}});
       const byId = new Map(extra.map((item) => [item.id, item]));
@@ -198,6 +226,21 @@ export async function searchDestinationSuggestions(query: string, locale: "ar" |
         const item = byId.get(ranked.id);
         if (item && !destinations.has(item.id)) destinations.set(item.id, publicDestination(item));
       }
+    } else {
+      const basic = await db.destination.findMany({
+        where: {
+          active: true,
+          OR: [
+            {nameEn: {contains: query.trim(), mode: "insensitive"}},
+            {nameAr: {contains: query.trim(), mode: "insensitive"}},
+            {slug: {contains: normalized.replace(/\s+/g, "-")}},
+            {aliases: {some: {normalized: {contains: normalized}}}},
+          ],
+        },
+        orderBy: [{sortOrder: "asc"}, {nameEn: "asc"}],
+        take,
+      });
+      for (const item of basic) if (!destinations.has(item.id)) destinations.set(item.id, publicDestination(item));
     }
   }
 
@@ -398,4 +441,9 @@ function destinationSecondary(destination: ResolvedDestination, locale: "ar" | "
     : destination.type.charAt(0) + destination.type.slice(1).toLowerCase();
   const country = destination.countryCode === "JO" ? (locale === "ar" ? "الأردن" : "Jordan") : destination.countryCode;
   return `${type} · ${country}`;
+}
+
+function isMissingSimilarityFunction(error: unknown): boolean {
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  return message.includes("42883") && message.toLowerCase().includes("similarity");
 }
