@@ -289,15 +289,21 @@ export async function recordPaymentCaptured(bookingId: string, externalReference
 }
 
 export async function requestRefund(bookingId: string, input: CreateRefundInput, userId: string) {
-  const booking = await database().booking.findUnique({where: {id: bookingId}});
-  if (!booking) notFound("Booking");
-  await requireHotelPermission(userId, booking.hotelId, "finance:manage");
-  if (booking.paymentState !== "CAPTURED" && booking.paymentState !== "PARTIALLY_REFUNDED") badRequest("NOTHING_REFUNDABLE", "Booking does not have captured payment available for refund");
-  const committed = await database().refund.aggregate({where: {bookingId, status: {in: ["REQUESTED", "APPROVED", "PROCESSING", "COMPLETED"]}}, _sum: {amount: true}});
-  const policyCap = booking.status === "CANCELLED" && booking.refundableAmount !== null ? Number(booking.refundableAmount) : Number(booking.totalAmount);
-  const outstanding = roundMoney(policyCap - Number(committed._sum.amount ?? 0));
-  if (input.amount > outstanding) badRequest("REFUND_EXCEEDS_OUTSTANDING", `Refund cannot exceed ${outstanding.toFixed(2)} ${booking.currency}`);
-  return database().refund.create({data: {bookingId, amount: input.amount, currency: booking.currency, reason: input.reason, requestedByUserId: userId, externalReference: input.externalReference ?? null}});
+  const initial = await database().booking.findUnique({where: {id: bookingId}, select: {id: true, hotelId: true}});
+  if (!initial) notFound("Booking");
+  await requireHotelPermission(userId, initial.hotelId, "finance:manage");
+
+  return database().$transaction(async (tx) => {
+    await tx.$queryRaw<Array<{id: string}>>`SELECT "id" FROM "Booking" WHERE "id" = ${bookingId} FOR UPDATE`;
+    const booking = await tx.booking.findUnique({where: {id: bookingId}});
+    if (!booking) notFound("Booking");
+    if (booking.paymentState !== "CAPTURED" && booking.paymentState !== "PARTIALLY_REFUNDED") badRequest("NOTHING_REFUNDABLE", "Booking does not have captured payment available for refund");
+    const committed = await tx.refund.aggregate({where: {bookingId, status: {in: ["REQUESTED", "APPROVED", "PROCESSING", "COMPLETED"]}}, _sum: {amount: true}});
+    const policyCap = booking.status === "CANCELLED" && booking.refundableAmount !== null ? Number(booking.refundableAmount) : Number(booking.totalAmount);
+    const outstanding = roundMoney(policyCap - Number(committed._sum.amount ?? 0));
+    if (input.amount > outstanding) badRequest("REFUND_EXCEEDS_OUTSTANDING", `Refund cannot exceed ${outstanding.toFixed(2)} ${booking.currency}`);
+    return tx.refund.create({data: {bookingId, amount: input.amount, currency: booking.currency, reason: input.reason, requestedByUserId: userId, externalReference: input.externalReference ?? null}});
+  }, {isolationLevel: "ReadCommitted"});
 }
 
 export async function completeRefund(refundId: string, userId: string, externalReference?: string) {
