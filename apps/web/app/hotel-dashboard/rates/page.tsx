@@ -8,6 +8,7 @@ import {currentUser} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import {direction} from "@/lib/i18n";
 import RateManager from "./rate-manager";
+import RestrictionManager from "./restriction-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -32,15 +33,17 @@ export default async function RatesPage({searchParams}: {searchParams: Promise<{
     active: room.active,
     ratePlans: room.ratePlans.map((plan) => ({id: plan.id, name: plan.name, code: plan.code, active: plan.active, refundable: plan.refundable, mealPlan: plan.mealPlan})),
   }));
+  const restrictionRooms = roomTypes.map((room) => ({...room, ratePlans: room.ratePlans.map(({id, name, code, active}) => ({id, name, code, active}))}));
 
   return <main className="partnerAppShell" dir={direction(locale)}>
     <PartnerSidebar hotelId={selected.id} hotelName={selected.name} city={selected.city} status={selected.status} active="rates" locale={locale}/>
     <section className="partnerMain">
       <PartnerLanguageBar locale={locale}/>
-      <div className="partnerTopbar"><div><span className="partnerPageEyebrow">{ar ? "إدارة الإيرادات" : "Revenue operations"}</span><h1>{ar ? "الأسعار والمخزون" : "Rates & inventory"}</h1><p>{ar ? "غيّر أسعار يوم واحد أو موسم كامل من نفس المصدر الذي يقرأ منه محرك الحجز." : "Control a single day or a full season from the same source of truth used by the booking engine."}</p></div><Link className="secondaryButton" href={`/hotel-dashboard/rooms?hotelId=${selected.id}`}>{ar ? "إدارة الغرف وخطط الأسعار" : "Manage rooms & rate plans"}</Link></div>
-      <div className="partnerPageIntro"><strong>{ar ? "تقويم تشغيل حقيقي، وليس إدخال سعر بسطر واحد" : "An operating calendar, not a one-rate form"}</strong><span>{ar ? "تعديل جماعي حتى 366 يوماً، أيام أسبوع محددة، سعر ومخزون وحد أدنى/أقصى للإقامة ووقف بيع مع سجل تدقيق لكل عملية." : "Bulk-edit up to 366 days, target weekdays, rates, inventory, stay limits and stop-sell with an audit trail for every operation."}</span></div>
+      <div className="partnerTopbar"><div><span className="partnerPageEyebrow">{ar ? "إدارة الإيرادات" : "Revenue operations"}</span><h1>{ar ? "الأسعار والمخزون" : "Rates & inventory"}</h1><p>{ar ? "غيّر الأسعار والمخزون وقيود الإقامة من نفس المصدر الذي يقرأ منه محرك الحجز." : "Control rates, inventory and stay restrictions from the same source of truth used by the booking engine."}</p></div><Link className="secondaryButton" href={`/hotel-dashboard/rooms?hotelId=${selected.id}`}>{ar ? "إدارة الغرف وخطط الأسعار" : "Manage rooms & rate plans"}</Link></div>
+      <div className="partnerPageIntro"><strong>{ar ? "تقويم تشغيل حقيقي مع قيود بيع متقدمة" : "A real operating calendar with advanced sell controls"}</strong><span>{ar ? "تعديل جماعي حتى 366 يوماً، سعر ومخزون، حد أدنى/أقصى للإقامة، CTA وCTD، مهلة الحجز، ووقف البيع مع سجل تدقيق لكل عملية." : "Bulk-edit up to 366 days with rates, inventory, length-of-stay, CTA, CTD, booking lead windows and stop-sell, all with an audit trail."}</span></div>
       <div className="partnerKpiGrid"><Metric icon={<Layers3 size={18}/>} label={ar ? "أنواع الغرف النشطة" : "Active room types"} value={activeRooms}/><Metric icon={<Gauge size={18}/>} label={ar ? "خطط الأسعار النشطة" : "Active rate plans"} value={activePlans}/><Metric icon={<CalendarDays size={18}/>} label={ar ? "أقصى تعديل جماعي" : "Bulk horizon"} value={366} suffix={ar ? " يوم" : " days"}/><Metric icon={<ShieldCheck size={18}/>} label={ar ? "تجاوز الحجز" : "Overbooking"} value={workspace.overbookingEnabled ? (ar ? "مفعّل" : "Enabled") : (ar ? "متوقف" : "Off")}/></div>
       <RateManager hotelId={selected.id} currency={workspace.currency} overbookingEnabled={workspace.overbookingEnabled} rooms={roomTypes} locale={locale}/>
+      <RestrictionManager hotelId={selected.id} rooms={restrictionRooms} locale={locale}/>
     </section>
   </main>;
 }
