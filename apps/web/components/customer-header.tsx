@@ -7,6 +7,7 @@ import { Brand } from "./brand";
 import { CurrencySwitcher } from "./currency-switcher";
 import { LanguageSwitcher } from "./language-switcher";
 import { SignOutButton } from "./sign-out-button";
+import styles from "./customer-header-controls.module.css";
 
 type CustomerHeaderProps = Readonly<{minimal?: boolean}>;
 
@@ -18,6 +19,12 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   const guideLabel = market.locale === "ar" ? "دليل السفر" : market.locale === "zh" ? "旅行指南" : "Travel guide";
 
   return <header className="siteHeader">
+    <div className={styles.utilityBar}>
+      <div className={`shell ${styles.utilityInner}`}>
+        <LanguageSwitcher locale={market.locale} compact/>
+        <CurrencySwitcher currency={market.currency} locale={market.locale} compact/>
+      </div>
+    </div>
     <div className="shell siteHeaderInner">
       <Brand />
       {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>
@@ -28,8 +35,6 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
         <Link href="/account/alerts"><Bell size={16}/>{copy.nav.alerts}</Link>
       </nav>}
       <div className="siteActions">
-        <CurrencySwitcher currency={market.currency} locale={market.locale} compact/>
-        <LanguageSwitcher locale={market.locale} compact/>
         {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
         {user ? <>
           <Link className="accountButton" href="/account" title={`${copy.nav.account} · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
