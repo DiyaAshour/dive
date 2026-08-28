@@ -3,8 +3,8 @@ import { ArrowRight, BadgeCheck, BellRing, CreditCard, MapPin, Search, ShieldChe
 import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
-import { dictionary } from "@/lib/i18n";
-import { requestLocale } from "@/lib/request-locale";
+import { guestDictionary } from "@/lib/guest-i18n";
+import { requestGuestMarket } from "@/lib/guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
 import destinationStyles from "./city-discovery.module.css";
 
@@ -15,23 +15,26 @@ function flagEmoji(countryCode: string) {
 }
 
 export default async function HomePage() {
-  const [hotels,destinations,locale] = await Promise.all([
+  const [hotels,destinations,market] = await Promise.all([
     listFeaturedHotels(6),
     listFeaturedDestinations({countryCode: "JO", limit: 5}),
-    requestLocale(),
+    requestGuestMarket(),
   ]);
-  const copy = dictionary(locale);
+  const locale=market.locale;
+  const copy = guestDictionary(locale);
   const stay = defaultStayDates();
   const visualHotels = hotels.filter((hotel)=>hotel.coverPhoto).slice(0,3);
   const destinationCopy = locale === "ar"
     ? {eyebrow: "اكتشف الأردن", title: "الوجهات الرائجة", intro: "استكشف المدن والوجهات الأكثر حضورًا في الأردن. ابحث بالعربي أو الإنجليزي وسيطابق HandMeKey الاسم والتهجئات البديلة.", stays: "إقامة متاحة", explore: "استكشف الإقامات"}
-    : {eyebrow: "Explore Jordan", title: "Popular destinations", intro: "Explore Jordan destinations with bilingual aliases and live verified hotel inventory.", stays: "stays available", explore: "Explore stays"};
-  const regionNames = new Intl.DisplayNames([locale], {type: "region"});
+    : locale === "zh"
+      ? {eyebrow:"探索约旦",title:"热门目的地",intro:"探索约旦热门城市和目的地，并查看实时已验证酒店房量。",stays:"家住宿可订",explore:"查看住宿"}
+      : {eyebrow: "Explore Jordan", title: "Popular destinations", intro: "Explore Jordan destinations with bilingual aliases and live verified hotel inventory.", stays: "stays available", explore: "Explore stays"};
+  const regionNames = new Intl.DisplayNames([market.intlLocale], {type: "region"});
 
-  return <main className="customerPage">
+  return <main className="customerPage" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
     <section className="premiumHero"><div className="shell premiumHeroGrid"><div className="premiumHeroCopy"><span className="heroKicker">{copy.home.kicker}</span><h1>{copy.home.title}</h1><p>{copy.home.intro}</p><div className="heroConfidence"><span><BadgeCheck size={17}/>{copy.home.verified}</span><span><ShieldCheck size={17}/>{copy.home.cancellation}</span><span><CreditCard size={17}/>{copy.home.total}</span></div></div><div className="heroVisual" aria-label={copy.home.verified}>{visualHotels.length ? visualHotels.map((hotel,index)=><Link prefetch={false} href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} className={`heroPhoto heroPhoto${index+1}`} key={hotel.id}><img src={hotel.coverPhoto!.url} alt={hotel.coverPhoto!.alt ?? hotel.name}/><span><small>{hotel.city}</small><strong>{hotel.name}</strong></span></Link>) : <div className="heroPlaceholder"><Search size={34}/><strong>{copy.home.livePlaceholder}</strong><span>{copy.home.livePlaceholderSub}</span></div>}</div></div>
-      <div className="shell"><form className="premiumSearchDock" action="/search" method="get"><label><span>{copy.home.where}</span><DestinationAutocomplete locale={locale} defaultValue={locale==="ar"?"عمّان":"Amman"} required ariaLabel={copy.home.where}/><small>{copy.home.whereHint}</small></label><label><span>{copy.home.checkIn}</span><input name="arrival" type="date" defaultValue={stay.arrival} required/></label><label><span>{copy.home.checkOut}</span><input name="departure" type="date" defaultValue={stay.departure} required/></label><label><span>{copy.home.guests}</span><input name="adults" type="number" min="1" max="20" defaultValue="2" required/><small>{copy.home.adults}</small></label><input type="hidden" name="children" value="0"/><button type="submit"><Search size={19}/>{copy.home.search}</button></form></div>
+      <div className="shell"><form className="premiumSearchDock" action="/search" method="get"><label><span>{copy.home.where}</span><DestinationAutocomplete locale={market.baseLocale} defaultValue={locale==="ar"?"عمّان":"Amman"} required ariaLabel={copy.home.where}/><small>{copy.home.whereHint}</small></label><label><span>{copy.home.checkIn}</span><input name="arrival" type="date" defaultValue={stay.arrival} required/></label><label><span>{copy.home.checkOut}</span><input name="departure" type="date" defaultValue={stay.departure} required/></label><label><span>{copy.home.guests}</span><input name="adults" type="number" min="1" max="20" defaultValue="2" required/><small>{copy.home.adults}</small></label><input type="hidden" name="children" value="0"/><button type="submit"><Search size={19}/>{copy.home.search}</button></form></div>
     </section>
 
     <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">{copy.home.liveEyebrow}</span><h2>{copy.home.liveTitle}</h2><p>{copy.home.liveIntro}</p></div><Link href={`/search?destination=${locale==="ar"?encodeURIComponent("عمّان"):"Amman"}&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>{copy.home.explore} <ArrowRight size={16}/></Link></div>
