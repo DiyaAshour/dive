@@ -27,6 +27,28 @@ test("traveler can move from marketplace search to a canonical hotel slug", asyn
   await expect(page.locator("body")).toContainText(/final|price|rate|السعر|الإجمالي/i);
 });
 
+test("China guest market automatically selects Chinese and CNY while preserving source charge currency", async ({page}) => {
+  await page.context().setExtraHTTPHeaders({"x-vercel-ip-country":"CN","accept-language":"zh-CN,zh;q=0.9,en;q=0.7"});
+  await page.goto("/search?destination=Amman");
+  await expect(page.locator("body")).toContainText("实时可订");
+  await expect(page.locator('select[aria-label="货币"]')).toHaveValue("CNY");
+  await expect(page.locator(".premiumResultPrice").first()).toContainText(/¥|CN¥/);
+  await expect(page.locator(".premiumResultPrice").first()).toContainText(/JOD|预订将按酒店原始币种计费/);
+});
+
+test("explicit traveler language and currency override automatic country detection", async ({page}) => {
+  await page.context().setExtraHTTPHeaders({"x-vercel-ip-country":"CN","accept-language":"zh-CN,zh;q=0.9"});
+  await page.goto("/");
+  await page.evaluate(async () => {
+    await fetch("/api/v1/preferences/locale",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({locale:"en"})});
+    await fetch("/api/v1/preferences/currency",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({currency:"USD"})});
+  });
+  await page.reload();
+  await expect(page.locator('select[aria-label="Language"]')).toHaveValue("en");
+  await expect(page.locator('select[aria-label="Currency"]')).toHaveValue("USD");
+  await expect(page.locator("body")).toContainText("Find the stay you want");
+});
+
 test("Arabic destination aliases resolve through Search 2", async ({page}) => {
   await page.goto(`/search?destination=${encodeURIComponent("العقبة")}`);
   await expect(page.locator("h1").first()).toContainText("Aqaba");
