@@ -199,7 +199,7 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
   const stay = buildStayDates(stayInput.arrival, stayInput.departure);
   const dates = stay.nights.map(parseDateOnly);
   const rawHotel = await database().hotel.findFirst({
-    where: {id: hotelId, status: "ACTIVE", verified: true},
+    where: {status: "ACTIVE", verified: true, OR: [{id: hotelId}, {slug: hotelId}]},
     include: {
       photos: livePhotoQuery,
       amenities: {select: {code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
@@ -225,8 +225,8 @@ export async function getPublicHotelDetails(hotelId: string, stayInput: StayInpu
   if (!rawHotel) notFound("Hotel");
   const hotel: HotelRow = {...rawHotel, photos: publicPhotos(rawHotel.photos), roomTypes: rawHotel.roomTypes.map((room) => ({...room, photos: publicPhotos(room.photos)}))};
   const offers = buildOffers(hotel, stay, stayInput).sort((a, b) => a.total - b.total);
-  const reviewMap = await reviewSummaries([hotelId]);
-  if (options.trackView !== false) await captureHotelView(hotelId, {arrival: stay.arrival, departure: stay.departure});
+  const reviewMap = await reviewSummaries([hotel.id]);
+  if (options.trackView !== false) await captureHotelView(hotel.id, {arrival: stay.arrival, departure: stay.departure});
   return {
     id: hotel.id,
     slug: hotel.slug,

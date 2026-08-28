@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { CreateHotelRequest, CreateRatePlanRequest, CreateRoomTypeRequest, UpdateCancellationPolicyInput, UpdateRoomTypeRequest, UpsertCalendarRequest } from "@platform/contracts";
 import { database } from "@platform/database";
+import { syncHotelDestinationLinks } from "../discovery/destinations";
 import type { Prisma } from "@platform/database";
 import { badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "./authorization";
@@ -13,12 +14,14 @@ function slugPart(value: string): string {
 export async function createHotel(ownerUserId: string, input: CreateHotelRequest) {
   const slug = `${slugPart(input.name)}-${randomBytes(3).toString("hex")}`;
   const db = database();
-  return db.$transaction(async (tx) => {
+  const hotel = await db.$transaction(async (tx) => {
     const hotel = await tx.hotel.create({data: {name: input.name.trim(), slug, city: input.city.trim(), countryCode: input.countryCode, address: input.address.trim(), timezone: input.timezone, currency: input.currency, memberships: {create: {userId: ownerUserId, role: "OWNER"}}}});
     await tx.user.updateMany({where: {id: ownerUserId, platformRole: "GUEST"}, data: {platformRole: "HOTEL_USER"}});
     await tx.auditLog.create({data: {hotelId: hotel.id, actorUserId: ownerUserId, action: "HOTEL_CREATED", entityType: "Hotel", entityId: hotel.id, after: {status: hotel.status, publishRevision: hotel.publishRevision}}});
     return hotel;
   });
+  await syncHotelDestinationLinks(hotel.id);
+  return hotel;
 }
 
 export async function createRoomType(actorUserId: string, hotelId: string, input: CreateRoomTypeRequest) {

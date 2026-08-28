@@ -53,11 +53,11 @@ export async function createGuestReview(bookingId: string, input: CreateGuestRev
 }
 
 export async function getPublicHotelReviews(hotelId: string, limit = 20) {
-  const hotel = await database().hotel.findFirst({where: {id: hotelId, status: "ACTIVE", verified: true}, select: {id: true}});
+  const hotel = await database().hotel.findFirst({where: {status: "ACTIVE", verified: true, OR: [{id: hotelId}, {slug: hotelId}]}, select: {id: true}});
   if (!hotel) notFound("Hotel");
   const [aggregate, reviews] = await Promise.all([
-    database().guestReview.aggregate({where: {hotelId, status: "PUBLISHED"}, _count: {_all: true}, _avg: {overall: true, cleanliness: true, staff: true, location: true, facilities: true, comfort: true, value: true}}),
-    database().guestReview.findMany({where: {hotelId, status: "PUBLISHED"}, select: {id: true, overall: true, cleanliness: true, staff: true, location: true, facilities: true, comfort: true, value: true, title: true, comment: true, hotelReply: true, repliedAt: true, createdAt: true, booking: {select: {guestName: true, departure: true}}}, orderBy: {createdAt: "desc"}, take: Math.max(1, Math.min(limit, 50))}),
+    database().guestReview.aggregate({where: {hotelId: hotel.id, status: "PUBLISHED"}, _count: {_all: true}, _avg: {overall: true, cleanliness: true, staff: true, location: true, facilities: true, comfort: true, value: true}}),
+    database().guestReview.findMany({where: {hotelId: hotel.id, status: "PUBLISHED"}, select: {id: true, overall: true, cleanliness: true, staff: true, location: true, facilities: true, comfort: true, value: true, title: true, comment: true, hotelReply: true, repliedAt: true, createdAt: true, booking: {select: {guestName: true, departure: true}}}, orderBy: {createdAt: "desc"}, take: Math.max(1, Math.min(limit, 50))}),
   ]);
   return {
     summary: {count: aggregate._count._all, overall: numberOrNull(aggregate._avg.overall), cleanliness: numberOrNull(aggregate._avg.cleanliness), staff: numberOrNull(aggregate._avg.staff), location: numberOrNull(aggregate._avg.location), facilities: numberOrNull(aggregate._avg.facilities), comfort: numberOrNull(aggregate._avg.comfort), value: numberOrNull(aggregate._avg.value)},
