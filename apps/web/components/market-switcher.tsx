@@ -132,7 +132,7 @@ export function MarketSwitcher({locale,currency,countryCode=null,edge}:Props) {
         <label className={styles.field}>
           <span className={styles.label}><Languages size={14}/>{copy.language}</span>
           <span className={styles.selectWrap}>
-            <select className={styles.select} value={localeValue} disabled={saving} onChange={(event)=>setLocaleValue(event.target.value as GuestLocale)}>
+            <select className={styles.select} aria-label={copy.language} value={localeValue} disabled={saving} onChange={(event)=>setLocaleValue(event.target.value as GuestLocale)}>
               {GUEST_LOCALE_OPTIONS.map((option)=><option value={option.code} key={option.code}>{LANGUAGE_FLAGS[option.code]} {option.label}</option>)}
             </select>
             <ChevronDown className={styles.selectArrow} size={15}/>
@@ -142,7 +142,7 @@ export function MarketSwitcher({locale,currency,countryCode=null,edge}:Props) {
         <label className={styles.field}>
           <span className={styles.label}><Coins size={14}/>{copy.currency}</span>
           <span className={styles.selectWrap}>
-            <select className={styles.select} value={currencyValue} disabled={saving} onChange={(event)=>setCurrencyValue(event.target.value as GuestCurrency)}>
+            <select className={styles.select} aria-label={copy.currency} value={currencyValue} disabled={saving} onChange={(event)=>setCurrencyValue(event.target.value as GuestCurrency)}>
               {currencies.map((code)=><option value={code} key={code}>{currencyFlag(code)} {code} · {currencyDisplayName(code,locale)}{hasReferenceRate(code)?"":" *"}</option>)}
             </select>
             <ChevronDown className={styles.selectArrow} size={15}/>
