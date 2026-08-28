@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bell, BookOpenText, Building2, Sparkles, UserRound } from "lucide-react";
 import { guestDictionary } from "@/lib/guest-i18n";
-import { requestGuestMarket } from "@/lib/guest-market";
+import { requestGuestMarket } from "@/lib/request-guest-market";
 import { currentUser } from "@/lib/server-session";
 import { Brand } from "./brand";
 import { CurrencySwitcher } from "./currency-switcher";
