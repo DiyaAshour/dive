@@ -51,16 +51,19 @@ jobs:
       - name: Generate Prisma client
         run: npm run db:generate
 
-      - name: Validate demo seed syntax
+      - name: Validate demo and destination seed syntax
         run: npm run db:seed-demo:check
 
-      - name: Push schema to ephemeral PostgreSQL
-        run: npm run db:push
+      - name: Deploy versioned migrations to ephemeral PostgreSQL
+        run: npm run db:deploy
 
-      - name: Execute demo catalog seed
+      - name: Verify migration history is clean
+        run: npm run db:status
+
+      - name: Execute demo catalog and destination seed
         run: npm run db:seed-demo
 
-      - name: Verify demo catalog reseed
+      - name: Verify demo catalog and destination reseed
         run: npm run db:seed-demo
 
       - name: Verify secure administrator domain flow
