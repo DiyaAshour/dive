@@ -16,6 +16,17 @@ enum EmailMessageKind {
   EMAIL_VERIFICATION
   SECURITY_ALERT
   PARTNER_STATEMENT
+  MANUAL_EMAIL
+}
+
+enum AdminEmailConversationStatus {
+  OPEN
+  CLOSED
+}
+
+enum AdminEmailDirection {
+  OUTBOUND
+  INBOUND
 }
 
 enum InvoiceDocumentType {
@@ -56,30 +67,79 @@ enum SupportCasePriority {
 }
 
 model EmailOutbox {
-  id                String              @id @default(cuid())
-  kind              EmailMessageKind
-  toEmail           String
-  toName            String?
-  subject           String
-  htmlBody          String              @db.Text
-  textBody          String              @db.Text
-  status            EmailDeliveryStatus @default(PENDING)
-  attempts          Int                 @default(0)
-  nextAttemptAt     DateTime            @default(now())
-  provider          String?
-  providerMessageId String?
-  lastError         String?             @db.Text
-  dedupeKey         String              @unique
-  bookingId         String?
-  hotelId           String?
-  userId            String?
-  sentAt            DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id                    String              @id @default(cuid())
+  kind                  EmailMessageKind
+  toEmail               String
+  toName                String?
+  subject               String
+  htmlBody              String              @db.Text
+  textBody              String              @db.Text
+  status                EmailDeliveryStatus @default(PENDING)
+  attempts              Int                 @default(0)
+  nextAttemptAt         DateTime            @default(now())
+  provider              String?
+  providerMessageId     String?
+  lastError             String?             @db.Text
+  dedupeKey             String              @unique
+  bookingId             String?
+  hotelId               String?
+  userId                String?
+  conversationId        String?
+  conversationMessageId String?             @unique
+  replyTo               String?
+  sentAt                DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  conversation        AdminEmailConversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  conversationMessage AdminEmailConversationMessage? @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
 
   @@index([status, nextAttemptAt, createdAt])
   @@index([bookingId, createdAt])
   @@index([userId, createdAt])
+  @@index([conversationId, createdAt])
+}
+
+model AdminEmailConversation {
+  id              String                       @id @default(cuid())
+  subject         String
+  participantEmail String
+  participantName String?
+  status          AdminEmailConversationStatus @default(OPEN)
+  unreadCount     Int                          @default(0)
+  createdByUserId String?
+  lastMessageAt   DateTime                     @default(now())
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+  messages        AdminEmailConversationMessage[]
+  outbox          EmailOutbox[]
+
+  @@index([lastMessageAt])
+  @@index([participantEmail, lastMessageAt])
+  @@index([status, lastMessageAt])
+}
+
+model AdminEmailConversationMessage {
+  id                String                 @id @default(cuid())
+  conversationId    String
+  conversation      AdminEmailConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction         AdminEmailDirection
+  fromEmail         String
+  fromName          String?
+  toEmail           String
+  toName            String?
+  subject           String
+  textBody          String                 @db.Text
+  htmlBody          String?                @db.Text
+  providerMessageId String?                @unique
+  inReplyTo         String?
+  createdByUserId   String?
+  sentAt            DateTime?
+  receivedAt        DateTime?
+  createdAt         DateTime               @default(now())
+  outbox            EmailOutbox?
+
+  @@index([conversationId, createdAt])
 }
 
 model BookingInvoice {

@@ -85,6 +85,15 @@ export function priceWatchEmail(input: Readonly<{title: string; body: string; ur
   };
 }
 
+export function manualEmailContent(input: Readonly<{subject: string; textBody: string}>): EmailContent {
+  const paragraphs = input.textBody.split(/\n{2,}/).map((part) => `<p style="white-space:pre-wrap;line-height:1.7">${escapeHtml(part)}</p>`).join("");
+  return {
+    subject: input.subject,
+    html: layout(input.subject, `${paragraphs}<p style="margin-top:24px;color:#64748b;font-size:13px">HandMeKey Support · support@handmekey.com</p>`),
+    text: input.textBody,
+  };
+}
+
 function actionEmail(subject:string, greeting:string, en:string, ar:string, label:string, url:string):EmailContent {
   return {
     subject,

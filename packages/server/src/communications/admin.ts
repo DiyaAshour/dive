@@ -15,6 +15,7 @@ export const ADMIN_EMAIL_KINDS = [
   "EMAIL_VERIFICATION",
   "SECURITY_ALERT",
   "PARTNER_STATEMENT",
+  "MANUAL_EMAIL",
 ] as const;
 
 type AdminEmailStatus = (typeof ADMIN_EMAIL_STATUSES)[number];
@@ -67,6 +68,7 @@ export async function getAdminEmailOperations(actorUserId: string, filters: Admi
         bookingId: true,
         hotelId: true,
         userId: true,
+        conversationId: true,
         sentAt: true,
         createdAt: true,
         updatedAt: true,

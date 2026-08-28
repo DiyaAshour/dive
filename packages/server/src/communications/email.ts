@@ -12,7 +12,8 @@ export type EmailKind =
   | "PASSWORD_RESET"
   | "EMAIL_VERIFICATION"
   | "SECURITY_ALERT"
-  | "PARTNER_STATEMENT";
+  | "PARTNER_STATEMENT"
+  | "MANUAL_EMAIL";
 
 export type QueueEmailInput = Readonly<{
   kind: EmailKind;
@@ -25,6 +26,9 @@ export type QueueEmailInput = Readonly<{
   bookingId?: string | null;
   hotelId?: string | null;
   userId?: string | null;
+  conversationId?: string | null;
+  conversationMessageId?: string | null;
+  replyTo?: string | null;
 }>;
 
 export function emailCapabilities() {
@@ -54,6 +58,9 @@ export async function queueEmail(input: QueueEmailInput) {
       bookingId: input.bookingId ?? null,
       hotelId: input.hotelId ?? null,
       userId: input.userId ?? null,
+      conversationId: input.conversationId ?? null,
+      conversationMessageId: input.conversationMessageId ?? null,
+      replyTo: input.replyTo?.trim() || null,
     },
     update: {},
   });
@@ -97,16 +104,20 @@ export async function processEmailOutbox(limit = 50): Promise<{processed: number
         subject: row.subject,
         htmlBody: row.htmlBody,
         textBody: row.textBody,
+        replyTo: row.replyTo,
       });
-      await db.emailOutbox.update({
-        where: {id: row.id},
-        data: {
-          status: "SENT",
-          provider: capability.provider,
-          providerMessageId,
-          sentAt: new Date(),
-          lastError: null,
-        },
+      const sentAt = new Date();
+      await db.$transaction(async (tx) => {
+        await tx.emailOutbox.update({
+          where: {id: row.id},
+          data: {status: "SENT", provider: capability.provider, providerMessageId, sentAt, lastError: null},
+        });
+        if (row.conversationMessageId) {
+          await tx.adminEmailConversationMessage.updateMany({
+            where: {id: row.conversationMessageId},
+            data: {providerMessageId, sentAt},
+          });
+        }
       });
       sent += 1;
     } catch (error) {
@@ -127,7 +138,7 @@ export async function processEmailOutbox(limit = 50): Promise<{processed: number
   return {processed, sent, failed, disabled: false};
 }
 
-async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toName: string | null; subject: string; htmlBody: string; textBody: string}>): Promise<string> {
+async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toName: string | null; subject: string; htmlBody: string; textBody: string; replyTo: string | null}>): Promise<string> {
   const provider = normalizedProvider();
   if (provider !== "resend") throw new Error("No email provider is configured");
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -143,7 +154,7 @@ async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toNa
       subject: input.subject,
       html: input.htmlBody,
       text: input.textBody,
-      ...(process.env.EMAIL_REPLY_TO?.trim() ? {reply_to: process.env.EMAIL_REPLY_TO.trim()} : {}),
+      ...((input.replyTo ?? process.env.EMAIL_REPLY_TO?.trim()) ? {reply_to: input.replyTo ?? process.env.EMAIL_REPLY_TO?.trim()} : {}),
     }),
   });
   const body = await response.json().catch(() => ({})) as {id?: unknown; message?: unknown; name?: unknown};
@@ -153,15 +164,6 @@ async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toNa
   return body.id;
 }
 
-function normalizedProvider(): string {
-  return (process.env.EMAIL_PROVIDER ?? "none").trim().toLowerCase();
-}
-
-function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function errorMessage(error: unknown): string {
-  const value = error instanceof Error ? error.message : "Unknown email delivery error";
-  return value.slice(0, 2_000);
-}
+function normalizedProvider(): string {return (process.env.EMAIL_PROVIDER ?? "none").trim().toLowerCase();}
+function normalizeEmail(value: string): string {return value.trim().toLowerCase();}
+function errorMessage(error: unknown): string {const value = error instanceof Error ? error.message : "Unknown email delivery error"; return value.slice(0, 2_000);}

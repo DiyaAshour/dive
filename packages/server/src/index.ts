@@ -35,6 +35,7 @@ export * from "./blog/service";
 export * from "./blog/taxonomy";
 export * from "./communications/email";
 export * from "./communications/admin";
+export * from "./communications/conversations";
 export * from "./communications/booking";
 export * from "./finance/service";
 export * from "./health/service";
