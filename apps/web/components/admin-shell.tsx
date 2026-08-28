@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Activity, BookOpenText, Building2, FileCheck2, Globe2, LayoutDashboard, Mail, MessageSquareWarning, Users} from "lucide-react";
+import {Activity, BookOpenText, Building2, FileCheck2, Globe2, LayoutDashboard, Mail, MessageSquareWarning, Users, WalletCards} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 import {direction} from "@/lib/i18n";
 import {portalDictionary} from "@/lib/portal-i18n";
@@ -7,7 +7,7 @@ import {AdminSignOutButton} from "./admin-sign-out-button";
 import {Brand} from "./brand";
 import {LanguageSwitcher} from "./language-switcher";
 
-type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "distribution" | "access" | "audit";
+type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "distribution" | "finance" | "access" | "audit";
 type Principal = Readonly<{
   user: {displayName: string; email: string};
 }>;
@@ -29,6 +29,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const emailLabel = locale === "ar" ? "البريد الإلكتروني" : "Email";
   const distributionLabel = locale === "ar" ? "التوزيع والقنوات" : "Distribution";
   const googleHotelsLabel = locale === "ar" ? "فنادق Google" : "Google Hotels";
+  const financeLabel = locale === "ar" ? "الدفعات والتسويات" : "Payouts & settlement";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
       <div className="adminBrand"><Brand href="/admin" inverse/><span>{admin.name}</span></div>
@@ -43,6 +44,8 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <Link className={active === "email" ? "active" : ""} href="/admin/communications/email"><Mail size={17}/>{emailLabel}{(counts.emailOps ?? 0) > 0 && <b>{counts.emailOps}</b>}</Link>
         <span>{distributionLabel}</span>
         <Link className={active === "distribution" ? "active" : ""} href="/admin/distribution/google-hotels"><Globe2 size={17}/>{googleHotelsLabel}</Link>
+        <span>{locale === "ar" ? "المالية" : "Finance"}</span>
+        <Link className={active === "finance" ? "active" : ""} href="/admin/finance/payouts"><WalletCards size={17}/>{financeLabel}</Link>
         <span>{admin.control}</span>
         <Link className={active === "access" ? "active" : ""} href={dashboardHref("access")}><Users size={17}/>{admin.access}</Link>
         <Link className={active === "audit" ? "active" : ""} href={dashboardHref("audit")}><Activity size={17}/>{admin.audit}</Link>
