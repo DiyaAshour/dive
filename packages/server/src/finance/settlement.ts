@@ -84,7 +84,7 @@ export async function runPartnerReconciliation(userId: string, hotelId: string, 
     payAtHotelCommission: snapshot.payAtHotelCommission,
     partnerNet: snapshot.partnerNet,
     collectionVariance: snapshot.collectionVariance,
-    snapshot,
+    snapshot: jsonValue(snapshot),
     createdByUserId: userId,
   }});
   await database().auditLog.create({data: {
@@ -101,6 +101,10 @@ export async function runPartnerReconciliation(userId: string, hotelId: string, 
 export async function createPartnerPayout(userId: string, hotelId: string, input: PartnerSettlementPeriod) {
   await requireHotelPermission(userId, hotelId, "finance:manage");
   const period = await resolvedPeriod(hotelId, input);
+  const today = dateOnly(utcDateOnly(new Date()));
+  if (period.periodEnd >= today) {
+    throw new ApplicationError("PAYOUT_PERIOD_NOT_CLOSED", "Payout periods must end before today so every included stay has completed its departure date", 409);
+  }
   const existing = await database().partnerPayout.findUnique({where: {hotelId_periodStart_periodEnd_currency: {
     hotelId,
     periodStart: period.periodStart,
@@ -140,7 +144,7 @@ export async function createPartnerPayout(userId: string, hotelId: string, input
       payAtHotelCommission: snapshot.payAtHotelCommission,
       partnerNet: snapshot.partnerNet,
       collectionVariance: snapshot.collectionVariance,
-      snapshot,
+      snapshot: jsonValue(snapshot),
       createdByUserId: userId,
     }});
     const statement = await tx.partnerStatement.findUnique({where: {hotelId_periodStart_periodEnd_currency: {
@@ -157,13 +161,13 @@ export async function createPartnerPayout(userId: string, hotelId: string, input
       currency: period.currency,
       reconciliationId: reconciliation.id,
       statementId: statement?.id ?? null,
-      platformCollectedGross: snapshot.actualCollected + snapshot.completedRefunds,
+      platformCollectedGross: roundMoney(snapshot.actualCollected + snapshot.completedRefunds),
       completedRefunds: snapshot.completedRefunds,
       platformCommission: snapshot.platformCommission,
       payAtHotelCommission: snapshot.payAtHotelCommission,
       partnerNet: snapshot.partnerNet,
       status: "READY",
-      snapshot: {...snapshot, payoutRule: "Only platform-collected PAY_NOW value for stays departing in the period is payable. PAY_AT_HOTEL commission is shown separately and is not silently netted from the payout."},
+      snapshot: jsonValue({...snapshot, payoutRule: "Only platform-collected PAY_NOW value for completed stays departing in the period is payable. PAY_AT_HOTEL commission is shown separately and is not silently netted from the payout."}),
       createdByUserId: userId,
     }});
     await tx.auditLog.create({data: {
@@ -197,7 +201,7 @@ export async function updatePlatformPayout(adminUserId: string, payoutId: string
     if (payout.status === "VOID") throw new ApplicationError("PAYOUT_VOID", "A void payout cannot be marked paid", 409);
     const updated = await database().$transaction(async (tx) => {
       const row = await tx.partnerPayout.update({where: {id: payoutId}, data: {status: "PAID", externalReference: input.externalReference, paidByUserId: adminUserId, paidAt: new Date()}});
-      await tx.partnerStatement.updateMany({where: {hotelId: payout.hotelId, periodStart: payout.periodStart, periodEnd: payout.periodEnd, currency: payout.currency, status: "ISSUED"}, data: {status: "PAID"}});
+      if (payout.statementId) await tx.partnerStatement.updateMany({where: {id: payout.statementId, status: "ISSUED"}, data: {status: "PAID"}});
       await tx.auditLog.create({data: {hotelId: payout.hotelId, actorUserId: adminUserId, action: "PARTNER_PAYOUT_PAID", entityType: "PartnerPayout", entityId: payoutId, before: {status: payout.status}, after: {status: "PAID", externalReference: input.externalReference}}});
       return row;
     });
@@ -234,7 +238,6 @@ async function buildSettlementSnapshot(hotelId: string, input: PartnerSettlement
       totalAmount: true,
       commissionAmount: true,
       refundableAmount: true,
-      cancellationPenaltyAmount: true,
       paymentAttempts: {where: {status: "CAPTURED"}, select: {amount: true}},
       refunds: {where: {status: "COMPLETED"}, select: {amount: true}},
     },
@@ -368,6 +371,10 @@ function dateOnly(value: string): Date {
 
 function utcDateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+function jsonValue(value: unknown) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function reconciliationNumber(from: string, to: string, hotelId: string) {
