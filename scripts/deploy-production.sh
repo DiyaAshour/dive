@@ -8,9 +8,12 @@ COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
 docker compose -f "$COMPOSE_FILE" build
 docker compose -f "$COMPOSE_FILE" up -d postgres
 
-echo "Applying Prisma schema for the controlled pilot deployment."
-echo "This repository predates committed Prisma migrations; production bootstrap uses db push only for the initial controlled database."
-docker compose -f "$COMPOSE_FILE" run --rm web npm run db:push
+echo "Applying versioned Prisma migrations."
+echo "Existing pre-migration HandMeKey databases are baseline-adopted only after a safety shape check; application rows are not recreated."
+docker compose -f "$COMPOSE_FILE" run --rm web npm run db:adopt
+
+echo "Synchronizing the destination registry and hotel destination links."
+docker compose -f "$COMPOSE_FILE" run --rm web npm run db:seed-destinations
 
 docker compose -f "$COMPOSE_FILE" up -d web worker caddy
 
