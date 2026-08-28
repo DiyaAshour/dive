@@ -15,8 +15,10 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   const accountLabel = user?.displayName.trim().split(/\s+/)[0] || copy.nav.account;
   const rewardsLabel = market.locale === "ar" ? "المكافآت" : market.locale === "zh" ? "奖励" : "Rewards";
   const guideLabel = market.locale === "ar" ? "دليل السفر" : market.locale === "zh" ? "旅行指南" : "Travel guide";
+  const marketEdge = market.direction === "rtl" ? "right" : "left";
 
   return <header className="siteHeader">
+    <MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/>
     <div className="shell siteHeaderInner">
       <Brand />
       {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>
@@ -27,7 +29,6 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
         <Link href="/account/alerts"><Bell size={16}/>{copy.nav.alerts}</Link>
       </nav>}
       <div className="siteActions">
-        <MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/>
         {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
         {user ? <>
           <Link className="accountButton" href="/account" title={`${copy.nav.account} · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
