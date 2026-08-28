@@ -1,7 +1,10 @@
 import { ApplicationError } from "../errors";
 import type { PaymentProvider } from "./provider";
+import { createPayTabsProviderFromEnv } from "./paytabs";
 
 const providers = new Map<string, PaymentProvider>();
+const payTabs = createPayTabsProviderFromEnv();
+if (payTabs) registerPaymentProvider(payTabs);
 
 export function registerPaymentProvider(provider: PaymentProvider): void {
   const key = provider.key.trim().toLowerCase();
@@ -27,7 +30,7 @@ export function resolveConfiguredPaymentProvider(): PaymentProvider {
 export function resolvePaymentProvider(key: string): PaymentProvider {
   const normalized = key.trim().toLowerCase();
   const provider = providers.get(normalized);
-  if (!provider) throw new ApplicationError("PAYMENT_PROVIDER_UNAVAILABLE", `Payment provider '${normalized}' is not registered`, 503);
+  if (!provider) throw new ApplicationError("PAYMENT_PROVIDER_UNAVAILABLE", `Payment provider '${normalized}' is not registered or is missing credentials`, 503);
   return provider;
 }
 

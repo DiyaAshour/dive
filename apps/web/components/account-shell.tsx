@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Bell, Gem, KeyRound, LayoutDashboard, Luggage, UserRound, WalletCards } from "lucide-react";
+import { Bell, Gem, KeyRound, LayoutDashboard, Luggage, ReceiptText, UserRound, WalletCards } from "lucide-react";
 import { dictionary } from "@/lib/i18n";
 import { requestLocale } from "@/lib/request-locale";
 import { CustomerHeader } from "./customer-header";
 
-type AccountSection = "overview" | "profile" | "security" | "trips" | "alerts" | "rewards" | "wallet";
+type AccountSection = "overview" | "profile" | "security" | "trips" | "alerts" | "rewards" | "wallet" | "invoices";
 
 type Props = Readonly<{
   active: AccountSection;
@@ -22,6 +22,7 @@ export async function AccountShell({active,eyebrow,title,description,children}: 
     {key:"overview",href:"/account",label:copy.account.overview,icon:LayoutDashboard},
     {key:"rewards",href:"/account/rewards",label:locale === "ar" ? "المكافآت" : "Rewards",icon:Gem},
     {key:"wallet",href:"/account/wallet",label:locale === "ar" ? "المحفظة" : "Wallet",icon:WalletCards},
+    {key:"invoices",href:"/account/invoices",label:locale === "ar" ? "الفواتير" : "Invoices",icon:ReceiptText},
     {key:"profile",href:"/account/profile",label:copy.account.profile,icon:UserRound},
     {key:"security",href:"/account/security",label:copy.account.security,icon:KeyRound},
     {key:"trips",href:"/trips",label:copy.account.trips,icon:Luggage},

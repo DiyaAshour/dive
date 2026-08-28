@@ -4,6 +4,7 @@ import { dictionary } from "@/lib/i18n";
 import { requestLocale } from "@/lib/request-locale";
 import { currentUser } from "@/lib/server-session";
 import { SecurityManager } from "./security-manager";
+import { EmailVerificationControl } from "./email-verification-control";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default async function AccountSecurityPage() {
   const locale = await requestLocale();
   const copy = dictionary(locale);
   return <AccountShell active="security" eyebrow={copy.security.eyebrow} title={copy.security.title} description={copy.security.body}>
+    <EmailVerificationControl locale={locale}/>
     <SecurityManager locale={locale}/>
   </AccountShell>;
 }

@@ -7,7 +7,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -30,6 +30,9 @@ jobs:
       ADMIN_SESSION_TTL_HOURS: 8
       BOOKING_TOKEN_SECRET: phase18-ci-booking-token-secret-000000000000
       PAYMENT_PROVIDER: none
+      EMAIL_PROVIDER: none
+      STORAGE_PROVIDER: none
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,3 +80,9 @@ jobs:
 
       - name: Verify administrator HTTP flow
         run: npm run admin:http-smoke
+
+      - name: Install browser for E2E
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser E2E smoke
+        run: npm run e2e -w @platform/web

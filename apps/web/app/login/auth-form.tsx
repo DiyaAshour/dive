@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { Locale } from "@/lib/i18n";
@@ -45,6 +46,7 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
       {mode==="register"&&<label>{ar?"الاسم الكامل":"Full name"}<input name="displayName" autoComplete="name" minLength={2} placeholder={ar?"اسمك الكامل":"Your full name"} required/></label>}
       <label>{ar?"البريد الإلكتروني":"Email address"}<input name="email" type="email" autoComplete="email" placeholder="name@example.com" required/></label>
       <label>{ar?"كلمة المرور":"Password"}<input name="password" type="password" minLength={10} autoComplete={mode==="login"?"current-password":"new-password"} placeholder={ar?"10 أحرف على الأقل":"At least 10 characters"} required/></label>
+      {mode==="login"&&<Link className="authForgotLink" href="/forgot-password">{ar?"نسيت كلمة المرور؟":"Forgot password?"}</Link>}
       {error&&<p className="formError">{error}</p>}
       <button className="primaryButton authSubmit" disabled={submitting}>{submitting?(ar?"يرجى الانتظار…":"Please wait…"):mode==="login"?(ar?"تسجيل الدخول":"Sign in"):(ar?"إنشاء الحساب":"Create account")}</button>
     </form>

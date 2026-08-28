@@ -5,6 +5,7 @@ import {
   getBookingExperienceContext,
   modifyBooking,
   previewCancellation,
+  queueBookingLifecycleEmails,
   requireBookingAccess,
   walletAppliedToBooking,
 } from "@platform/server";
@@ -59,7 +60,9 @@ export async function PATCH(request: NextRequest, {params}: {params: Promise<{bo
     if (!parsed.success) return validationError(parsed.error);
     const parsedKey = idempotencyKeySchema.safeParse(idempotencyKey(request));
     if (!parsedKey.success) return validationError(parsedKey.error);
-    return ok(await modifyBooking(bookingId, parsed.data, parsedKey.data, await bookingAccessContext(request)));
+    const booking = await modifyBooking(bookingId, parsed.data, parsedKey.data, await bookingAccessContext(request));
+    if (booking.status === "MODIFIED") await queueBookingLifecycleEmails(bookingId, "MODIFIED").catch((error) => console.error("[booking-email] modification queue failed", error));
+    return ok(booking);
   } catch (error) {
     return handleApiError(error);
   }

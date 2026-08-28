@@ -1,11 +1,21 @@
-import { evaluateActivePriceWatches, expirePendingMediaUploads, expireStaleHolds } from "@platform/server";
+import {
+  evaluateActivePriceWatches,
+  expirePendingMediaUploads,
+  expireStaleHolds,
+  processEmailOutbox,
+  syncBookingLifecycleEmails,
+  syncPriceWatchNotificationEmails,
+} from "@platform/server";
 
 const intervalMs = boundedInteger(process.env.HOLD_EXPIRY_INTERVAL_MS, 30_000, 5_000, 300_000);
 const bookingBatchSize = boundedInteger(process.env.HOLD_EXPIRY_BATCH_SIZE, 200, 1, 500);
 const mediaBatchSize = boundedInteger(process.env.MEDIA_UPLOAD_CLEANUP_BATCH_SIZE, 200, 1, 500);
 const priceWatchBatchSize = boundedInteger(process.env.PRICE_WATCH_BATCH_SIZE, 100, 1, 500);
 const priceWatchIntervalMs = boundedInteger(process.env.PRICE_WATCH_INTERVAL_MS, 3_600_000, 60_000, 86_400_000);
+const emailBatchSize = boundedInteger(process.env.EMAIL_DELIVERY_BATCH_SIZE, 50, 1, 200);
+const emailSyncIntervalMs = boundedInteger(process.env.EMAIL_SYNC_INTERVAL_MS, 60_000, 15_000, 3_600_000);
 let nextPriceWatchAt = 0;
+let nextEmailSyncAt = 0;
 let running = false;
 let stopping = false;
 
@@ -13,29 +23,30 @@ async function tick(): Promise<void> {
   if (running || stopping) return;
   running = true;
   try {
-    try {
-      const expired = await expireStaleHolds(bookingBatchSize);
-      if (expired > 0) console.info(JSON.stringify({event:"booking_holds_expired", count:expired, at:new Date().toISOString()}));
-    } catch (error) {
-      console.error(JSON.stringify({event:"booking_hold_expiry_failed", message:error instanceof Error ? error.message : "unknown error", at:new Date().toISOString()}));
-    }
-    try {
-      const expiredMedia = await expirePendingMediaUploads(mediaBatchSize);
-      if (expiredMedia > 0) console.info(JSON.stringify({event:"media_uploads_expired", count:expiredMedia, at:new Date().toISOString()}));
-    } catch (error) {
-      console.error(JSON.stringify({event:"media_upload_cleanup_failed", message:error instanceof Error ? error.message : "unknown error", at:new Date().toISOString()}));
-    }
+    await run("booking_holds_expired", async () => ({count: await expireStaleHolds(bookingBatchSize)}));
+    await run("media_uploads_expired", async () => ({count: await expirePendingMediaUploads(mediaBatchSize)}));
+
     if (Date.now() >= nextPriceWatchAt) {
       nextPriceWatchAt = Date.now() + priceWatchIntervalMs;
-      try {
-        const result = await evaluateActivePriceWatches(priceWatchBatchSize);
-        console.info(JSON.stringify({event:"price_watches_checked", ...result, at:new Date().toISOString()}));
-      } catch (error) {
-        console.error(JSON.stringify({event:"price_watch_check_failed", message:error instanceof Error ? error.message : "unknown error", at:new Date().toISOString()}));
-      }
+      await run("price_watches_checked", () => evaluateActivePriceWatches(priceWatchBatchSize));
     }
+    if (Date.now() >= nextEmailSyncAt) {
+      nextEmailSyncAt = Date.now() + emailSyncIntervalMs;
+      await run("booking_email_events_synced", () => syncBookingLifecycleEmails(750));
+      await run("price_watch_emails_synced", () => syncPriceWatchNotificationEmails(750));
+    }
+    await run("email_outbox_processed", () => processEmailOutbox(emailBatchSize));
   } finally {
     running = false;
+  }
+}
+
+async function run(event: string, operation: () => Promise<Record<string, unknown>>): Promise<void> {
+  try {
+    const result = await operation();
+    console.info(JSON.stringify({event, ...result, at: new Date().toISOString()}));
+  } catch (error) {
+    console.error(JSON.stringify({event: `${event}_failed`, message: error instanceof Error ? error.message : "unknown error", at: new Date().toISOString()}));
   }
 }
 

@@ -13,3 +13,4 @@ export * from "./messaging";
 export * from "./growth";
 export * from "./admin";
 export * from "./blog";
+export * from "./communications";

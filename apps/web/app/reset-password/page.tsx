@@ -1,0 +1,5 @@
+import { CustomerHeader } from "@/components/customer-header";
+import { requestLocale } from "@/lib/request-locale";
+import { ResetPasswordForm } from "./reset-password-form";
+
+export default async function ResetPasswordPage({searchParams}:{searchParams:Promise<{token?:string}>}){const [locale,query]=await Promise.all([requestLocale(),searchParams]);const token=query.token?.trim()??"";return <main className="opsPublicPage"><CustomerHeader/><section className="opsAuthCard"><span className="eyebrow">{locale==="ar"?"أمان الحساب":"Account security"}</span><h1>{locale==="ar"?"اختر كلمة مرور جديدة":"Choose a new password"}</h1><p>{locale==="ar"?"بعد التغيير سيتم تسجيل خروج جميع الجلسات السابقة.":"After a successful reset, all previous sessions are revoked."}</p>{token?<ResetPasswordForm locale={locale} token={token}/>:<div className="opsNotice danger"><strong>{locale==="ar"?"الرابط غير مكتمل":"Invalid reset link"}</strong><p>{locale==="ar"?"اطلب رابط استعادة جديد.":"Request a new password reset link."}</p></div>}</section></main>}

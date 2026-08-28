@@ -1,0 +1,199 @@
+enum EmailDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  DEAD
+}
+
+enum EmailMessageKind {
+  BOOKING_CONFIRMED
+  BOOKING_MODIFIED
+  BOOKING_CANCELLED
+  PARTNER_BOOKING_NOTICE
+  PRICE_WATCH
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+  SECURITY_ALERT
+  PARTNER_STATEMENT
+}
+
+enum InvoiceDocumentType {
+  BOOKING_INVOICE
+  CANCELLATION_NOTE
+}
+
+enum InvoiceStatus {
+  ISSUED
+  VOID
+}
+
+enum PartnerStatementStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+enum AuthTokenPurpose {
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+}
+
+enum SupportCaseStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportCasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model EmailOutbox {
+  id                String              @id @default(cuid())
+  kind              EmailMessageKind
+  toEmail           String
+  toName            String?
+  subject           String
+  htmlBody          String              @db.Text
+  textBody          String              @db.Text
+  status            EmailDeliveryStatus @default(PENDING)
+  attempts          Int                 @default(0)
+  nextAttemptAt     DateTime            @default(now())
+  provider          String?
+  providerMessageId String?
+  lastError         String?             @db.Text
+  dedupeKey         String              @unique
+  bookingId         String?
+  hotelId           String?
+  userId            String?
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([bookingId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model BookingInvoice {
+  id             String              @id @default(cuid())
+  bookingId      String
+  revision       Int
+  documentType   InvoiceDocumentType
+  invoiceNumber  String              @unique
+  dedupeKey      String              @unique
+  hotelId        String
+  userId         String?
+  guestName      String
+  guestEmail     String
+  hotelName      String
+  hotelAddress   String
+  currency       String              @db.Char(3)
+  baseAmount     Decimal             @db.Decimal(12, 2)
+  serviceAmount  Decimal             @db.Decimal(12, 2)
+  taxAmount      Decimal             @db.Decimal(12, 2)
+  totalAmount    Decimal             @db.Decimal(12, 2)
+  walletAmount   Decimal             @default(0) @db.Decimal(12, 2)
+  amountDue      Decimal             @db.Decimal(12, 2)
+  paymentMode    String
+  paymentState   String
+  snapshot       Json
+  status         InvoiceStatus       @default(ISSUED)
+  issuedAt       DateTime            @default(now())
+  voidedAt       DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([bookingId, revision, documentType])
+  @@index([userId, issuedAt])
+  @@index([hotelId, issuedAt])
+}
+
+model PartnerStatement {
+  id                      String                 @id @default(cuid())
+  hotelId                 String
+  statementNumber         String                 @unique
+  periodStart             DateTime               @db.Date
+  periodEnd               DateTime               @db.Date
+  currency                String                 @db.Char(3)
+  bookingGross            Decimal                @default(0) @db.Decimal(14, 2)
+  roomBase                Decimal                @default(0) @db.Decimal(14, 2)
+  serviceAmount           Decimal                @default(0) @db.Decimal(14, 2)
+  taxAmount               Decimal                @default(0) @db.Decimal(14, 2)
+  platformCommission      Decimal                @default(0) @db.Decimal(14, 2)
+  cancellationAdjustments Decimal                @default(0) @db.Decimal(14, 2)
+  refunds                 Decimal                @default(0) @db.Decimal(14, 2)
+  status                  PartnerStatementStatus @default(DRAFT)
+  snapshot                Json
+  issuedAt                DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  @@unique([hotelId, periodStart, periodEnd, currency])
+  @@index([hotelId, periodEnd, status])
+}
+
+model AuthActionToken {
+  id         String           @id @default(cuid())
+  userId     String
+  email      String
+  purpose    AuthTokenPurpose
+  tokenHash  String           @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, purpose, expiresAt])
+  @@index([email, purpose, expiresAt])
+}
+
+model EmailVerificationState {
+  userId     String   @id
+  email      String
+  verifiedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([email])
+}
+
+model SupportCase {
+  id          String              @id @default(cuid())
+  reference   String              @unique
+  userId      String?
+  bookingId   String?
+  hotelId     String?
+  guestEmail  String
+  subject     String
+  status      SupportCaseStatus   @default(OPEN)
+  priority    SupportCasePriority @default(NORMAL)
+  assignedTo  String?
+  messages    SupportCaseMessage[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, priority, updatedAt])
+  @@index([userId, updatedAt])
+  @@index([bookingId])
+  @@index([hotelId, updatedAt])
+}
+
+model SupportCaseMessage {
+  id         String      @id @default(cuid())
+  supportId  String
+  support    SupportCase @relation(fields: [supportId], references: [id], onDelete: Cascade)
+  authorKind String
+  authorId   String?
+  body       String      @db.Text
+  internal   Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+
+  @@index([supportId, createdAt])
+}
