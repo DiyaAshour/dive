@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { CustomerHeader } from "@/components/customer-header";
 import { guestDictionary } from "@/lib/guest-i18n";
-import { requestGuestMarket } from "@/lib/guest-market";
+import { requestGuestMarket } from "@/lib/request-guest-market";
 import { currentUser } from "@/lib/server-session";
 import { CheckoutFlow } from "./checkout-flow";
 
