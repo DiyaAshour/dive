@@ -32,9 +32,16 @@ export const hotelReservationQuerySchema = z.object({
   scope: z.enum(["ARRIVALS", "DEPARTURES", "IN_HOUSE", "ALL"]).default("ALL"),
 });
 
+export const reservationCenterQuerySchema = z.object({
+  date: dateOnly,
+  scope: z.enum(["ARRIVALS", "DEPARTURES", "IN_HOUSE", "CANCELLED", "NO_SHOW", "ALL"]).default("ALL"),
+  q: z.string().trim().max(120).default(""),
+});
+
 export type ExpectedArrivalInput = z.infer<typeof expectedArrivalInputSchema>;
 export type StaffArrivalInput = z.infer<typeof staffArrivalInputSchema>;
 export type CreateGuestRequestInput = z.infer<typeof createGuestRequestSchema>;
 export type UpdateGuestRequestStatusInput = z.infer<typeof updateGuestRequestStatusSchema>;
 export type FrontDeskNoteInput = z.infer<typeof frontDeskNoteInputSchema>;
 export type HotelReservationQuery = z.infer<typeof hotelReservationQuerySchema>;
+export type ReservationCenterQuery = z.infer<typeof reservationCenterQuerySchema>;
