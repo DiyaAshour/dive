@@ -9,6 +9,21 @@ import {guestMarketCopy} from "@/lib/guest-i18n";
 type Props = Readonly<{currency:GuestCurrency;locale:GuestLocale;compact?:boolean}>;
 
 const priority = ["JOD","USD","EUR","GBP","CNY","AED","SAR","JPY","KRW","TRY","INR","CAD","AUD","CHF"] as const;
+const specialFlags: Partial<Record<GuestCurrency,string>> = {
+  EUR:"🇪🇺",
+  XAF:"🌍",
+  XCD:"🌴",
+  XOF:"🌍",
+  XPF:"🌊",
+};
+
+function currencyFlag(code:GuestCurrency):string {
+  const special=specialFlags[code];
+  if(special)return special;
+  const countryCode=code.slice(0,2);
+  if(!/^[A-Z]{2}$/.test(countryCode))return "🌐";
+  return String.fromCodePoint(...countryCode.split("").map((char)=>127397+char.charCodeAt(0)));
+}
 
 export function CurrencySwitcher({currency,locale,compact=false}:Props) {
   const [value,setValue]=useState<GuestCurrency>(currency);
@@ -37,7 +52,7 @@ export function CurrencySwitcher({currency,locale,compact=false}:Props) {
   return <label className={compact?"languageSwitcher currencySwitcher compact":"languageSwitcher currencySwitcher"} title={copy.auto}>
     <Coins size={15}/>
     <select aria-label={copy.currency} value={value} disabled={saving} onChange={(event)=>void change(event.target.value as GuestCurrency)}>
-      {currencies.map((code)=><option value={code} key={code}>{code} · {currencyDisplayName(code,locale)}{hasReferenceRate(code)?"":" *"}</option>)}
+      {currencies.map((code)=><option value={code} key={code}>{currencyFlag(code)} {code} · {currencyDisplayName(code,locale)}{hasReferenceRate(code)?"":" *"}</option>)}
     </select>
   </label>;
 }
