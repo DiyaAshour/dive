@@ -1,5 +1,3 @@
-import {cookies, headers} from "next/headers";
-
 export const GUEST_LOCALES = ["en","ar","zh","fr","de","es","it","tr","ru","ja","ko","hi","pt","id","th"] as const;
 export type GuestLocale = (typeof GUEST_LOCALES)[number];
 
@@ -77,27 +75,11 @@ export function marketForCountry(countryCode: string | null | undefined): {local
   return {locale: country ? COUNTRY_LOCALE[country] ?? "en" : "en", currency: country ? COUNTRY_CURRENCY[country] ?? "USD" : "JOD"};
 }
 
-export async function requestGuestMarket(): Promise<GuestMarket> {
-  const [cookieStore, headerStore] = await Promise.all([cookies(), headers()]);
-  const countryCode = normalizeCountry(
-    headerStore.get("x-vercel-ip-country") ?? headerStore.get("cf-ipcountry") ?? headerStore.get("x-country-code") ?? cookieStore.get(MARKET_COUNTRY_COOKIE)?.value,
-  );
-  const countryMarket = marketForCountry(countryCode);
-  const cookieLocale = cookieStore.get(GUEST_LOCALE_COOKIE)?.value;
-  const browserLocale = localeFromLanguageTag(headerStore.get("accept-language"));
-  const locale = isGuestLocale(cookieLocale) ? cookieLocale : browserLocale ?? countryMarket.locale ?? "en";
-  const localeSource: GuestMarket["localeSource"] = isGuestLocale(cookieLocale) ? "cookie" : browserLocale ? "browser" : countryCode ? "country" : "default";
-  const cookieCurrency = cookieStore.get(CURRENCY_COOKIE)?.value;
-  const currency = isGuestCurrency(cookieCurrency) ? cookieCurrency : countryCode ? countryMarket.currency : "JOD";
-  const currencySource: GuestMarket["currencySource"] = isGuestCurrency(cookieCurrency) ? "cookie" : countryCode ? "country" : "default";
-  return {locale,baseLocale:baseLocale(locale),currency,countryCode,intlLocale:guestIntlLocale(locale),direction:locale === "ar" ? "rtl" : "ltr",localeSource,currencySource};
-}
-
 export function guestCookieOptions() {
   return {httpOnly:false,secure:process.env.NODE_ENV === "production",sameSite:"lax" as const,path:"/",maxAge:COOKIE_MAX_AGE_SECONDS};
 }
 
-function normalizeCountry(value: string | null | undefined): string | null {
+export function normalizeCountry(value: string | null | undefined): string | null {
   if (!value) return null;
   const normalized = value.trim().toUpperCase();
   return /^[A-Z]{2}$/.test(normalized) && normalized !== "XX" ? normalized : null;
