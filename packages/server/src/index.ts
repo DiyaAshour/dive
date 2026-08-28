@@ -43,6 +43,7 @@ export * from "./communications/admin";
 export * from "./communications/conversations";
 export * from "./communications/booking";
 export * from "./finance/service";
+export * from "./finance/settlement";
 export * from "./health/service";
 export * from "./payments/provider";
 export * from "./payments/registry";
