@@ -33,14 +33,19 @@ test("bare hotel path routes travelers to marketplace search", async ({page}) =>
   await expect(page.locator("h1").first()).toBeVisible();
 });
 
-test("China guest market automatically selects Chinese and CNY while preserving source charge currency", async ({page}) => {
-  await page.context().setExtraHTTPHeaders({"x-vercel-ip-country":"CN","accept-language":"zh-CN,zh;q=0.9,en;q=0.7"});
-  await page.goto("/search?destination=Amman");
-  await expect(page.locator("body")).toContainText("实时可订");
-  await page.getByRole("button",{name:"语言和货币"}).click();
-  await expect(page.locator('select[aria-label="货币"]')).toHaveValue("CNY");
-  await expect(page.locator(".premiumResultPrice").first()).toContainText(/¥|CN¥/);
-  await expect(page.locator(".premiumResultPrice").first()).toContainText(/JOD|预订将按酒店原始币种计费/);
+test("China guest market automatically selects Chinese and CNY while preserving source charge currency", async ({browser}) => {
+  const context = await browser.newContext({locale:"zh-CN",extraHTTPHeaders:{"x-vercel-ip-country":"CN"}});
+  const page = await context.newPage();
+  try {
+    await page.goto("/search?destination=Amman");
+    await expect(page.locator("body")).toContainText("实时可订");
+    await page.getByRole("button",{name:"语言和货币"}).click();
+    await expect(page.locator('select[aria-label="货币"]')).toHaveValue("CNY");
+    await expect(page.locator(".premiumResultPrice").first()).toContainText(/¥|CN¥/);
+    await expect(page.locator(".premiumResultPrice").first()).toContainText(/JOD|预订将按酒店原始币种计费/);
+  } finally {
+    await context.close();
+  }
 });
 
 test("explicit traveler language and currency override automatic country detection", async ({page}) => {
