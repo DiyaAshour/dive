@@ -20,7 +20,7 @@ export type BookingAccessContext = Readonly<{userId?: string | null; accessToken
 type NightPrice = Readonly<{date: Date; base: number; service: number; tax: number; total: number}>;
 type DbClient = Pick<ReturnType<typeof database>, "ratePlan" | "dailyRate" | "inventoryDay" | "refund">;
 type TransactionLike = Pick<DbClient, "ratePlan" | "dailyRate" | "inventoryDay">;
-type HotelPricing = Readonly<{id: string; serviceRate: unknown; taxRate: unknown}>;
+type HotelPricing = Readonly<{id: string; serviceRate: unknown; taxRate: unknown; timezone: string}>;
 type PolicyJson = {name: string; rules: Array<{minimumDaysBeforeArrival: number; penaltyType: string; penaltyValue: number | null}>; noShowPenaltyType: string; noShowPenaltyValue: number | null};
 
 type PricedStay = Readonly<{
@@ -411,8 +411,23 @@ async function priceStay(tx: TransactionLike, hotel: HotelPricing, roomTypeId: s
   if (!ratePlan.cancellationPolicy) conflict("CANCELLATION_POLICY_NOT_CONFIGURED", "Rate plan does not have a cancellation policy");
   const rates = await tx.dailyRate.findMany({where: {ratePlanId, date: {in: dateValues}}, orderBy: {date: "asc"}});
   if (rates.length !== dates.length) conflict("RATE_NOT_CONFIGURED", "A rate is missing for one or more stay dates");
+  if (rates.some((rate) => rate.closed || rate.stopSell)) conflict("RATE_RESTRICTED", "Selected stay includes a closed or stop-sell date");
+
   const stayLength = dates.length;
-  if (rates.some((rate) => rate.closed || rate.stopSell || rate.minStay > stayLength || (rate.maxStay !== null && rate.maxStay < stayLength))) conflict("RATE_RESTRICTED", "Selected stay is closed or restricted by the rate plan");
+  const arrivalRate = rates[0];
+  const arrivalDate = dates[0];
+  if (!arrivalRate || !arrivalDate) conflict("RATE_NOT_CONFIGURED", "Arrival rate is not configured");
+  if (arrivalRate.closedToArrival) conflict("CLOSED_TO_ARRIVAL", "This rate plan does not allow arrival on the selected date");
+  if (arrivalRate.minStay > stayLength || (arrivalRate.maxStay !== null && arrivalRate.maxStay < stayLength)) conflict("STAY_LENGTH_RESTRICTED", "Selected stay length does not satisfy the arrival-date restriction");
+
+  const bookingLeadDays = calendarDayDifference(localDateInTimeZone(new Date(), hotel.timezone), arrivalDate);
+  if (bookingLeadDays < arrivalRate.minAdvanceBookingDays) conflict("ADVANCE_BOOKING_TOO_SOON", `Arrival requires at least ${arrivalRate.minAdvanceBookingDays} day(s) advance booking`);
+  if (arrivalRate.maxAdvanceBookingDays !== null && bookingLeadDays > arrivalRate.maxAdvanceBookingDays) conflict("ADVANCE_BOOKING_TOO_FAR", `Arrival can be booked at most ${arrivalRate.maxAdvanceBookingDays} day(s) in advance`);
+
+  const departureDate = nextDateAfter(dates[dates.length - 1]!);
+  const departureRestriction = await tx.dailyRate.findUnique({where: {ratePlanId_date: {ratePlanId, date: parseDateOnly(departureDate)}}, select: {closedToDeparture: true}});
+  if (departureRestriction?.closedToDeparture) conflict("CLOSED_TO_DEPARTURE", "This rate plan does not allow departure on the selected date");
+
   const promotion = selectBestPromotion(ratePlan.promotions.map((item) => item.promotion), dateValues);
   const nights = rates.map((rate) => {
     const base = promotionBaseRate(Number(rate.baseRate), promotion);
@@ -552,6 +567,25 @@ function assertFingerprint(actual: string | null, expected: string): void {
 
 function conflict(code: string, message: string): never {
   throw new ApplicationError(code, message, 409);
+}
+
+function localDateInTimeZone(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {timeZone, year: "numeric", month: "2-digit", day: "2-digit"}).formatToParts(value);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) throw new ApplicationError("HOTEL_DATE_UNAVAILABLE", "Unable to resolve the hotel's local date", 500);
+  return `${year}-${month}-${day}`;
+}
+
+function calendarDayDifference(from: string, to: string): number {
+  return Math.round((parseDateOnly(to).getTime() - parseDateOnly(from).getTime()) / 86_400_000);
+}
+
+function nextDateAfter(value: string): string {
+  const date = parseDateOnly(value);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return dateKey(date);
 }
 
 function dateKey(date: Date): string {
