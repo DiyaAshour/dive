@@ -6,7 +6,8 @@ import { CustomerHeader } from "@/components/customer-header";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
 import { guestMoney, sourceAmountFromGuestInput } from "@/lib/guest-currency";
 import { guestDictionary, guestMarketCopy } from "@/lib/guest-i18n";
-import { requestGuestMarket, type GuestLocale } from "@/lib/guest-market";
+import { type GuestLocale } from "@/lib/guest-market";
+import { requestGuestMarket } from "@/lib/request-guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
 import { SaveSearchButton } from "./save-search-button";
 
