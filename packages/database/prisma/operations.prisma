@@ -66,6 +66,17 @@ enum SupportCasePriority {
   URGENT
 }
 
+enum PartnerPayoutStatus {
+  READY
+  PAID
+  VOID
+}
+
+enum PartnerReconciliationStatus {
+  CLEAN
+  REVIEW_REQUIRED
+}
+
 model EmailOutbox {
   id                    String              @id @default(cuid())
   kind                  EmailMessageKind
@@ -256,4 +267,59 @@ model SupportCaseMessage {
   createdAt  DateTime    @default(now())
 
   @@index([supportId, createdAt])
+}
+
+model PartnerReconciliation {
+  id                     String                      @id @default(cuid())
+  hotelId                String
+  reconciliationNumber   String                      @unique
+  periodStart            DateTime                    @db.Date
+  periodEnd              DateTime                    @db.Date
+  currency               String                      @db.Char(3)
+  status                 PartnerReconciliationStatus
+  eligibleBookingCount   Int                         @default(0)
+  issueCount             Int                         @default(0)
+  expectedCollected      Decimal                     @default(0) @db.Decimal(14, 2)
+  actualCollected        Decimal                     @default(0) @db.Decimal(14, 2)
+  completedRefunds       Decimal                     @default(0) @db.Decimal(14, 2)
+  platformCommission     Decimal                     @default(0) @db.Decimal(14, 2)
+  payAtHotelCommission   Decimal                     @default(0) @db.Decimal(14, 2)
+  partnerNet             Decimal                     @default(0) @db.Decimal(14, 2)
+  collectionVariance     Decimal                     @default(0) @db.Decimal(14, 2)
+  snapshot               Json
+  createdByUserId        String
+  createdAt              DateTime                    @default(now())
+
+  @@index([hotelId, periodEnd, status])
+  @@index([hotelId, createdAt])
+}
+
+model PartnerPayout {
+  id                     String              @id @default(cuid())
+  hotelId                String
+  payoutNumber           String              @unique
+  periodStart            DateTime            @db.Date
+  periodEnd              DateTime            @db.Date
+  currency               String              @db.Char(3)
+  reconciliationId       String
+  statementId            String?
+  platformCollectedGross Decimal              @default(0) @db.Decimal(14, 2)
+  completedRefunds       Decimal              @default(0) @db.Decimal(14, 2)
+  platformCommission     Decimal              @default(0) @db.Decimal(14, 2)
+  payAtHotelCommission   Decimal              @default(0) @db.Decimal(14, 2)
+  partnerNet             Decimal              @default(0) @db.Decimal(14, 2)
+  status                 PartnerPayoutStatus @default(READY)
+  externalReference      String?
+  snapshot               Json
+  createdByUserId        String
+  paidByUserId           String?
+  paidAt                 DateTime?
+  voidedAt               DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@unique([hotelId, periodStart, periodEnd, currency])
+  @@index([hotelId, status, periodEnd])
+  @@index([reconciliationId])
+  @@index([createdAt])
 }
