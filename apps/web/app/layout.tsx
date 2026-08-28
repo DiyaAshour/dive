@@ -23,6 +23,7 @@ import "./localization.css";
 import "./booking-details.css";
 import "./booking-center.css";
 import "./admin.css";
+import "./admin-email.css";
 import "./production-ops.css";
 
 export const metadata: Metadata = {

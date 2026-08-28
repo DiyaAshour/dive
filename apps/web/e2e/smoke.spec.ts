@@ -35,3 +35,8 @@ test("search result pages are noindex but public content remains followable", as
   const robots = page.locator('meta[name="robots"]');
   await expect(robots).toHaveAttribute("content", /noindex/i);
 });
+
+test("email operations requires an administrator session", async ({page}) => {
+  await page.goto("/admin/communications/email");
+  await expect(page).toHaveURL(/\/admin\/login\?next=/);
+});

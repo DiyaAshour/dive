@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Activity, BookOpenText, Building2, FileCheck2, LayoutDashboard, MessageSquareWarning, Users} from "lucide-react";
+import {Activity, BookOpenText, Building2, FileCheck2, LayoutDashboard, Mail, MessageSquareWarning, Users} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 import {direction} from "@/lib/i18n";
 import {portalDictionary} from "@/lib/portal-i18n";
@@ -7,7 +7,7 @@ import {AdminSignOutButton} from "./admin-sign-out-button";
 import {Brand} from "./brand";
 import {LanguageSwitcher} from "./language-switcher";
 
-type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "access" | "audit";
+type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "access" | "audit";
 type Principal = Readonly<{
   user: {displayName: string; email: string};
 }>;
@@ -16,15 +16,17 @@ type Props = Readonly<{
   locale: Locale;
   principal: Principal;
   active: Active;
-  counts?: {verification: number; hiddenReviews: number};
+  counts?: {verification: number; hiddenReviews: number; emailOps?: number};
   children: React.ReactNode;
 }>;
 
-export function AdminShell({locale, principal, active, counts = {verification: 0, hiddenReviews: 0}, children}: Props) {
+export function AdminShell({locale, principal, active, counts = {verification: 0, hiddenReviews: 0, emailOps: 0}, children}: Props) {
   const copy = portalDictionary(locale);
   const admin = copy.admin;
   const dashboardHref = (section: Active) => section === "overview" ? "/admin" : `/admin#${section}`;
   const blogLabel = locale === "ar" ? "المحتوى والمدونة" : "Content & blog";
+  const communicationsLabel = locale === "ar" ? "الاتصالات" : "Communications";
+  const emailLabel = locale === "ar" ? "البريد الإلكتروني" : "Email";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
       <div className="adminBrand"><Brand href="/admin" inverse/><span>{admin.name}</span></div>
@@ -35,6 +37,8 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <Link className={active === "properties" ? "active" : ""} href="/admin/properties"><Building2 size={17}/>{admin.properties}</Link>
         <Link className={active === "reviews" ? "active" : ""} href="/admin/reviews"><MessageSquareWarning size={17}/>{admin.reviews}{counts.hiddenReviews > 0 && <b>{counts.hiddenReviews}</b>}</Link>
         <Link className={active === "blog" ? "active" : ""} href="/admin/blog"><BookOpenText size={17}/>{blogLabel}</Link>
+        <span>{communicationsLabel}</span>
+        <Link className={active === "email" ? "active" : ""} href="/admin/communications/email"><Mail size={17}/>{emailLabel}{(counts.emailOps ?? 0) > 0 && <b>{counts.emailOps}</b>}</Link>
         <span>{admin.control}</span>
         <Link className={active === "access" ? "active" : ""} href={dashboardHref("access")}><Users size={17}/>{admin.access}</Link>
         <Link className={active === "audit" ? "active" : ""} href={dashboardHref("audit")}><Activity size={17}/>{admin.audit}</Link>
