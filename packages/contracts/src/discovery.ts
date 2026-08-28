@@ -26,11 +26,20 @@ export const discoverySearchSchema = publicStaySchema.safeExtend({
   freeCancellation: z.boolean().default(false),
   paymentMode: z.enum(["PAY_NOW", "PAY_AT_HOTEL"]).optional(),
   sort: discoverySortSchema.default("RECOMMENDED"),
+  pageSize: z.coerce.number().int().min(6).max(40).default(20),
+  cursor: z.string().trim().max(500).optional(),
 }).superRefine((value, ctx) => {
   if (value.minPrice !== undefined && value.maxPrice !== undefined && value.maxPrice < value.minPrice) {
     ctx.addIssue({code: "custom", path: ["maxPrice"], message: "Maximum price cannot be lower than minimum price"});
   }
 });
 
+export const destinationSuggestionQuerySchema = z.object({
+  q: z.string().trim().max(120).default(""),
+  locale: z.enum(["ar", "en"]).default("en"),
+  limit: z.coerce.number().int().min(1).max(12).default(8),
+});
+
 export type PublicStayInput = z.infer<typeof publicStaySchema>;
 export type DiscoverySearchInput = z.infer<typeof discoverySearchSchema>;
+export type DestinationSuggestionQuery = z.infer<typeof destinationSuggestionQuerySchema>;
