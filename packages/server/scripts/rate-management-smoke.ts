@@ -28,7 +28,7 @@ try {
   const room = await server.createRoomType(registered.user.id, hotel.id, createRoomTypeRequestSchema.parse({
     name: "King Room",
     code: "KING",
-    description: "A complete room product used to verify bulk rate, inventory and restriction management behavior.",
+    description: "A complete room product used to verify bulk rate, inventory and advanced restriction management behavior.",
     unitType: "ROOM",
     quantity: 5,
     maxGuests: 2,
@@ -74,6 +74,11 @@ try {
     rate: {mode: "SET", value: 100},
     available: 5,
     minStay: 1,
+    maxStay: null,
+    minAdvanceBookingDays: 0,
+    maxAdvanceBookingDays: null,
+    closedToArrival: false,
+    closedToDeparture: false,
     closed: false,
     stopSell: false,
   });
@@ -84,6 +89,7 @@ try {
   assert.equal(calendar.rates.length, 7);
   assert.equal(calendar.inventory.length, 7);
   assert.ok(calendar.rates.every((rate: {baseRate: unknown}) => Number(rate.baseRate) === 100));
+  assert.ok(calendar.rates.every((rate: {closedToArrival: boolean; closedToDeparture: boolean; minAdvanceBookingDays: number; maxAdvanceBookingDays: number | null}) => !rate.closedToArrival && !rate.closedToDeparture && rate.minAdvanceBookingDays === 0 && rate.maxAdvanceBookingDays === null));
   assert.ok(calendar.inventory.every((day: {available: number}) => day.available === 5));
 
   await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
@@ -103,11 +109,17 @@ try {
     to: from,
     minStay: 2,
     maxStay: 5,
+    minAdvanceBookingDays: 2,
+    maxAdvanceBookingDays: 30,
+    closedToArrival: true,
     stopSell: true,
   }));
   const restricted = await server.getCalendar(registered.user.id, hotel.id, from, from);
   assert.equal(restricted.rates[0]?.minStay, 2);
   assert.equal(restricted.rates[0]?.maxStay, 5);
+  assert.equal(restricted.rates[0]?.minAdvanceBookingDays, 2);
+  assert.equal(restricted.rates[0]?.maxAdvanceBookingDays, 30);
+  assert.equal(restricted.rates[0]?.closedToArrival, true);
   assert.equal(restricted.rates[0]?.stopSell, true);
 
   await assert.rejects(
@@ -118,12 +130,87 @@ try {
     () => server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, overbookingLimit: 1})),
     (error: unknown) => error instanceof server.ApplicationError && error.code === "OVERBOOKING_DISABLED",
   );
+  await assert.rejects(
+    async () => server.bulkUpdateRateCalendar(registered.user.id, hotel.id, {
+      roomTypeId: room.id,
+      ratePlanId: ratePlan.id,
+      from,
+      to: from,
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      minAdvanceBookingDays: 20,
+      maxAdvanceBookingDays: 5,
+    }),
+    (error: unknown) => error instanceof server.ApplicationError && error.code === "INVALID_ADVANCE_BOOKING_WINDOW",
+  );
+
+  await database().hotel.update({where: {id: hotel.id}, data: {status: "ACTIVE", verified: true}});
+  const departure = addDate(from, 2);
+  const quoteInput = {hotelId: hotel.id, roomTypeId: room.id, ratePlanId: ratePlan.id, arrival: from, departure, adults: 2, children: 0};
+
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, stopSell: false, closedToArrival: true, minAdvanceBookingDays: 0, maxAdvanceBookingDays: null,
+  }));
+  await assert.rejects(
+    () => server.quoteBooking(quoteInput),
+    (error: unknown) => error instanceof server.ApplicationError && error.code === "CLOSED_TO_ARRIVAL",
+  );
+
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, closedToArrival: false,
+  }));
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from: departure, to: departure, closedToDeparture: true,
+  }));
+  await assert.rejects(
+    () => server.quoteBooking(quoteInput),
+    (error: unknown) => error instanceof server.ApplicationError && error.code === "CLOSED_TO_DEPARTURE",
+  );
+
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from: departure, to: departure, closedToDeparture: false,
+  }));
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, minStay: 3, maxStay: null,
+  }));
+  await assert.rejects(
+    () => server.quoteBooking(quoteInput),
+    (error: unknown) => error instanceof server.ApplicationError && error.code === "STAY_LENGTH_RESTRICTED",
+  );
+
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, minStay: 1, minAdvanceBookingDays: 30, maxAdvanceBookingDays: null,
+  }));
+  await assert.rejects(
+    () => server.quoteBooking(quoteInput),
+    (error: unknown) => error instanceof server.ApplicationError && error.code === "ADVANCE_BOOKING_TOO_SOON",
+  );
+
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, minAdvanceBookingDays: 0, maxAdvanceBookingDays: 5,
+  }));
+  await assert.rejects(
+    () => server.quoteBooking(quoteInput),
+    (error: unknown) => error instanceof server.ApplicationError && error.code === "ADVANCE_BOOKING_TOO_FAR",
+  );
+
+  await server.bulkUpdateRateCalendar(registered.user.id, hotel.id, bulkCalendarUpdateRequestSchema.parse({
+    roomTypeId: room.id, ratePlanId: ratePlan.id, from, to: from, maxAdvanceBookingDays: null,
+  }));
+  const bookable = await server.quoteBooking(quoteInput);
+  assert.equal(bookable.nights, 2);
+  assert.equal(bookable.amounts.base, 220);
 
   const audit = await database().auditLog.findFirst({where: {hotelId: hotel.id, actorUserId: registered.user.id, action: "RATE_CALENDAR_BULK_UPDATED", entityId: ratePlan.id}});
   assert.ok(audit);
-  console.log("[rate-management-smoke] bulk pricing, inventory, restrictions, safeguards and audit checks passed");
+  console.log("[rate-management-smoke] pricing, inventory, CTA/CTD, booking windows, stay limits, safeguards and audit checks passed");
 } finally {
   if (hotelId) await database().hotel.deleteMany({where: {id: hotelId}});
   await database().user.deleteMany({where: {email}});
   await database().$disconnect();
+}
+
+function addDate(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
