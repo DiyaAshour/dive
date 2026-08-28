@@ -1,0 +1,65 @@
+enum DestinationType {
+  COUNTRY
+  REGION
+  CITY
+  AREA
+  LANDMARK
+}
+
+model Destination {
+  id               String             @id @default(cuid())
+  type             DestinationType
+  slug             String             @unique
+  countryCode      String             @db.Char(2)
+  nameEn           String
+  nameAr           String?
+  parentId         String?
+  parent           Destination?       @relation("DestinationHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children         Destination[]      @relation("DestinationHierarchy")
+  latitude         Decimal?           @db.Decimal(9, 6)
+  longitude        Decimal?           @db.Decimal(9, 6)
+  radiusKm         Decimal?           @db.Decimal(8, 2)
+  seoTitleEn       String?
+  seoTitleAr       String?
+  seoDescriptionEn String?            @db.Text
+  seoDescriptionAr String?            @db.Text
+  active           Boolean            @default(true)
+  sortOrder        Int                @default(0)
+  aliases          DestinationAlias[]
+  hotelLinks       HotelDestination[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([countryCode, type, active, sortOrder])
+  @@index([parentId, active, sortOrder])
+  @@index([nameEn])
+  @@index([nameAr])
+}
+
+model DestinationAlias {
+  id            String      @id @default(cuid())
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  alias         String
+  normalized    String
+  locale        String?     @db.Char(2)
+  weight        Int         @default(100)
+  createdAt     DateTime    @default(now())
+
+  @@unique([destinationId, normalized])
+  @@index([normalized, weight])
+}
+
+model HotelDestination {
+  hotelId       String
+  hotel         Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  primary       Boolean     @default(false)
+  distanceKm    Decimal?    @db.Decimal(8, 2)
+  createdAt     DateTime    @default(now())
+
+  @@id([hotelId, destinationId])
+  @@index([destinationId, primary, hotelId])
+  @@index([hotelId, primary])
+}
