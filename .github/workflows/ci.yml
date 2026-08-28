@@ -78,6 +78,9 @@ jobs:
       - name: Verify partner reservation management flow
         run: npm run reservation-management:smoke
 
+      - name: Verify partner settlement and payout flow
+        run: npm run finance-settlement:smoke
+
       - name: Verify loyalty domain rules
         run: npm run loyalty-rule:smoke
 
