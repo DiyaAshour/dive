@@ -326,6 +326,7 @@ model Hotel {
   bookings           Booking[]
   financialEvents    FinancialEvent[]
   auditLogs          AuditLog[]
+  destinationLinks   HotelDestination[]
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
