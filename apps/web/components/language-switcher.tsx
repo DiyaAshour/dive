@@ -2,16 +2,17 @@
 
 import { Globe2 } from "lucide-react";
 import { useState } from "react";
-import { dictionary, type Locale } from "@/lib/i18n";
+import { GUEST_LOCALE_OPTIONS, type GuestLocale } from "@/lib/guest-market";
+import { guestMarketCopy } from "@/lib/guest-i18n";
 
-type Props = Readonly<{locale: Locale; compact?: boolean}>;
+type Props = Readonly<{locale: GuestLocale; compact?: boolean}>;
 
 export function LanguageSwitcher({locale, compact = false}: Props) {
-  const [value, setValue] = useState<Locale>(locale);
+  const [value, setValue] = useState<GuestLocale>(locale);
   const [saving, setSaving] = useState(false);
-  const copy = dictionary(locale);
+  const label = guestMarketCopy(locale).auto;
 
-  async function change(next: Locale) {
+  async function change(next: GuestLocale) {
     if (next === locale || saving) return;
     setValue(next);
     setSaving(true);
@@ -29,11 +30,10 @@ export function LanguageSwitcher({locale, compact = false}: Props) {
     }
   }
 
-  return <label className={compact ? "languageSwitcher compact" : "languageSwitcher"} title={copy.language.label}>
+  return <label className={compact ? "languageSwitcher compact" : "languageSwitcher"} title={label}>
     <Globe2 size={16}/>
-    <select aria-label={copy.language.label} value={value} disabled={saving} onChange={(event)=>void change(event.target.value as Locale)}>
-      <option value="en">{copy.language.english}</option>
-      <option value="ar">{copy.language.arabic}</option>
+    <select aria-label="Language" value={value} disabled={saving} onChange={(event)=>void change(event.target.value as GuestLocale)}>
+      {GUEST_LOCALE_OPTIONS.map((option)=><option value={option.code} key={option.code}>{option.label}</option>)}
     </select>
   </label>;
 }
