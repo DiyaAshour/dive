@@ -44,18 +44,32 @@ test("iPhone 16 Pro Max keeps the first screen compact and search-led",async({pa
   await expect(page.locator(".mobileSiteNav")).toBeVisible();
   await expect(page.locator(".desktopMarketSwitcher")).toBeHidden();
   await expect(page.locator(".premiumHeroCopy h1")).toBeVisible();
+  await expect(page.locator(".mobileAppNav")).toBeVisible();
   const metrics=await page.evaluate(()=>{
     const heading=document.querySelector<HTMLElement>(".premiumHeroCopy h1");
     const search=document.querySelector<HTMLElement>(".premiumSearchDock");
-    if(!heading||!search)throw new Error("home hero/search missing");
+    const nav=document.querySelector<HTMLElement>(".mobileAppNav");
+    if(!heading||!search||!nav)throw new Error("home mobile shell missing");
     return {
       headingSize:parseFloat(getComputedStyle(heading).fontSize),
       headingBottom:heading.getBoundingClientRect().bottom,
       searchTop:search.getBoundingClientRect().top,
+      navPosition:getComputedStyle(nav).position,
+      navBottom:window.innerHeight-nav.getBoundingClientRect().bottom,
     };
   });
   expect(metrics.headingSize).toBeLessThanOrEqual(38.5);
   expect(metrics.searchTop).toBeLessThan(650);
   expect(metrics.searchTop).toBeGreaterThan(metrics.headingBottom);
+  expect(metrics.navPosition).toBe("fixed");
+  expect(metrics.navBottom).toBeLessThan(40);
   await expectNoDocumentOverflow(page,"iPhone 16 Pro Max home");
+});
+
+test("mobile app navigation does not compete with hotel booking rail",async({page})=>{
+  await page.setViewportSize({width:430,height:932});
+  await page.goto("/hotel/demo-lowest-point-retreat?arrival=2026-09-01&departure=2026-09-03&adults=2&children=0");
+  await expect(page.locator(".hotelBookingRail")).toBeVisible();
+  await expect(page.locator(".mobileAppNav")).toHaveCount(0);
+  await expectNoDocumentOverflow(page,"iPhone hotel booking rail");
 });
