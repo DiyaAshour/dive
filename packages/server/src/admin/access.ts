@@ -53,10 +53,10 @@ export async function getPlatformAccessControl(actorUserId: string, query = "") 
   const normalizedQuery = query.trim().slice(0, 120);
   const now = new Date();
   const users = await database().user.findMany({
-    where: normalizedQuery ? {OR: [
-      {email: {contains: normalizedQuery, mode: "insensitive"}},
-      {displayName: {contains: normalizedQuery, mode: "insensitive"}},
-    ]} : undefined,
+    ...(normalizedQuery ? {where: {OR: [
+      {email: {contains: normalizedQuery, mode: "insensitive" as const}},
+      {displayName: {contains: normalizedQuery, mode: "insensitive" as const}},
+    ]}} : {}),
     select: {
       id: true,
       email: true,
@@ -263,7 +263,7 @@ export async function setPlatformHotelMembership(actorUserId: string, userId: st
       action: before ? "HOTEL_MEMBERSHIP_UPDATED_BY_OWNER" : "HOTEL_MEMBERSHIP_CREATED_BY_OWNER",
       entityType: "HotelMembership",
       entityId: membership.id,
-      before: before ? {role: before.role, status: before.status} : undefined,
+      ...(before ? {before: {role: before.role, status: before.status}} : {}),
       after: {role: membership.role, status: membership.status, userId},
     }});
     return membership;
