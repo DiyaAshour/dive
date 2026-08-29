@@ -16,8 +16,8 @@ function flagEmoji(countryCode: string) {
 
 export default async function HomePage() {
   const [hotels,destinations,market] = await Promise.all([
-    listFeaturedHotels(6),
-    listFeaturedDestinations({countryCode: "JO", limit: 5}),
+    listFeaturedHotels(6).catch(() => []),
+    listFeaturedDestinations({countryCode: "JO", limit: 5}).catch(() => []),
     requestGuestMarket(),
   ]);
   const locale=market.locale;
