@@ -25,7 +25,7 @@ function assertLocalDatabase() {
   const raw = process.env.DATABASE_URL?.trim();
   if (!raw) throw new Error("DATABASE_URL is missing. Create .env from .env.example first.");
   const url = new URL(raw);
-  const allowed = new Set(["localhost", "127.0.0.1", "::1", "postgres"]);
+  const allowed = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "postgres"]);
   if (!allowed.has(url.hostname)) {
     throw new Error(`Refusing to provision an administrator against non-local database host '${url.hostname}'.`);
   }
@@ -69,7 +69,7 @@ try {
       action: "LOCAL_ADMIN_PROVISIONED",
       entityType: "User",
       entityId: user.id,
-      before: existing ? {platformRole: existing.platformRole} : undefined,
+      ...(existing ? {before: {platformRole: existing.platformRole}} : {}),
       after: {platformRole: "PLATFORM_ADMIN", method: "local-development-provisioner"},
     }});
     return user;
