@@ -1,0 +1,9 @@
+model HotelPhotoCategoryAssignment {
+  photoId   String   @id
+  hotelId   String
+  category  String   @default("OTHER") @db.VarChar(32)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId, category])
+}
