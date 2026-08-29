@@ -1,0 +1,246 @@
+/* Global responsive system: phone, foldable, tablet, laptop, desktop, ultrawide and RTL.
+   Loaded last. Keep layout behavior centralized so feature styles cannot silently regress device support. */
+
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{width:100%;max-width:100%}
+body{min-width:0;overflow-x:clip}
+:where(main,section,article,aside,header,footer,nav,form,fieldset,div){min-width:0}
+:where(img,video,canvas,iframe){max-width:100%}
+:where(pre,.codeBlock){max-width:100%;overflow-x:auto}
+:where(p,h1,h2,h3,h4,strong,span,a,button,label){overflow-wrap:break-word}
+:where(button,a,input,select,textarea){touch-action:manipulation}
+
+/* Large desktop / ultrawide: stay centered, but do not look tiny on 2K/4K displays. */
+@media (min-width:1600px){
+  .shell{width:min(1320px,calc(100% - 96px))}
+  .partnerMain{max-width:1680px}
+  .adminMain{max-width:1760px}
+  .blogArticle{max-width:1220px}
+}
+
+/* Tablet + small laptop. */
+@media (min-width:781px) and (max-width:1180px){
+  .shell{width:min(100% - 40px,1220px)}
+  .premiumHeroGrid,.partnerHeroGrid,.partnerAuthShell,.partnerOnboardingShell,.premiumAuthShell{gap:34px}
+  .searchLayout{grid-template-columns:220px minmax(0,1fr)}
+  .premiumResultCard{grid-template-columns:minmax(210px,32%) minmax(0,1fr)}
+  .hotelInfoGrid{gap:24px}
+  .publicRoomProduct{grid-template-columns:minmax(220px,34%) minmax(0,1fr)}
+  .checkout{grid-template-columns:minmax(0,1fr)}
+  .checkout>aside{order:-1}
+  .accountLayout{grid-template-columns:1fr}
+  .accountSidebar{position:static}
+  .accountSidebar nav{display:flex;flex-direction:row;overflow-x:auto;scrollbar-width:none}
+  .accountSidebar nav::-webkit-scrollbar{display:none}
+  .accountSidebar nav a{flex:0 0 auto}
+  .blogArticleLayout{grid-template-columns:minmax(0,1fr) 200px;gap:32px}
+  .rewardsHeroGrid{grid-template-columns:1fr}
+  .partnerFeatureGrid,.partnerSteps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .adminKpiGrid,.partnerKpiGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+@media (max-width:780px){
+  /* Shared mobile fundamentals. */
+  .shell{width:calc(100% - 24px)!important;margin-inline:12px!important}
+  :where(input,select,textarea){font-size:16px!important;max-width:100%}
+  :where(.primary,.primaryButton,.secondaryButton,.resultCta,.bookRateButton,.bookingPrimaryAction,.bookingSecondaryAction,.bookingDangerAction){min-height:46px}
+  :where(.panel,.accountCard,.accountFormCard,.walletConvertCard,.walletActivityCard,.rewardsProgressCard,.rewardsActivityCard){max-width:100%}
+
+  /* Auth surfaces. */
+  .premiumAuthShell,.partnerAuthShell,.partnerOnboardingShell,.adminLoginShell{grid-template-columns:1fr!important;gap:24px!important;min-height:auto!important;padding-top:30px!important;padding-bottom:44px!important}
+  .authIntro h1,.partnerAuthIntro h1,.partnerOnboardingIntro h1,.adminLoginIntro h1{font-size:clamp(34px,10vw,44px)!important}
+  .premiumAuthCard,.partnerOnboardingCard,.adminLoginCard{width:100%;padding:20px!important;border-radius:18px!important}
+  .partnerSetupRail{overflow-x:auto;grid-template-columns:repeat(5,minmax(95px,1fr));padding-bottom:5px;scrollbar-width:none}
+  .partnerSetupRail::-webkit-scrollbar{display:none}
+  .adminLoginAssurances{grid-template-columns:1fr!important}
+
+  /* Account / trips / rewards / wallet. */
+  .accountLayout{display:block!important;padding-top:16px!important;padding-bottom:55px!important}
+  .accountSidebar{position:sticky!important;top:64px!important;z-index:30!important;margin-bottom:16px!important;padding:7px!important;border-radius:14px!important}
+  .accountSidebarTitle{display:none!important}
+  .accountSidebar nav{display:flex!important;grid-template-columns:none!important;flex-direction:row!important;gap:5px!important;overflow-x:auto;padding-bottom:1px;scrollbar-width:none;scroll-snap-type:x proximity}
+  .accountSidebar nav::-webkit-scrollbar{display:none}
+  .accountSidebar nav a{flex:0 0 auto!important;min-height:42px!important;display:flex!important;flex-direction:row!important;justify-content:center!important;padding:9px 11px!important;font-size:10px!important;scroll-snap-align:start}
+  .accountPageHead{margin-bottom:16px!important}
+  .accountPageHead h1{font-size:28px!important}
+  .accountMetrics{display:flex!important;grid-template-columns:none!important;overflow-x:auto;gap:8px!important;padding-bottom:3px;scroll-snap-type:x proximity;scrollbar-width:none}
+  .accountMetrics::-webkit-scrollbar{display:none}
+  .accountMetric{flex:0 0 145px;scroll-snap-align:start;padding:14px!important}
+  .accountMetric strong{font-size:25px!important}
+  .accountGrid,.accountFormSection,.securityPasswordForm{grid-template-columns:1fr!important}
+  .accountCard,.accountFormCard{padding:16px!important;border-radius:15px!important}
+  .accountFormActions{justify-content:stretch!important}
+  .accountFormActions>*{width:100%}
+  .sessionRow{align-items:flex-start!important;flex-direction:column!important}
+  .sessionRevoke{width:100%!important;justify-content:center!important}
+
+  .tripsOverview{grid-template-columns:1fr!important;padding:15px!important}
+  .tripsOverviewLead{align-items:flex-start!important}
+  .tripsMetrics{grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%}
+  .tripsTabs{display:flex!important;width:100%!important;overflow-x:auto;scrollbar-width:none}
+  .tripsTabs::-webkit-scrollbar{display:none}
+  .tripsTabs a{flex:0 0 auto;min-width:105px}
+  .tripBookingCard{grid-template-columns:1fr!important}
+  .tripBookingMedia{aspect-ratio:16/10;min-height:0!important}
+  .tripBookingContent{padding:15px!important;border-inline-end:0!important}
+  .tripStayDates{grid-template-columns:1fr 28px 1fr!important;padding:10px!important}
+  .tripBookingAside{grid-column:auto!important;grid-template-columns:1fr!important;padding:14px 15px!important}
+  .tripBookingAction{width:100%;min-height:46px}
+
+  .rewardsHero{grid-template-columns:1fr!important;padding:20px!important;border-radius:18px!important}
+  .rewardsBalance{text-align:start!important;min-width:0!important}
+  .rewardsBalance strong{font-size:38px!important}
+  .rewardsProgressTop,.rewardsSectionHead{align-items:flex-start!important;flex-direction:column!important}
+  .rewardsProgressStats{display:flex!important;width:100%;overflow-x:auto}
+  .rewardsProgressStats span{min-width:110px!important;flex:1}
+  .rewardsBenefits{grid-template-columns:1fr!important}
+  .rewardsActivityRow{grid-template-columns:auto minmax(0,1fr)!important}
+  .rewardsActivityRow>strong{grid-column:2!important}
+
+  .walletHero{grid-template-columns:1fr!important;min-height:0!important;padding:20px!important;border-radius:18px!important}
+  .walletHeroBalance>strong{font-size:38px!important}
+  .walletHeroFoot{flex-direction:column!important;gap:6px!important}
+  .walletUseCases,.walletConvertBalances,.walletConvertControl,.walletSplitPreview,.checkoutSecondaryPayments{grid-template-columns:1fr!important}
+  .walletConvertCard,.walletActivityCard{padding:16px!important;border-radius:16px!important}
+  .walletConvertFooter,.walletSectionHead{align-items:stretch!important;flex-direction:column!important}
+  .walletConvertButton{width:100%}
+  .checkoutWalletOption{grid-template-columns:auto auto minmax(0,1fr)!important}
+  .checkoutWalletUse{grid-column:2/-1!important;justify-self:start!important}
+
+  /* Public Rewards and Blog. */
+  .rewardsHeroGrid,.rewardsExplain{grid-template-columns:1fr!important;gap:26px!important}
+  .rewardsKeyVisual{grid-template-columns:repeat(3,minmax(150px,1fr))!important;overflow-x:auto;transform:none!important;padding:3px 0 18px;scrollbar-width:none}
+  .rewardsKeyVisual::-webkit-scrollbar{display:none}
+  .rewardsKeyVisual>div{min-height:190px!important}
+  .rewardsSteps,.rewardsLevels,.rewardsIntegrity{grid-template-columns:1fr!important}
+  .rewardsSection{padding-top:48px!important;padding-bottom:48px!important}
+  .rewardsFinal{padding:52px 0!important}
+
+  .blogHero{padding:34px 0!important}
+  .blogHeroInner{align-items:flex-start!important;flex-direction:column!important;gap:14px!important}
+  .blogHero h1{font-size:clamp(34px,10vw,48px)!important}
+  .blogLanguageLinks{white-space:normal!important;flex-wrap:wrap}
+  .blogListing{padding-top:24px!important;padding-bottom:55px!important}
+  .blogFeatured{grid-template-columns:1fr!important;gap:0!important;border-radius:18px!important}
+  .blogFeatured>img,.blogFeatured>.blogImagePlaceholder{min-height:0!important;aspect-ratio:16/10!important}
+  .blogFeatured>div:last-child,.blogExperience[dir="rtl"] .blogFeatured>div:last-child{padding:20px!important}
+  .blogFeatured h2{font-size:26px!important}
+  .blogGrid,.blogRelated>div{grid-template-columns:1fr!important}
+  .blogArticle{padding-top:22px!important;padding-bottom:60px!important}
+  .blogArticleHead{text-align:start!important}
+  .blogArticleHead h1{font-size:clamp(34px,10vw,48px)!important}
+  .blogArticleHead>p{font-size:15px!important}
+  .blogArticleMeta{justify-content:flex-start!important}
+  .blogArticleCover{border-radius:16px!important}
+  .blogArticleLayout{grid-template-columns:1fr!important;gap:22px!important;margin-top:28px!important}
+  .blogArticleBody{font-size:16px!important;line-height:1.75!important}
+  .blogArticleBody h2{font-size:27px!important;margin-top:36px!important}
+  .blogArticleRail{position:static!important;order:-1!important}
+  .blogEditorLayout,.blogEditorGrid,.blogEditorSide{grid-template-columns:1fr!important}
+  .blogEditorMain,.seoPanel,.seoFields{padding:15px!important}
+  .blogEditorToolbar{align-items:flex-start!important;flex-direction:column!important}
+  .blogEditorToolbar>div:last-child{width:100%;flex-wrap:wrap}
+
+  /* Partner marketing and onboarding. */
+  .partnerMarketingHeaderInner,.partnerAuthHeader>.shell,.partnerOnboardingHeader>.shell{height:auto!important;min-height:64px;padding-block:8px;gap:10px}
+  .partnerMarketingHeader nav{display:none!important}
+  .partnerHeroGrid{grid-template-columns:1fr!important;gap:24px!important;padding:46px 0 52px!important}
+  .partnerHero h1{font-size:clamp(36px,11vw,48px)!important}
+  .partnerHeroMock{padding:14px!important;border-radius:17px!important}
+  .partnerMockGrid{grid-template-columns:1fr 1fr!important}
+  .partnerFeatureSection,.partnerHow{padding:52px 0!important}
+  .partnerFeatureGrid,.partnerSteps{grid-template-columns:1fr!important}
+  .partnerFinalCta{align-items:flex-start!important;flex-direction:column!important;padding:21px!important}
+  .partnerFinalCta>a{width:100%;min-height:48px}
+
+  /* Admin: command bar instead of desktop rail, safe tables within local scrollers. */
+  .adminApp{display:block!important}
+  .adminSidebar{position:sticky!important;top:0!important;z-index:90!important;width:100%!important;height:auto!important;padding:8px 10px!important}
+  .adminBrand,.adminSidebarFoot{display:none!important}
+  .adminNav{display:flex!important;grid-template-columns:none!important;flex-direction:row!important;gap:5px!important;overflow-x:auto;scrollbar-width:none}
+  .adminNav::-webkit-scrollbar{display:none}
+  .adminNav>span{display:none!important}
+  .adminNav a{flex:0 0 auto;min-height:42px;padding:9px 10px!important;font-size:10px!important;border:1px solid rgba(255,255,255,.07)}
+  .adminMain{width:100%!important;padding:15px 12px 48px!important}
+  .adminTopbar,.adminSectionTitle,.adminPropertyTopbar{align-items:flex-start!important;flex-direction:column!important;gap:10px!important}
+  .adminTopbar h1{font-size:28px!important}
+  .adminSessionBadge{width:100%}
+  .adminKpiGrid,.adminPropertyKpis{display:flex!important;grid-template-columns:none!important;overflow-x:auto;gap:8px!important;padding-bottom:3px;scrollbar-width:none}
+  .adminKpiGrid::-webkit-scrollbar,.adminPropertyKpis::-webkit-scrollbar{display:none}
+  .adminKpiGrid article,.adminPropertyKpis article{flex:0 0 150px}
+  .adminFilterBar{grid-template-columns:1fr!important}
+  .adminPropertyDirectory>article{grid-template-columns:1fr!important;gap:12px!important}
+  .adminPropertyStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .adminAccessList article,.adminAuditList article{grid-template-columns:auto minmax(0,1fr)!important}
+
+  /* Booking management surfaces. */
+  .bookingCenterSection{padding-top:18px!important;padding-bottom:50px!important}
+  .bookingCenterSummary,.bookingToolsDynamic,.bookingToolsGrid{grid-template-columns:1fr!important}
+  .bookingHeroCard{padding:17px!important;border-radius:18px!important}
+  .bookingHeroTopline,.bookingPropertyBlock{align-items:flex-start!important;flex-direction:column!important}
+  .bookingStayFacts{grid-template-columns:1fr!important}
+  .bookingQuickActions{display:grid!important;grid-template-columns:1fr 1fr!important}
+  .bookingQuickActions a{justify-content:center;min-width:0}
+  .bookingPaymentCard{position:static!important}
+  .bookingActionHeader{padding:17px 15px 13px!important}
+  .bookingActionBody{padding:0 15px 16px!important}
+  .bookingActionFooter{padding:13px 15px 15px!important;flex-direction:column!important}
+  .bookingActionFooter>*{width:100%}
+
+  /* Generic dense forms and grids used by Partner/Admin tools. */
+  .setupGrid,.calendarForm,.grid2,.grid3{grid-template-columns:1fr!important}
+  .wideSetup{grid-column:auto!important}
+  .roomTable,.adminPropertyTable,.adminVerificationSection .adminTable,.adminBlogTable{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+
+/* Very narrow foldables / 320px class devices. */
+@media (max-width:360px){
+  .shell{width:calc(100% - 18px)!important;margin-inline:9px!important}
+  .wordmarkText{font-size:15px!important}
+  .siteHeaderInner{gap:5px!important}
+  .accountButton{padding-inline:8px!important}
+  .mobileSiteNav>summary{padding-inline:8px!important}
+  .mobileSiteNav>summary span{display:none}
+  .premiumHeroCopy h1,.partnerHero h1{font-size:32px!important}
+  .hotelExperience .premiumHotelHead h1{font-size:27px!important}
+  .hotelExperience .hotelQuickFacts{grid-template-columns:1fr!important}
+  .hotelExperience .hotelQuickFacts div+div{border-inline-start:0!important;border-top:1px solid var(--line)!important}
+  .hotelExperience .availabilityForm{grid-template-columns:1fr!important}
+  .hotelExperience .availabilityForm button{grid-column:auto!important}
+  .hotelExperience .hotelBookingRail{grid-template-columns:minmax(0,1fr) 116px!important}
+  .hotelExperience .hotelRailButton{min-width:0!important;padding-inline:9px!important;font-size:10px!important}
+  .tripsMetrics{grid-template-columns:1fr!important}
+  .tripStayDates{grid-template-columns:1fr!important}
+  .tripStayDates i{display:none}
+  .tripStayDates b{grid-column:auto!important}
+  .partnerMockGrid,.adminPropertyStats,.bookingQuickActions{grid-template-columns:1fr!important}
+  .rewardsProgressStats{display:grid!important;grid-template-columns:1fr!important}
+  .rewardsProgressStats span{min-width:0!important}
+}
+
+/* Landscape phones: prioritize vertical room and gallery space. */
+@media (max-height:520px) and (orientation:landscape) and (max-width:950px){
+  .siteHeaderInner{height:54px!important}
+  .searchSummaryBar{top:54px!important}
+  .premiumHeroGrid{padding:22px 0!important}
+  .hotelExperience .hotelDetailSection{padding-bottom:88px!important}
+  .hotelExperience .premiumGallery{height:210px!important}
+  .hotelExperience .hotelBookingRail{bottom:5px!important}
+  .hotelGalleryTopbar{padding:5px 9px!important}
+  .hotelGalleryCategories{padding:4px 8px!important}
+  .hotelGalleryStage{padding-block:4px!important}
+  .hotelGalleryCaption{display:none!important}
+  .hotelGalleryThumbs{padding-bottom:5px!important}
+  .partnerSidebar,.adminSidebar{position:relative!important}
+  .accountSidebar{position:relative!important;top:auto!important}
+}
+
+/* RTL-specific physical borders/alignment that legacy styles expressed with left/right. */
+html[dir="rtl"] .premiumResultPrice,html[dir="rtl"] .ratePrice,html[dir="rtl"] .publicRatePrice{text-align:start!important}
+html[dir="rtl"] .hotelFacilities{border-left:0!important;border-inline-start:1px solid var(--line);padding-left:0!important;padding-inline-start:28px}
+@media (max-width:1050px){html[dir="rtl"] .hotelFacilities{border-inline-start:0!important;padding-inline-start:0!important}}
+
+/* Reduced motion / accessibility without changing the visual identity. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
