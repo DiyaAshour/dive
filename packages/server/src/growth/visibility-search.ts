@@ -1,5 +1,6 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
 import { database } from "@platform/database";
+import { demoSearchFallback } from "../discovery/demo-fallback";
 import { searchHotels } from "../discovery/service";
 import { searchHotelsV2 } from "../discovery/search-v2";
 
@@ -87,12 +88,34 @@ async function applyVisibilityBoost<T extends Readonly<{id:string}>>(results:T[]
   return bestByHotel.size ? rankWithCampaigns(results,bestByHotel) : results.map((result)=>tagged(result,undefined));
 }
 
+async function safeVisibilityBoost<T extends Readonly<{id:string}>>(results:T[], input:DiscoverySearchInput, travelerCountry?:string):Promise<VisibilityTagged<T>[]> {
+  try {
+    return await applyVisibilityBoost(results,input,travelerCountry);
+  } catch (error) {
+    console.error("Visibility boost unavailable; continuing with organic results", error);
+    return results.map((result)=>tagged(result,undefined));
+  }
+}
+
 export async function searchHotelsWithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
   const base = await searchHotels(input);
-  return {...base, results: await applyVisibilityBoost(base.results,input,context.travelerCountry)};
+  return {...base, results: await safeVisibilityBoost(base.results,input,context.travelerCountry)};
 }
 
 export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
-  const base = await searchHotelsV2(input);
-  return {...base, results: await applyVisibilityBoost(base.results,input,context.travelerCountry)};
+  type SearchV2Result = Awaited<ReturnType<typeof searchHotelsV2>>;
+  let base: SearchV2Result;
+
+  try {
+    base = await searchHotelsV2(input);
+    if (base.results.length === 0) {
+      const demo = demoSearchFallback(input);
+      if (demo.results.length > 0) base = demo as unknown as SearchV2Result;
+    }
+  } catch (error) {
+    console.error("Production hotel search unavailable; serving demo catalog", error);
+    base = demoSearchFallback(input) as unknown as SearchV2Result;
+  }
+
+  return {...base, results: await safeVisibilityBoost(base.results,input,context.travelerCountry)};
 }
