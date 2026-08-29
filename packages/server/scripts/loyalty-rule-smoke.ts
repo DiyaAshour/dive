@@ -4,6 +4,7 @@ import {
   loyaltyPointsPerJod,
   loyaltyTierForNights,
   loyaltyTierProgress,
+  type LoyaltyRuleSet,
 } from "@platform/core";
 
 assert.equal(loyaltyTierForNights(0), "MEMBER");
@@ -43,6 +44,29 @@ assert.deepEqual(loyaltyTierProgress(15), {
   nextMinimumNights: null,
   nightsToNextTier: 0,
   percent: 100,
+});
+
+const customRules: LoyaltyRuleSet = {
+  eligibleCurrency: "JOD",
+  tiers: {
+    MEMBER: {minimumNights: 0, pointsPerJod: 5},
+    GOLD: {minimumNights: 3, pointsPerJod: 8},
+    BLACK: {minimumNights: 8, pointsPerJod: 12},
+  },
+};
+assert.equal(loyaltyTierForNights(2,customRules), "MEMBER");
+assert.equal(loyaltyTierForNights(3,customRules), "GOLD");
+assert.equal(loyaltyTierForNights(8,customRules), "BLACK");
+assert.equal(loyaltyPointsPerJod("GOLD",customRules), 8);
+assert.equal(calculateLoyaltyPoints(10,"GOLD","JOD",customRules), 80);
+assert.equal(calculateLoyaltyPoints(10,"GOLD","USD",customRules), 0);
+assert.deepEqual(loyaltyTierProgress(7,customRules), {
+  tier:"GOLD",
+  nextTier:"BLACK",
+  currentMinimumNights:3,
+  nextMinimumNights:8,
+  nightsToNextTier:1,
+  percent:80,
 });
 
 console.info(JSON.stringify({event: "loyalty_rule_smoke_passed"}));
