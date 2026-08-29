@@ -12,16 +12,42 @@ enum LoyaltyEntryType {
   EXPIRY
 }
 
+enum LoyaltyMembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model LoyaltyProgramConfig {
+  id                      String   @id
+  enabled                 Boolean  @default(true)
+  earningEnabled          Boolean  @default(true)
+  redemptionEnabled       Boolean  @default(true)
+  eligibleCurrency        String   @default("JOD") @db.Char(3)
+  memberPointsPerJod      Int      @default(10)
+  goldMinimumNights       Int      @default(5)
+  goldPointsPerJod        Int      @default(12)
+  blackMinimumNights      Int      @default(15)
+  blackPointsPerJod       Int      @default(15)
+  walletPointsPerJod      Int      @default(400)
+  minimumRedemptionPoints Int      @default(400)
+  redemptionStepPoints    Int      @default(20)
+  updatedByUserId         String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
 model LoyaltyAccount {
-  userId               String               @id
-  tier                 LoyaltyTier          @default(MEMBER)
-  pointsBalance        Int                  @default(0)
-  lifetimePointsEarned Int                  @default(0)
-  qualifyingNights     Int                  @default(0)
-  qualifyingStays      Int                  @default(0)
+  userId               String                  @id
+  status               LoyaltyMembershipStatus @default(ACTIVE)
+  tier                 LoyaltyTier             @default(MEMBER)
+  tierOverride         LoyaltyTier?
+  pointsBalance        Int                     @default(0)
+  lifetimePointsEarned Int                     @default(0)
+  qualifyingNights     Int                     @default(0)
+  qualifyingStays      Int                     @default(0)
   entries              LoyaltyLedgerEntry[]
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 }
 
 model LoyaltyLedgerEntry {
