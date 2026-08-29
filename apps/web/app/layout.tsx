@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { SiteLaunchGate } from "@/components/site-launch-gate";
 import { direction } from "@/lib/i18n";
 import { requestLocale } from "@/lib/request-locale";
+import { getSiteLaunchConfig } from "@/lib/site-launch";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 import "./phase2.css";
+import "./room-amenities-dnd.css";
 import "./account.css";
 import "./trips.css";
 import "./rewards.css";
@@ -25,6 +28,7 @@ import "./booking-center.css";
 import "./admin.css";
 import "./admin-email.css";
 import "./production-ops.css";
+import "./site-launch.css";
 import "./search-v2.css";
 
 export const metadata: Metadata = {
@@ -35,6 +39,6 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
-  const locale = await requestLocale();
-  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body>{children}</body></html>;
+  const [locale, launchConfig] = await Promise.all([requestLocale(), getSiteLaunchConfig()]);
+  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={locale} config={launchConfig}>{children}</SiteLaunchGate></body></html>;
 }
