@@ -2,6 +2,9 @@
    Browser zoom reduces the effective CSS viewport. Treat medium-width desktop
    space as compact navigation before translated labels begin to collide. */
 
+.desktopMarketSwitcher{display:block}
+.mobileMarketSwitcher{display:none}
+
 @media (min-width:781px) and (max-width:1180px){
   .siteHeader{position:sticky;top:0;z-index:90;background:rgba(255,255,255,.97);backdrop-filter:blur(18px)}
   .siteHeaderInner{height:68px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important}
@@ -17,6 +20,15 @@
   .mobileSiteNavPanel nav a,.mobilePartnerEntry,.mobileSiteNavPanel .partnerEntry{display:flex!important;align-items:center;gap:10px;min-height:46px;padding:10px 12px;border-radius:10px;color:#2f455a;font-size:13px;font-weight:750}
   .mobilePartnerEntry{margin-top:6px;border-top:1px solid var(--line);border-radius:0;padding-top:13px!important}
   .mobileSiteNavPanel .partnerEntry{width:100%;justify-content:flex-start!important;margin-top:2px!important;color:#667789!important}
+  .desktopMarketSwitcher{display:none!important}
+  .mobileMarketSwitcher{display:block!important;margin-top:6px;padding-top:9px;border-top:1px solid var(--line)}
+  .mobileMarketSwitcher>div>button{width:100%;min-height:44px;justify-content:flex-start!important}
+}
+
+@media (max-width:780px){
+  .desktopMarketSwitcher{display:none!important}
+  .mobileMarketSwitcher{display:block!important;margin-top:6px;padding-top:9px;border-top:1px solid var(--line)}
+  .mobileMarketSwitcher>div>button{width:100%;min-height:44px;justify-content:flex-start!important}
 }
 
 /* At zoom-equivalent tablet widths the marketing hero must reflow, not shrink. */
