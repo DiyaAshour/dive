@@ -16,6 +16,7 @@ export * from "./discovery/search-v2";
 export * from "./discovery/seo";
 export * from "./distribution/google-hotels";
 export * from "./media/service";
+export * from "./media/photo-gallery";
 export * from "./media/cleanup";
 export * from "./storage/provider";
 export * from "./storage/registry";
