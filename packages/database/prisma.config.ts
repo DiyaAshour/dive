@@ -3,11 +3,16 @@ import { defineConfig } from "prisma/config";
 
 config({path: new URL("../../.env", import.meta.url)});
 
-// `prisma generate` does not need a live database connection, but Prisma
-// still evaluates this config during Vercel builds. Keep generation working
-// when DATABASE_URL has not been injected yet; runtime/database commands still
-// require the real DATABASE_URL from the environment.
-const databaseUrl = process.env.DATABASE_URL ?? "postgresql://invalid:invalid@127.0.0.1:5432/invalid";
+// Vercel's Neon Marketplace integration may expose the database connection
+// under one of several standard variable names. Prefer DATABASE_URL, but keep
+// Prisma generation and migration deployment compatible with the generated
+// Neon variables as well.
+const databaseUrl = process.env.DATABASE_URL
+  ?? process.env.POSTGRES_PRISMA_URL
+  ?? process.env.POSTGRES_URL
+  ?? process.env.DATABASE_URL_UNPOOLED
+  ?? process.env.POSTGRES_URL_NON_POOLING
+  ?? "postgresql://invalid:invalid@127.0.0.1:5432/invalid";
 
 export default defineConfig({
   schema: "prisma",
