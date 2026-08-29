@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {loyaltyTierForNights, type HandMeKeyLoyaltyTier} from "@platform/core";
 import type {LoyaltyMemberUpdateInput, LoyaltyPointsAdjustmentInput, LoyaltyProgramSettingsInput} from "@platform/contracts";
-import {database} from "@platform/database";
+import {database, type Prisma} from "@platform/database";
 import {badRequest, notFound} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
 import {getLoyaltyProgramConfig, LOYALTY_PROGRAM_CONFIG_ID, loyaltyRuleSetFromProgram, mapProgramSettings} from "./config";
@@ -232,6 +232,6 @@ function accountSnapshot(account: {status: string; tier: string; tierOverride: s
   };
 }
 
-function jsonValue(value: unknown) {
-  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+function jsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
