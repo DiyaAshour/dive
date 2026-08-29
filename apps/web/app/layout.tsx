@@ -29,6 +29,7 @@ import "./booking-details.css";
 import "./booking-center.css";
 import "./admin.css";
 import "./admin-rewards.css";
+import "./admin-access.css";
 import "./admin-email.css";
 import "./production-ops.css";
 import "./site-launch.css";
