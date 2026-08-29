@@ -2,6 +2,20 @@
 .hotelMobileQuickNavHost,.mobileRoomCommerceHost,.mobileRoomRateControlHost{display:none}
 
 @media (max-width:780px){
+  .hotelExperience{width:100%;max-width:100%;overflow-x:clip}
+  .hotelExperience .hotelDetailSection,
+  .hotelExperience .hotelDetailSection>*,
+  .hotelExperience .hotelBookingWorkspace,
+  .hotelExperience .hotelBookingMain,
+  .hotelExperience .roomOfferList,
+  .hotelExperience .roomOfferCard,
+  .hotelExperience .publicRoomProduct,
+  .hotelExperience .publicRoomContent,
+  .hotelExperience .publicRateOptions,
+  .hotelExperience .publicRateRow,
+  .hotelExperience .publicRateCell,
+  .hotelExperience .publicRateAction{min-width:0!important;max-width:100%!important}
+
   .hotelExperience .hotelDetailSection{display:flex!important;flex-direction:column!important;padding-bottom:124px!important}
   .hotelExperience .hotelDetailSection>*{order:20}
   .hotelExperience .hotelDetailSection>.backLink{order:0}
@@ -18,101 +32,109 @@
   .hotelExperience .hotelDetailSection>.hotelInfoGrid{order:10}
   .hotelExperience .hotelDetailSection>.reviewsSection{order:11}
 
-  .hotelMobileQuickNavHost{display:block;position:sticky;top:64px;z-index:72;margin:7px -12px 10px;padding:6px 12px;background:rgba(255,255,255,.97);border-top:1px solid #e5ebf0;border-bottom:1px solid #dce5ec;backdrop-filter:blur(16px)}
-  .hotelMobileQuickNav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
-  .hotelMobileQuickNav a{min-width:0;min-height:40px;display:flex;align-items:center;justify-content:center;gap:4px;padding:7px 5px;border-radius:10px;color:#526578;font-size:9.5px;font-weight:800;white-space:nowrap}
+  .hotelMobileQuickNavHost{display:block;position:sticky;top:64px;z-index:72;width:100%;min-width:0;max-width:100%;margin:7px 0 10px;padding:6px;background:rgba(255,255,255,.97);border:1px solid #dce5ec;border-radius:13px;backdrop-filter:blur(16px);overflow:hidden}
+  .hotelMobileQuickNav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;min-width:0}
+  .hotelMobileQuickNav a{min-width:0;max-width:100%;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:5px 2px;border-radius:9px;color:#526578;font-size:8.8px;line-height:1.05;font-weight:800;white-space:normal;overflow:hidden;text-align:center}
+  .hotelMobileQuickNav a span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hotelMobileQuickNav a svg{flex:0 0 auto}
   .hotelMobileQuickNav a.primary{background:var(--navy);color:#fff;box-shadow:0 5px 14px rgba(16,40,64,.15)}
   .hotelMobileQuickNav a:not(.primary){background:#f6f8fa;border:1px solid #e2e8ee}
 
   .hotelExperience .premiumHotelHead{padding:14px!important}
   .hotelExperience .premiumHotelHead h1{font-size:27px!important;line-height:1.08!important}
-  .hotelExperience .premiumHotelHead>div>p{margin-bottom:8px!important}
+  .hotelExperience .premiumHotelHead>div>p{margin-bottom:8px!important;overflow-wrap:anywhere}
   .hotelExperience .premiumGallery{height:220px!important}
-  .hotelExperience .hotelTrustBar{margin:8px 0 0!important}
+  .hotelExperience .hotelTrustBar{margin:8px 0 0!important;max-width:100%;overflow-x:auto!important}
 
-  .hotelExperience .availabilityCard{margin:2px 0 12px!important;padding:10px!important;gap:7px!important}
+  .hotelExperience .availabilityCard{margin:2px 0 12px!important;padding:10px!important;gap:7px!important;min-width:0!important;max-width:100%!important}
   .hotelExperience .availabilityCard>div:first-child{display:none!important}
-  .hotelExperience .availabilityForm{grid-template-columns:1fr 1fr!important;gap:6px!important;padding:0!important;background:transparent!important}
-  .hotelExperience .availabilityForm label{min-height:54px;padding:7px 8px!important;border:1px solid #e2e8ee!important;background:#f8fafc!important;border-radius:10px!important}
+  .hotelExperience .availabilityForm{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important;padding:0!important;background:transparent!important;min-width:0!important;max-width:100%!important}
+  .hotelExperience .availabilityForm label{min-width:0!important;max-width:100%!important;min-height:54px;padding:7px 8px!important;border:1px solid #e2e8ee!important;background:#f8fafc!important;border-radius:10px!important;overflow:hidden}
   .hotelExperience .availabilityForm label span{font-size:8px!important}
-  .hotelExperience .availabilityForm input{font-size:14px!important;padding-top:2px!important}
-  .hotelExperience .availabilityForm button{grid-column:1/-1!important;min-height:47px!important;margin-top:1px!important;border-radius:11px!important}
+  .hotelExperience .availabilityForm input{display:block;width:100%!important;min-width:0!important;max-width:100%!important;font-size:14px!important;padding-top:2px!important}
+  .hotelExperience .availabilityForm button{grid-column:1/-1!important;min-width:0!important;max-width:100%!important;min-height:47px!important;margin-top:1px!important;border-radius:11px!important}
 
   .hotelExperience .hotelBookingWorkspace{display:block!important;margin-top:0!important}
   .hotelExperience .hotelBookingMain{min-width:0}
-  .hotelExperience .rateSectionHead{display:block!important;margin:12px 0 10px!important}
+  .hotelExperience .rateSectionHead{display:block!important;margin:12px 0 10px!important;min-width:0!important}
   .hotelExperience .rateSectionHead>div:last-child{display:none!important}
-  .hotelExperience .rateSectionHead h2{font-size:23px!important;line-height:1.08!important;margin:4px 0!important}
-  .hotelExperience .rateSectionHead p{font-size:10.5px!important;line-height:1.4!important}
+  .hotelExperience .rateSectionHead h2{font-size:23px!important;line-height:1.08!important;margin:4px 0!important;overflow-wrap:anywhere}
+  .hotelExperience .rateSectionHead p{font-size:10.5px!important;line-height:1.4!important;overflow-wrap:anywhere}
   .hotelExperience .roomOfferList{gap:16px!important}
   .hotelExperience .roomOfferCard{overflow:hidden!important;border:1px solid #dbe4eb!important;border-radius:19px!important;background:#fff!important;box-shadow:0 8px 24px rgba(16,40,64,.055)!important}
   .hotelExperience .publicRoomProduct{display:block!important;border:0!important;background:#fff!important}
   .hotelExperience .publicRoomMedia{height:205px!important;min-height:205px!important;background:#edf2f5!important}
-  .hotelExperience .publicRoomContent{padding:13px 13px 11px!important}
+  .hotelExperience .publicRoomContent{padding:13px 13px 11px!important;overflow:hidden}
   .hotelExperience .publicRoomContent>.eyebrow{font-size:8.5px!important}
-  .hotelExperience .publicRoomContent h3{font-size:21px!important;line-height:1.12!important;margin:4px 0 8px!important}
-  .hotelExperience .publicRoomFits{margin-bottom:7px!important}
+  .hotelExperience .publicRoomContent h3{font-size:21px!important;line-height:1.12!important;margin:4px 0 8px!important;overflow-wrap:anywhere}
+  .hotelExperience .publicRoomFits{min-width:0!important;max-width:100%!important;margin-bottom:7px!important}
   .hotelExperience .publicRoomFits>strong{font-size:9px!important}
-  .hotelExperience .publicRoomFits small{font-size:9.5px!important}
-  .hotelExperience .publicBedLayout{margin:6px 0!important}
-  .hotelExperience .publicBedLayout p{font-size:10.5px!important;margin:3px 0!important}
-  .hotelExperience .publicRoomExtras{gap:5px!important;margin:7px 0!important}
-  .hotelExperience .publicRoomExtras span{font-size:9px!important;padding:5px 7px!important}
-  .hotelExperience .publicRoomTags{gap:5px!important;margin-top:7px!important}
-  .hotelExperience .publicRoomTags span{font-size:8.5px!important;padding:5px 6px!important}
+  .hotelExperience .publicRoomFits small{font-size:9.5px!important;overflow-wrap:anywhere}
+  .hotelExperience .publicBedLayout{min-width:0!important;margin:6px 0!important}
+  .hotelExperience .publicBedLayout p{font-size:10.5px!important;margin:3px 0!important;overflow-wrap:anywhere}
+  .hotelExperience .publicRoomExtras{max-width:100%;gap:5px!important;margin:7px 0!important;overflow:hidden}
+  .hotelExperience .publicRoomExtras span{min-width:0;max-width:100%;font-size:9px!important;padding:5px 7px!important;overflow-wrap:anywhere}
+  .hotelExperience .publicRoomTags{max-width:100%;gap:5px!important;margin-top:7px!important;overflow-x:auto!important}
+  .hotelExperience .publicRoomTags span{flex:0 0 auto;max-width:88%;font-size:8.5px!important;padding:5px 6px!important;overflow:hidden;text-overflow:ellipsis}
   .hotelExperience .publicRoomTags span:nth-child(n+5){display:none!important}
-  .hotelExperience .publicRoomDescription{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:10.5px!important;line-height:1.45!important;margin:8px 0 0!important}
-  .hotelExperience .scarcityNote{display:inline-flex!important;margin-top:8px!important;font-size:9.5px!important}
+  .hotelExperience .publicRoomDescription{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:10.5px!important;line-height:1.45!important;margin:8px 0 0!important;overflow-wrap:anywhere}
+  .hotelExperience .scarcityNote{display:inline-flex!important;max-width:100%;margin-top:8px!important;font-size:9.5px!important;white-space:normal!important;overflow-wrap:anywhere}
 
-  .mobileRoomCommerceHost{display:block;margin-top:10px}
-  .mobileRoomCommerceSummary{display:flex;align-items:end;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid #dce6ed;border-radius:12px;background:linear-gradient(135deg,#f8fafc,#f4f8fb)}
-  .mobileRoomCommerceSummary>span{display:grid;gap:1px;min-width:0}
+  .mobileRoomCommerceHost{display:block;min-width:0;max-width:100%;margin-top:10px}
+  .mobileRoomCommerceSummary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;min-width:0;max-width:100%;padding:10px 11px;border:1px solid #dce6ed;border-radius:12px;background:linear-gradient(135deg,#f8fafc,#f4f8fb);overflow:hidden}
+  .mobileRoomCommerceSummary>span{display:grid;gap:1px;min-width:0;max-width:100%;overflow:hidden}
   .mobileRoomCommerceSummary small{font-size:8px;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:#718193}
-  .mobileRoomCommerceSummary strong{font-size:19px;line-height:1.05;color:#0b5d9e;white-space:nowrap}
-  .mobileRoomCommerceSummary>b{font-size:9.5px;color:#596b7d;text-align:end}
+  .mobileRoomCommerceSummary strong{display:block;min-width:0;max-width:100%;font-size:19px;line-height:1.05;color:#0b5d9e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobileRoomCommerceSummary>b{min-width:0;max-width:94px;font-size:9px;line-height:1.2;color:#596b7d;text-align:end;white-space:normal;overflow-wrap:anywhere}
 
-  .hotelExperience .publicRateOptions{padding:9px!important;background:#f4f7f9!important;border-top:1px solid #dbe4eb!important}
+  .hotelExperience .publicRateOptions{padding:9px!important;background:#f4f7f9!important;border-top:1px solid #dbe4eb!important;overflow:hidden!important}
   .hotelExperience .publicRateHead{display:none!important}
   .hotelExperience .publicRateRow{display:block!important;min-height:0!important;margin:0 0 9px!important;padding:0!important;border:1px solid #d9e3eb!important;border-radius:14px!important;background:#fff!important;overflow:hidden!important;box-shadow:0 3px 10px rgba(16,40,64,.035)!important}
-  .hotelExperience .publicRateCell{min-height:0!important;padding:8px 10px!important;border:0!important;border-bottom:1px solid #edf1f4!important}
+  .hotelExperience .publicRateCell{min-height:0!important;padding:8px 10px!important;border:0!important;border-bottom:1px solid #edf1f4!important;overflow:hidden!important}
   .hotelExperience .publicRateCell>span:first-child{display:none!important}
-  .hotelExperience .packageCell h4{font-size:14px!important;margin:0 0 5px!important}
-  .hotelExperience .rateBadges{gap:4px!important}
-  .hotelExperience .rateBadge,.hotelExperience .dealPill{font-size:8px!important;padding:4px 6px!important}
-  .hotelExperience .rateCancellationTitle{font-size:10px!important;line-height:1.35!important;margin:0 0 3px!important;color:#637386!important;font-weight:700!important}
-  .hotelExperience .positiveText,.hotelExperience .ratePenalty{font-size:9.5px!important;line-height:1.35!important;margin:0!important}
-  .hotelExperience .rateFeatureChips{gap:4px!important}
-  .hotelExperience .rateFeatureChips span{font-size:8.5px!important;padding:4px 6px!important}
-  .hotelExperience .rateReward{font-size:8.5px!important;line-height:1.35!important;margin:6px 0 0!important}
-  .hotelExperience .publicRateAction{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:3px 8px!important;align-items:end!important;padding:10px!important;border:0!important;background:#fbfcfd!important;text-align:start!important}
+  .hotelExperience .packageCell h4{font-size:14px!important;margin:0 0 5px!important;overflow-wrap:anywhere}
+  .hotelExperience .rateBadges{max-width:100%;gap:4px!important;overflow:hidden}
+  .hotelExperience .rateBadge,.hotelExperience .dealPill{max-width:100%;font-size:8px!important;padding:4px 6px!important;white-space:normal!important;overflow-wrap:anywhere}
+  .hotelExperience .rateCancellationTitle{font-size:10px!important;line-height:1.35!important;margin:0 0 3px!important;color:#637386!important;font-weight:700!important;overflow-wrap:anywhere}
+  .hotelExperience .positiveText,.hotelExperience .ratePenalty{font-size:9.5px!important;line-height:1.35!important;margin:0!important;overflow-wrap:anywhere}
+  .hotelExperience .rateFeatureChips{max-width:100%;gap:4px!important;overflow:hidden}
+  .hotelExperience .rateFeatureChips span{min-width:0;max-width:100%;font-size:8.5px!important;padding:4px 6px!important;white-space:normal!important;overflow-wrap:anywhere}
+  .hotelExperience .rateReward{font-size:8.5px!important;line-height:1.35!important;margin:6px 0 0!important;overflow-wrap:anywhere}
+  .hotelExperience .publicRateAction{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,88px)!important;gap:3px 8px!important;align-items:end!important;padding:10px!important;border:0!important;background:#fbfcfd!important;text-align:start!important;overflow:hidden!important}
   .hotelExperience .publicRateAction>span:first-child{display:none!important}
-  .hotelExperience .publicRateAction>.ratePrice{grid-column:1;grid-row:1;display:grid!important;gap:0!important;justify-items:start!important}
-  .hotelExperience .publicRateAction .ratePrice strong{font-size:23px!important;line-height:1!important}
+  .hotelExperience .publicRateAction>.ratePrice{grid-column:1;grid-row:1;display:grid!important;gap:0!important;min-width:0!important;max-width:100%!important;justify-items:start!important;overflow:hidden}
+  .hotelExperience .publicRateAction .ratePrice strong{display:block;max-width:100%;font-size:23px!important;line-height:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hotelExperience .publicRateAction .ratePrice small{font-size:8px!important}
   .hotelExperience .publicRateAction>small:not(.fxSourceAmount){display:none!important}
-  .hotelExperience .publicRateAction .fxSourceAmount{grid-column:1/-1;font-size:7.5px!important;line-height:1.3!important;margin-top:2px!important}
-  .hotelExperience .publicRateAction .rateInventory{grid-column:2;grid-row:1;align-self:start;font-size:8px!important;white-space:nowrap}
-  .hotelExperience .publicRateAction .bookRateButton{grid-column:1/-1!important;min-height:46px!important;margin-top:6px!important;border-radius:10px!important;font-size:12px!important}
+  .hotelExperience .publicRateAction .fxSourceAmount{grid-column:1/-1;max-width:100%;font-size:7.5px!important;line-height:1.3!important;margin-top:2px!important;overflow-wrap:anywhere}
+  .hotelExperience .publicRateAction .rateInventory{grid-column:2;grid-row:1;align-self:start;min-width:0;max-width:88px;font-size:8px!important;line-height:1.2;white-space:normal!important;text-align:end;overflow-wrap:anywhere}
+  .hotelExperience .publicRateAction .bookRateButton{grid-column:1/-1!important;width:100%!important;min-width:0!important;max-width:100%!important;min-height:46px!important;margin-top:6px!important;border-radius:10px!important;font-size:12px!important}
 
   .hotelExperience .roomOfferCard[data-mobile-rates-expanded="false"] .mobileSecondaryRate{display:none!important}
-  .mobileRoomRateControlHost{display:block}
-  .mobileRoomRateToggle{width:100%;min-height:44px;border:1px solid #cad8e3;border-radius:11px;background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;font-size:10.5px;font-weight:850}
-  .mobileRoomRateToggle svg{transition:transform .18s ease}
+  .mobileRoomRateControlHost{display:block;min-width:0;max-width:100%}
+  .mobileRoomRateToggle{width:100%;min-width:0;max-width:100%;min-height:44px;border:1px solid #cad8e3;border-radius:11px;background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;font-size:10.5px;font-weight:850;overflow:hidden}
+  .mobileRoomRateToggle span{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mobileRoomRateToggle svg{flex:0 0 auto;transition:transform .18s ease}
   .mobileRoomRateToggle.isOpen svg{transform:rotate(180deg)}
 
-  .hotelExperience .priceWatchPanel{margin-top:16px!important;padding:14px!important;border-radius:15px!important}
-  .hotelExperience .priceWatchPanel h3{font-size:17px!important;margin:4px 0 6px!important}
+  .hotelExperience .priceWatchPanel{min-width:0!important;max-width:100%!important;margin-top:16px!important;padding:14px!important;border-radius:15px!important;overflow:hidden}
+  .hotelExperience .priceWatchPanel h3{font-size:17px!important;margin:4px 0 6px!important;overflow-wrap:anywhere}
   .hotelExperience .priceWatchPanel>p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:10.5px!important;line-height:1.45!important}
-  .hotelExperience .priceWatchPanel label{min-width:0!important;width:100%!important;font-size:10px!important}
-  .hotelExperience .priceWatchPanel .secondaryButton{width:100%!important}
+  .hotelExperience .priceWatchPanel label{min-width:0!important;max-width:100%!important;width:100%!important;font-size:10px!important}
+  .hotelExperience .priceWatchPanel input{width:100%!important;min-width:0!important;max-width:100%!important}
+  .hotelExperience .priceWatchPanel .secondaryButton{width:100%!important;min-width:0!important;max-width:100%!important}
 
-  .hotelExperience .hotelTrustLayer{margin-top:20px!important}
-  .hotelExperience .hotelInfoGrid{margin-top:16px!important}
-  .hotelExperience .reviewsSection{margin-top:24px!important}
+  .hotelExperience .hotelTrustLayer{min-width:0!important;max-width:100%!important;margin-top:20px!important;overflow:hidden}
+  .hotelExperience .hotelInfoGrid{min-width:0!important;max-width:100%!important;margin-top:16px!important}
+  .hotelExperience .reviewsSection{min-width:0!important;max-width:100%!important;margin-top:24px!important}
 }
 
 @media (max-width:390px){
-  .hotelMobileQuickNav a{font-size:8.6px;padding-inline:3px}
+  .hotelMobileQuickNav a{font-size:8px;padding-inline:1px}
   .hotelExperience .publicRoomMedia{height:192px!important;min-height:192px!important}
+  .mobileRoomCommerceSummary{grid-template-columns:minmax(0,1fr) minmax(0,78px)}
   .mobileRoomCommerceSummary strong{font-size:18px}
+  .mobileRoomCommerceSummary>b{max-width:78px;font-size:8.3px}
+  .hotelExperience .publicRateAction{grid-template-columns:minmax(0,1fr) minmax(0,72px)!important}
+  .hotelExperience .publicRateAction .rateInventory{max-width:72px}
 }
