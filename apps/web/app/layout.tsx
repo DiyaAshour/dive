@@ -34,6 +34,7 @@ import "./sponsored-results.css";
 import "./search-v2.css";
 import "./property-content-manager.css";
 import "./hotel-gallery-lightbox.css";
+import "./room-product-visuals.css";
 import "./dashboard-clarity.css";
 
 export const metadata: Metadata = {
