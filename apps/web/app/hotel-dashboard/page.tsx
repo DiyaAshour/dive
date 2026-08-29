@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Building2, Plus, ShieldCheck } from "lucide-react";
-import { getHotelPublicContentForManagement, getHotelWorkspace, getPublishingReadiness, listHotelMedia, listUserHotels } from "@platform/server";
+import { getHotelPublicContentForManagement, getHotelWorkspace, getPublishingReadiness, listHotelMediaWithCategories, listUserHotels } from "@platform/server";
 import { PartnerSidebar } from "@/components/partner-sidebar";
 import { PartnerLanguageBar } from "@/components/partner-language-bar";
 import { currentUser } from "@/lib/server-session";
@@ -26,7 +26,7 @@ export default async function HotelDashboard({searchParams}: {searchParams: Prom
     getHotelWorkspace(user.id,selected.id),
     getHotelPublicContentForManagement(user.id,selected.id),
     getPublishingReadiness(user.id,selected.id),
-    listHotelMedia(user.id,selected.id),
+    listHotelMediaWithCategories(user.id,selected.id),
   ]);
   const ratePlanCount=workspace.roomTypes.reduce((sum,roomType)=>sum+roomType.ratePlans.length,0);
   const serviceRate=Number(workspace.serviceRate)*100;
