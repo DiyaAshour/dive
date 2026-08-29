@@ -38,6 +38,7 @@ import "./room-product-visuals.css";
 import "./dashboard-clarity.css";
 import "./mobile-first.css";
 import "./responsive-global.css";
+import "./responsive-polish.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
