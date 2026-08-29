@@ -9,20 +9,22 @@ import type {SiteLaunchConfig} from "@/lib/site-launch";
 type Props = Readonly<{
   locale: string;
   config: SiteLaunchConfig;
+  initialNow: number;
   children: ReactNode;
 }>;
 
 const BYPASS_PREFIXES = ["/admin", "/api", "/partner", "/hotel-dashboard"];
 
-export function SiteLaunchGate({locale, config, children}: Props) {
+export function SiteLaunchGate({locale, config, initialNow, children}: Props) {
   const pathname = usePathname() || "/";
   const target = useMemo(() => config.launchAt ? new Date(config.launchAt).getTime() : null, [config.launchAt]);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(initialNow);
   const bypass = BYPASS_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const active = config.enabled && target !== null && now < target;
 
   useEffect(() => {
     if (!config.enabled || target === null || bypass) return;
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [config.enabled, target, bypass]);
