@@ -36,35 +36,51 @@ export function HotelGalleryController({photos,hotelName,locale}:{photos:Gallery
 
   useEffect(()=>{
     if(!photos.length)return;
-    const gallery=document.querySelector(".premiumGallery");
-    if(!gallery)return;
-    const images=Array.from(gallery.querySelectorAll("img"));
-    images.forEach((image,index)=>{
-      image.setAttribute("data-hmk-gallery-index",String(index));
+
+    const premiumImages=Array.from(document.querySelectorAll<HTMLImageElement>(".premiumGallery img"));
+    const roomImages=Array.from(document.querySelectorAll<HTMLImageElement>(".publicRoomMedia img"));
+    const bindings:Array<{image:HTMLImageElement;photo:GalleryPhoto;onClick:()=>void;onKeyDown:(event:KeyboardEvent)=>void}>=[];
+
+    function matchingPhoto(image:HTMLImageElement,fallback?:GalleryPhoto){
+      const rawSrc=image.getAttribute("src");
+      return photos.find((photo)=>photo.url===rawSrc||photo.url===image.currentSrc||photo.url===image.src)??fallback;
+    }
+
+    function bind(image:HTMLImageElement,photo:GalleryPhoto){
       image.setAttribute("role","button");
       image.setAttribute("tabindex","0");
       image.setAttribute("aria-label",ar?`فتح معرض صور ${hotelName}`:`Open ${hotelName} photo gallery`);
+      const activate=()=>{
+        setFilter("ALL");
+        setSelectedId(photo.id);
+        setOpen(true);
+      };
+      const onClick=()=>activate();
+      const onKeyDown=(event:KeyboardEvent)=>{
+        if(!(["Enter"," "].includes(event.key)))return;
+        event.preventDefault();
+        activate();
+      };
+      image.addEventListener("click",onClick);
+      image.addEventListener("keydown",onKeyDown);
+      bindings.push({image,photo,onClick,onKeyDown});
+    }
+
+    premiumImages.forEach((image,index)=>{
+      const photo=matchingPhoto(image,photos[index]);
+      if(photo)bind(image,photo);
     });
-    const activate=(target:EventTarget|null)=>{
-      if(!(target instanceof HTMLElement))return;
-      const image=target.closest<HTMLImageElement>(".premiumGallery img");
-      if(!image)return;
-      const index=Number(image.dataset.hmkGalleryIndex??0);
-      const photo=photos[index]??photos[0];
-      if(!photo)return;
-      setFilter("ALL");
-      setSelectedId(photo.id);
-      setOpen(true);
+    roomImages.forEach((image)=>{
+      const photo=matchingPhoto(image);
+      if(photo)bind(image,photo);
+    });
+
+    return()=>{
+      bindings.forEach(({image,onClick,onKeyDown})=>{
+        image.removeEventListener("click",onClick);
+        image.removeEventListener("keydown",onKeyDown);
+      });
     };
-    const onClick=(event:Event)=>activate(event.target);
-    const onKeyDown=(event:Event)=>{
-      if(!(event instanceof KeyboardEvent)||!(["Enter"," "].includes(event.key)))return;
-      const target=event.target;
-      if(target instanceof HTMLElement&&target.closest(".premiumGallery img")){event.preventDefault();activate(target);}
-    };
-    gallery.addEventListener("click",onClick);
-    gallery.addEventListener("keydown",onKeyDown);
-    return()=>{gallery.removeEventListener("click",onClick);gallery.removeEventListener("keydown",onKeyDown);};
   },[photos,hotelName,ar]);
 
   useEffect(()=>{
