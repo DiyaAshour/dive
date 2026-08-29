@@ -23,7 +23,15 @@ export default function AdminLoginForm({nextPath, locale}: Readonly<{nextPath: s
         body: JSON.stringify({email: form.get("email"), password: form.get("password")}),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(locale === "ar" && payload?.error?.code === "INVALID_ADMIN_CREDENTIALS" ? "بيانات دخول المدير غير صحيحة" : payload?.error?.message ?? copy.invalidCredentials);
+      if (!response.ok) {
+        const code = payload?.error?.code;
+        const message = locale === "ar" && code === "INVALID_ADMIN_CREDENTIALS"
+          ? "بيانات دخول المدير غير صحيحة"
+          : locale === "ar" && code === "ADMIN_DATABASE_NOT_READY"
+            ? "قاعدة بيانات لوحة التحكم المحلية غير جاهزة. شغّل ملف repair-local-admin.ps1 ثم حاول مرة أخرى."
+            : payload?.error?.message ?? copy.invalidCredentials;
+        throw new Error(message);
+      }
       window.location.assign(nextPath);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : copy.invalidCredentials);
