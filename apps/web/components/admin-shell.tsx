@@ -32,6 +32,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const financeLabel = locale === "ar" ? "الدفعات والتسويات" : "Payouts & settlement";
   const rewardsLabel = locale === "ar" ? "المكافآت والعضويات" : "Rewards & memberships";
   const launchLabel = locale === "ar" ? "ما قبل الإطلاق" : "Pre-launch";
+  const accessLabel = locale === "ar" ? "المستخدمون والصلاحيات" : "Users & access";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
       <div className="adminBrand"><Brand href="/admin" inverse/><span>{admin.name}</span></div>
@@ -51,7 +52,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <span>{admin.control}</span>
         <Link className={active === "rewards" ? "active" : ""} href="/admin/rewards"><Gem size={17}/>{rewardsLabel}</Link>
         <Link className={active === "launch" ? "active" : ""} href="/admin/site"><Rocket size={17}/>{launchLabel}</Link>
-        <Link className={active === "access" ? "active" : ""} href={dashboardHref("access")}><Users size={17}/>{admin.access}</Link>
+        <Link className={active === "access" ? "active" : ""} href="/admin/access"><Users size={17}/>{accessLabel}</Link>
         <Link className={active === "audit" ? "active" : ""} href={dashboardHref("audit")}><Activity size={17}/>{admin.audit}</Link>
       </nav>
       <div className="adminSidebarFoot">
