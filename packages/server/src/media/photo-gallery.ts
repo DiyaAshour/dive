@@ -9,7 +9,13 @@ export async function listHotelMediaWithCategories(actorUserId: string, hotelId:
   const media = await listHotelMedia(actorUserId, hotelId);
   const photoIds = media.flatMap((item) => item.photo ? [item.photo.id] : []);
   const categoryMap = await hotelPhotoCategoryMap(hotelId, photoIds);
-  return media.map((item) => item.photo ? {...item, photo: {...item.photo, category: categoryMap.get(item.photo.id) ?? defaultCategory(item.photo.roomTypeId)}} : item);
+  return media.map((item) => ({
+    ...item,
+    photo: item.photo ? {
+      ...item.photo,
+      category: categoryMap.get(item.photo.id) ?? defaultCategory(item.photo.roomTypeId),
+    } : null,
+  }));
 }
 
 export async function createMediaUploadWithCategory(actorUserId: string, hotelId: string, input: CreateMediaUploadInput) {
