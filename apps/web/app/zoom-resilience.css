@@ -58,3 +58,29 @@
   .premiumSearchDock label:nth-of-type(4){grid-column:auto}
   .premiumSearchDock button{grid-column:1/-1}
 }
+
+/* Large phones such as iPhone 16 Pro Max: put search in the first-screen story. */
+@media (max-width:480px){
+  .siteHeaderInner{height:60px!important;gap:7px!important}
+  .wordmark{gap:7px!important}
+  .wordmarkIcon{width:34px!important;height:34px!important;border-radius:10px!important}
+  .wordmarkText{font-size:17px!important}
+  .siteActions{gap:5px!important}
+  .accountButton{min-width:42px!important;min-height:42px!important;padding:0 9px!important}
+  .accountButton span{display:none!important}
+  .mobileSiteNav>summary{min-width:42px!important;min-height:42px!important;padding-inline:9px!important}
+  .mobileSiteNav>summary span{display:none!important}
+
+  .premiumHeroGrid{padding:22px 0 25px!important;gap:10px!important}
+  .heroKicker{font-size:10px!important;padding:6px 9px!important;letter-spacing:.045em!important}
+  .premiumHeroCopy h1{font-size:clamp(31px,8.8vw,38px)!important;line-height:1.04!important;letter-spacing:-.04em!important;margin:9px 0 10px!important}
+  .premiumHeroCopy>p{font-size:14px!important;line-height:1.5!important;margin-block:0!important}
+  .heroConfidence{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:8px!important;margin-top:13px!important;padding-bottom:2px!important;scrollbar-width:none}
+  .heroConfidence::-webkit-scrollbar{display:none}
+  .heroConfidence span{flex:0 0 auto!important;font-size:10px!important;white-space:nowrap!important;padding:6px 8px!important;border:1px solid rgba(16,40,64,.09);border-radius:999px;background:rgba(255,255,255,.66)}
+  .premiumSearchDock{margin:7px 0 0!important;padding:6px!important;border-radius:15px!important}
+  .premiumSearchDock label{padding:8px 9px!important}
+  .premiumSearchDock label>span{font-size:9px!important}
+  .premiumSearchDock small{font-size:9px!important}
+  .premiumSearchDock button{min-height:48px!important;margin-top:4px!important}
+}
