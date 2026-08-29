@@ -1,5 +1,3 @@
-import "server-only";
-
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { CreateBookingHoldInput } from "@platform/contracts";
 import { getDemoBookingQuote, getPublicHotelDetails } from "@platform/server";
@@ -138,21 +136,17 @@ function encodeDemoBookingToken(payload: DemoBookingPayload): string {
 
 function decodeDemoBookingToken(token: string | null): DemoBookingPayload | null {
   if (!token) return null;
-  const [prefix, body, suppliedSignature, extra] = token.split(".");
-  if (prefix !== "demo" || body !== "v1" || !suppliedSignature || extra) {
-    // Tokens are emitted as demo.v1.<payload>.<signature>; parse that shape below.
-    const parts = token.split(".");
-    if (parts.length !== 4 || `${parts[0]}.${parts[1]}` !== TOKEN_PREFIX) return null;
-    return decodeBody(parts[2]!, parts[3]!);
-  }
-  return null;
-}
+  const parts = token.split(".");
+  if (parts.length !== 4 || `${parts[0]}.${parts[1]}` !== TOKEN_PREFIX) return null;
+  const body = parts[2];
+  const suppliedSignature = parts[3];
+  if (!body || !suppliedSignature) return null;
 
-function decodeBody(body: string, suppliedSignature: string): DemoBookingPayload | null {
   const expected = signature(body);
   const supplied = Buffer.from(suppliedSignature);
   const wanted = Buffer.from(expected);
   if (supplied.length !== wanted.length || !timingSafeEqual(supplied, wanted)) return null;
+
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as DemoBookingPayload;
     if (parsed.version !== 1 || !parsed.bookingId?.startsWith("demo-booking-") || !parsed.selection?.hotelId?.startsWith("demo-")) return null;
