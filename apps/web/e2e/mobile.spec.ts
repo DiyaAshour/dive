@@ -84,13 +84,23 @@ test.describe("mobile-first traveler flow", () => {
 
     const essentials = page.locator(".stayEssentials");
     await expect(essentials).toBeVisible();
-    const quickStrip = essentials.locator(".stayEssentialsQuick > div");
-    const quickStyle = await quickStrip.evaluate((element) => {
+    const quickGrid = essentials.locator(".stayEssentialsQuick > div");
+    const quickStyle = await quickGrid.evaluate((element) => {
       const style = getComputedStyle(element);
-      return {display:style.display,overflowX:style.overflowX};
+      return {display:style.display,overflowX:style.overflowX,gridTemplateColumns:style.gridTemplateColumns};
     });
-    expect(quickStyle.display).toBe("flex");
-    expect(["auto","scroll"]).toContain(quickStyle.overflowX);
+    expect(quickStyle.display).toBe("grid");
+    expect(quickStyle.overflowX).not.toBe("auto");
+    expect(quickStyle.gridTemplateColumns.split(" ").length).toBe(2);
+
+    const quickAmenities = essentials.locator(".quickAmenity");
+    if (await quickAmenities.count() >= 2) {
+      const firstQuick = await quickAmenities.nth(0).boundingBox();
+      const secondQuick = await quickAmenities.nth(1).boundingBox();
+      expect(firstQuick).not.toBeNull();
+      expect(secondQuick).not.toBeNull();
+      expect(Math.abs(firstQuick!.y-secondQuick!.y)).toBeLessThanOrEqual(2);
+    }
 
     const groups = essentials.locator(".stayEssentialGroup");
     if (await groups.count() >= 2) {
