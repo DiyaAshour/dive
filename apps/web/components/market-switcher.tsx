@@ -119,39 +119,38 @@ export function MarketSwitcher({locale,currency,countryCode=null,edge}:Props) {
     </button>
 
     {open&&<div className={styles.panel} role="dialog" aria-label={copy.title} dir={locale==="ar"?"rtl":"ltr"}>
-      <div className={styles.head}>
-        <div>
-          <h3>{copy.title}</h3>
-          <p>{copy.subtitle}</p>
-        </div>
-      </div>
-
+      <div className={styles.head}><div><h3>{copy.title}</h3><p>{copy.subtitle}</p></div></div>
       {marketName&&<div className={styles.marketHint}><MapPin size={14}/><span>{copy.detected}: {marketName}</span></div>}
 
       <div className={styles.grid}>
-        <label className={styles.field}>
+        <div className={styles.field}>
           <span className={styles.label}><Languages size={14}/>{copy.language}</span>
-          <span className={styles.selectWrap}>
-            <select className={styles.select} aria-label={copy.language} value={localeValue} disabled={saving} onChange={(event)=>setLocaleValue(event.target.value as GuestLocale)}>
-              {GUEST_LOCALE_OPTIONS.map((option)=><option value={option.code} key={option.code}>{LANGUAGE_FLAGS[option.code]} {option.label}</option>)}
-            </select>
-            <ChevronDown className={styles.selectArrow} size={15}/>
-          </span>
-        </label>
+          <div className={styles.optionGrid}>
+            {GUEST_LOCALE_OPTIONS.map((option)=><button type="button" key={option.code} disabled={saving} aria-pressed={localeValue===option.code} className={`${styles.optionCard} ${localeValue===option.code?styles.optionActive:""}`} onClick={()=>setLocaleValue(option.code)}>
+              <span className={styles.optionFlag}>{LANGUAGE_FLAGS[option.code]}</span>
+              <span className={styles.optionText}><strong>{option.label}</strong><small>{option.code.toUpperCase()}</small></span>
+            </button>)}
+          </div>
+          <select className={styles.nativeMirror} aria-label={copy.language} value={localeValue} disabled={saving} onChange={(event)=>setLocaleValue(event.target.value as GuestLocale)} tabIndex={-1}>
+            {GUEST_LOCALE_OPTIONS.map((option)=><option value={option.code} key={option.code}>{LANGUAGE_FLAGS[option.code]} {option.label}</option>)}
+          </select>
+        </div>
 
-        <label className={styles.field}>
+        <div className={styles.field}>
           <span className={styles.label}><Coins size={14}/>{copy.currency}</span>
-          <span className={styles.selectWrap}>
-            <select className={styles.select} aria-label={copy.currency} value={currencyValue} disabled={saving} onChange={(event)=>setCurrencyValue(event.target.value as GuestCurrency)}>
-              {currencies.map((code)=><option value={code} key={code}>{currencyFlag(code)} {code} · {currencyDisplayName(code,locale)}{hasReferenceRate(code)?"":" *"}</option>)}
-            </select>
-            <ChevronDown className={styles.selectArrow} size={15}/>
-          </span>
-        </label>
+          <div className={`${styles.optionGrid} ${styles.currencyOptionGrid}`}>
+            {currencies.map((code)=><button type="button" key={code} disabled={saving} aria-pressed={currencyValue===code} className={`${styles.optionCard} ${currencyValue===code?styles.optionActive:""}`} onClick={()=>setCurrencyValue(code)}>
+              <span className={styles.optionFlag}>{currencyFlag(code)}</span>
+              <span className={styles.optionText}><strong>{code}</strong><small>{currencyDisplayName(code,locale)}{hasReferenceRate(code)?"":" *"}</small></span>
+            </button>)}
+          </div>
+          <select className={styles.nativeMirror} aria-label={copy.currency} value={currencyValue} disabled={saving} onChange={(event)=>setCurrencyValue(event.target.value as GuestCurrency)} tabIndex={-1}>
+            {currencies.map((code)=><option value={code} key={code}>{currencyFlag(code)} {code} · {currencyDisplayName(code,locale)}{hasReferenceRate(code)?"":" *"}</option>)}
+          </select>
+        </div>
       </div>
 
       {error&&<p className={styles.error}>{copy.error}</p>}
-
       <div className={styles.actions}>
         <button className={styles.cancel} type="button" disabled={saving} onClick={resetAndClose}>{copy.cancel}</button>
         <button className={styles.apply} type="button" disabled={!dirty||saving} onClick={()=>void apply()}>{saving?copy.saving:copy.apply}</button>
