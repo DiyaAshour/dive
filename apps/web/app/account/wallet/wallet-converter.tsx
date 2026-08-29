@@ -12,6 +12,8 @@ type Props = {
   pointsPerJod: number;
   minimumRedemptionPoints: number;
   redemptionStepPoints: number;
+  redemptionAvailable: boolean;
+  unavailableReason: string | null;
 };
 
 type WalletResponse = {
@@ -34,7 +36,7 @@ export function WalletConverter(props:Props) {
   const [error,setError] = useState<string|null>(null);
 
   const normalizedMax = pointsBalance - (pointsBalance % props.redemptionStepPoints);
-  const valid = points >= props.minimumRedemptionPoints && points <= pointsBalance && points % props.redemptionStepPoints === 0;
+  const valid = props.redemptionAvailable && points >= props.minimumRedemptionPoints && points <= pointsBalance && points % props.redemptionStepPoints === 0;
   const value = useMemo(()=>points / props.pointsPerJod,[points,props.pointsPerJod]);
 
   async function convert() {
@@ -53,7 +55,7 @@ export function WalletConverter(props:Props) {
       setWalletBalance(payload.data.balance);
       const nextPoints = Math.max(0,pointsBalance-points);
       setPointsBalance(nextPoints);
-      setPoints(normalizeDefault(nextPoints,props.minimumRedemptionPoints,props.redemptionStepPoints));
+      setPoints(normalizeDefault(nextPoints,payload.data.minimumRedemptionPoints,payload.data.redemptionStepPoints));
       setMessage(ar?`تمت إضافة ${value.toFixed(2)} ${props.currency} إلى محفظتك.`:`${value.toFixed(2)} ${props.currency} was added to your Wallet.`);
     } catch (cause) {
       setError(cause instanceof Error?cause.message:(ar?"تعذر تحويل النقاط":"Could not convert points"));
@@ -63,7 +65,7 @@ export function WalletConverter(props:Props) {
   }
 
   function selectAll() {
-    if (normalizedMax >= props.minimumRedemptionPoints) setPoints(normalizedMax);
+    if (props.redemptionAvailable && normalizedMax >= props.minimumRedemptionPoints) setPoints(normalizedMax);
   }
 
   return <section className="walletConvertCard">
@@ -72,15 +74,17 @@ export function WalletConverter(props:Props) {
       <div><span className="accountCardLabel">{ar?"تحويل المكافآت":"Convert Rewards"}</span><h2>{ar?"حوّل نقاطك إلى رصيد حجز":"Turn points into booking credit"}</h2><p>{ar?`${props.pointsPerJod.toLocaleString()} نقطة = 1 ${props.currency}. الرصيد يبقى في HandMeKey Wallet ويمكن استخدامه في الحجوزات.`:`${props.pointsPerJod.toLocaleString()} points = 1 ${props.currency}. Credit stays in HandMeKey Wallet and can be used on bookings.`}</p></div>
     </div>
 
+    {props.unavailableReason && <div className="alertCard" style={{marginTop:14}}><div><strong>{ar?"التحويل غير متاح حاليًا":"Conversion currently unavailable"}</strong><p>{props.unavailableReason}</p></div></div>}
+
     <div className="walletConvertBalances">
       <div><Coins size={17}/><span>{ar?"نقاطك":"Your points"}</span><strong>{pointsBalance.toLocaleString()}</strong></div>
       <div><WalletCards size={17}/><span>{ar?"رصيد المحفظة":"Wallet balance"}</span><strong>{walletBalance.toFixed(2)} {props.currency}</strong></div>
     </div>
 
     <div className="walletConvertControl">
-      <label><span>{ar?"عدد النقاط للتحويل":"Points to convert"}</span><input type="number" min={props.minimumRedemptionPoints} max={Math.max(props.minimumRedemptionPoints,normalizedMax)} step={props.redemptionStepPoints} value={points || ""} onChange={(event)=>setPoints(Number(event.target.value)||0)}/></label>
+      <label><span>{ar?"عدد النقاط للتحويل":"Points to convert"}</span><input disabled={!props.redemptionAvailable} type="number" min={props.minimumRedemptionPoints} max={Math.max(props.minimumRedemptionPoints,normalizedMax)} step={props.redemptionStepPoints} value={points || ""} onChange={(event)=>setPoints(Number(event.target.value)||0)}/></label>
       <div className="walletConvertEquals"><span>{ar?"ستحصل على":"You’ll receive"}</span><strong>{valid?value.toFixed(2):"0.00"} {props.currency}</strong></div>
-      <button type="button" className="walletAllButton" disabled={normalizedMax < props.minimumRedemptionPoints} onClick={selectAll}>{ar?"تحويل الحد المتاح":"Use available points"}</button>
+      <button type="button" className="walletAllButton" disabled={!props.redemptionAvailable||normalizedMax < props.minimumRedemptionPoints} onClick={selectAll}>{ar?"تحويل الحد المتاح":"Use available points"}</button>
     </div>
 
     <div className="walletConvertFooter">
