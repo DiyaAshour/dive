@@ -59,7 +59,8 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
 
   async function uploadImage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const files = form.getAll("image").filter((value): value is File => value instanceof File && value.size > 0);
     if (!files.length) return setMessage(ar?"اختر صورة واحدة على الأقل":"Choose at least one image");
     setBusy(true);
@@ -75,7 +76,7 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
           category: String(form.get("category") || "OTHER"),
         });
       }
-      event.currentTarget.reset();
+      formElement.reset();
       setImageFileNames([]);
       setUploadCategory("EXTERIOR");
       await refresh();
@@ -90,13 +91,14 @@ export default function MediaManager({hotelId, initialMedia, roomTypes, locale}:
 
   async function uploadDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const file = form.get("document");
     if (!(file instanceof File) || file.size === 0) return setMessage(ar?"اختر مستند تحقق أولًا":"Choose a verification document first");
     setBusy(true);
     try {
       await runUpload(file, {kind: "VERIFICATION_DOCUMENT", documentType: String(form.get("documentType") || "")});
-      event.currentTarget.reset();
+      formElement.reset();
       setDocumentFileName(null);
       await refresh();
       router.refresh();
