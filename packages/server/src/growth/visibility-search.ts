@@ -18,6 +18,7 @@ type CampaignSnapshot = Readonly<{
 }>;
 
 type VisibilityTag = Readonly<{sponsored: true; campaignId: string; extraCommissionPercent: number}>;
+type VisibilityTagged<T> = T & Readonly<{visibilityBoost: VisibilityTag | null}>;
 
 function snapshot(value: unknown): CampaignSnapshot | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -66,20 +67,23 @@ async function matchingCampaigns(hotelIds: string[], input: DiscoverySearchInput
   return bestByHotel;
 }
 
-function rankWithCampaigns<T extends Readonly<{id:string}>>(results: T[], bestByHotel: Map<string, CampaignSnapshot>) {
+function tagged<T extends Readonly<{id:string}>>(result:T, campaign:CampaignSnapshot | undefined):VisibilityTagged<T> {
+  return {...result,visibilityBoost:campaign ? {sponsored:true,campaignId:campaign.id,extraCommissionPercent:campaign.extraCommissionPercent} : null};
+}
+
+function rankWithCampaigns<T extends Readonly<{id:string}>>(results: T[], bestByHotel: Map<string, CampaignSnapshot>): VisibilityTagged<T>[] {
   return results.map((result, organicIndex) => {
     const campaign = bestByHotel.get(result.id);
     const uplift = campaign ? Math.min(12, campaign.extraCommissionPercent * 1.5) : 0;
-    const visibilityBoost: VisibilityTag | null = campaign ? {sponsored:true,campaignId:campaign.id,extraCommissionPercent:campaign.extraCommissionPercent} : null;
-    return {result: visibilityBoost ? {...result, visibilityBoost} : result, score: organicIndex - uplift, organicIndex};
+    return {result:tagged(result,campaign),score:organicIndex-uplift,organicIndex};
   }).sort((a,b)=>a.score-b.score||a.organicIndex-b.organicIndex).map((item)=>item.result);
 }
 
-async function applyVisibilityBoost<T extends Readonly<{id:string}>>(results:T[], input:DiscoverySearchInput, travelerCountry?:string) {
+async function applyVisibilityBoost<T extends Readonly<{id:string}>>(results:T[], input:DiscoverySearchInput, travelerCountry?:string):Promise<VisibilityTagged<T>[]> {
   const country = travelerCountry?.trim().toUpperCase();
-  if (!country || input.sort !== "RECOMMENDED" || results.length < 2) return results;
+  if (!country || input.sort !== "RECOMMENDED" || results.length < 2) return results.map((result)=>tagged(result,undefined));
   const bestByHotel = await matchingCampaigns(results.map((result)=>result.id), input, country);
-  return bestByHotel.size ? rankWithCampaigns(results,bestByHotel) : results;
+  return bestByHotel.size ? rankWithCampaigns(results,bestByHotel) : results.map((result)=>tagged(result,undefined));
 }
 
 export async function searchHotelsWithVisibilityBoost(input: DiscoverySearchInput, context: Readonly<{travelerCountry?: string}> = {}) {
