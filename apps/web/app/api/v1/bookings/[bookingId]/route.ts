@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { idempotencyKeySchema, modifyBookingSchema } from "@platform/contracts";
 import {
+  ApplicationError,
   bookingView,
   getBookingExperienceContext,
   modifyBooking,
@@ -10,11 +11,19 @@ import {
   walletAppliedToBooking,
 } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
-import { bookingAccessContext, idempotencyKey } from "@/lib/request-auth";
+import { demoBookingView } from "@/lib/demo-booking";
+import { bookingAccessContext, bookingToken, idempotencyKey } from "@/lib/request-auth";
 
 export async function GET(request: NextRequest, {params}: {params: Promise<{bookingId: string}>}) {
   try {
     const {bookingId} = await params;
+
+    if (bookingId.startsWith("demo-booking-")) {
+      const booking = await demoBookingView(bookingId, bookingToken(request));
+      if (!booking) throw new ApplicationError("INVALID_BOOKING_ACCESS", "Demo reservation access expired or is invalid", 401);
+      return ok(booking);
+    }
+
     const access = await bookingAccessContext(request);
     await requireBookingAccess(bookingId, access);
     const [booking, experience, walletApplied] = await Promise.all([
@@ -56,6 +65,9 @@ export async function GET(request: NextRequest, {params}: {params: Promise<{book
 export async function PATCH(request: NextRequest, {params}: {params: Promise<{bookingId: string}>}) {
   try {
     const {bookingId} = await params;
+    if (bookingId.startsWith("demo-booking-")) {
+      throw new ApplicationError("DEMO_BOOKING_READ_ONLY", "Demo reservations cannot be modified", 409);
+    }
     const parsed = modifyBookingSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return validationError(parsed.error);
     const parsedKey = idempotencyKeySchema.safeParse(idempotencyKey(request));
