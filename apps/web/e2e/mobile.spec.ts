@@ -164,9 +164,34 @@ test.describe("mobile-first traveler flow", () => {
     await expect(checkoutLink).toBeVisible();
     const checkoutHref = await checkoutLink.getAttribute("href");
     expect(checkoutHref).toMatch(/^\/checkout\?/);
+
+    await page.route("**/api/v1/wallet", async (route) => {
+      await route.fulfill({
+        status:200,
+        contentType:"application/json",
+        body:JSON.stringify({data:{currency:"JOD",balance:1000,pointsPerJod:100,minimumRedemptionPoints:100,redemptionStepPoints:100,convertiblePoints:0,convertibleAmount:0},error:null}),
+      });
+    });
     await page.goto(checkoutHref!);
     await expect(page.locator(".checkout")).toBeVisible();
     await expect(page.locator(".walletReserveButton")).toBeVisible();
+
+    const walletOption = page.locator(".checkoutWalletOption");
+    await expect(walletOption).toBeVisible();
+    await walletOption.locator('input[type="checkbox"]').check();
+    const walletAmount = page.locator(".checkoutWalletAmountField input");
+    await expect(walletAmount).toBeVisible();
+    const maximum = Number(await walletAmount.getAttribute("max"));
+    expect(maximum).toBeGreaterThan(0);
+    expect(Number(await walletAmount.inputValue())).toBeGreaterThan(0);
+
+    await walletAmount.fill("1");
+    await walletAmount.blur();
+    expect(Number(await walletAmount.inputValue())).toBe(1);
+    await expect(page.locator(".walletSplitPreview")).toBeVisible();
+
+    await page.locator(".checkoutWalletAmountMeta button").click();
+    expect(Number(await walletAmount.inputValue())).toBe(maximum);
     await expectNoHorizontalOverflow(page);
   });
 });
