@@ -27,7 +27,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   </>;
 
   return <header className="siteHeader">
-    <MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/>
+    <div className="desktopMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/></div>
     <div className="shell siteHeaderInner">
       <Brand />
       {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{navLinks}</nav>}
@@ -42,6 +42,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
           <div className="mobileSiteNavPanel">
             <nav aria-label={menuLabel}>{navLinks}</nav>
             <Link className="mobilePartnerEntry" href="/partner"><Building2 size={17}/>{copy.nav.partner}</Link>
+            <div className="mobileMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
             {user && <SignOutButton locale={market.baseLocale}/>} 
           </div>
         </details>}
