@@ -31,6 +31,18 @@ async function firstHotelHref(page: Page) {
   return href!;
 }
 
+async function setLocale(page: Page, locale: "ar"|"en"|"zh") {
+  await page.goto("/");
+  await page.evaluate(async (nextLocale) => {
+    await fetch("/api/v1/preferences/locale", {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({locale:nextLocale}),
+    });
+  }, locale);
+  await page.reload();
+}
+
 test("core marketplace is viewport-safe from 320px phones through HD desktop", async ({page}) => {
   for (const viewport of commerceViewports) {
     await page.setViewportSize({width:viewport.width,height:viewport.height});
@@ -80,15 +92,7 @@ test("secondary public surfaces are safe on phone, tablet and desktop", async ({
 test("Arabic RTL marketplace remains viewport-safe", async ({page}) => {
   for (const viewport of [{width:360,height:800},{width:768,height:1024}]) {
     await page.setViewportSize(viewport);
-    await page.goto("/");
-    await page.evaluate(async () => {
-      await fetch("/api/v1/preferences/locale", {
-        method:"POST",
-        headers:{"content-type":"application/json"},
-        body:JSON.stringify({locale:"ar"}),
-      });
-    });
-    await page.reload();
+    await setLocale(page,"ar");
     await expect(page.locator("html")).toHaveAttribute("dir","rtl");
     await expectViewportSafe(page, `rtl home ${viewport.width}`);
 
@@ -96,6 +100,21 @@ test("Arabic RTL marketplace remains viewport-safe", async ({page}) => {
     await expect(page.locator("h1").first()).toBeVisible();
     await expectViewportSafe(page, `rtl search ${viewport.width}`);
   }
+});
+
+test("Chinese mobile content and the global market switcher fit narrow screens", async ({page}) => {
+  await page.setViewportSize({width:320,height:700});
+  await setLocale(page,"zh");
+  await expect(page.locator("html")).toHaveAttribute("dir","ltr");
+  await expectViewportSafe(page,"zh home 320");
+
+  await page.getByRole("button",{name:"语言和货币"}).click();
+  await expect(page.locator('select[aria-label="货币"]')).toBeAttached();
+  await expectViewportSafe(page,"zh market switcher 320");
+
+  await page.goto("/search?destination=Amman");
+  await expect(page.locator(".premiumResultCard").first()).toBeVisible();
+  await expectViewportSafe(page,"zh search 320");
 });
 
 test("phone landscape keeps hotel gallery and booking controls inside the viewport", async ({page}) => {
