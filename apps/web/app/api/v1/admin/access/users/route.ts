@@ -19,7 +19,14 @@ export async function POST(request: NextRequest) {
     if (!user) return unauthorized();
     const parsed = createUserSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return validationError(parsed.error);
-    return ok(await createPlatformManagedUser(user.id, parsed.data));
+    return ok(await createPlatformManagedUser(user.id, {
+      displayName: parsed.data.displayName,
+      email: parsed.data.email,
+      password: parsed.data.password,
+      platformRole: parsed.data.platformRole,
+      hotelId: parsed.data.hotelId ?? null,
+      hotelRole: parsed.data.hotelRole ?? null,
+    }));
   } catch (error) {
     return handleApiError(error);
   }
