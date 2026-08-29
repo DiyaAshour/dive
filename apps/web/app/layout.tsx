@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { SiteLaunchGate } from "@/components/site-launch-gate";
 import { direction } from "@/lib/i18n";
@@ -44,6 +44,13 @@ export const metadata: Metadata = {
   title: {default: "HandMeKey — Hotels, clearly priced", template: "%s · HandMeKey"},
   description: "Search verified hotels, compare live rates and book with the final stay price visible before checkout.",
   alternates: {types: {"application/rss+xml": siteUrl("/feed.xml")}},
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "light",
 };
 
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
