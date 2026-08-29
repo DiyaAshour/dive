@@ -25,6 +25,7 @@ export * from "./bookings/inventory";
 export * from "./bookings/authorization";
 export * from "./bookings/service";
 export * from "./bookings/experience";
+export * from "./bookings/demo-quote";
 export * from "./operations/service";
 export * from "./operations/reservation-management";
 export * from "./operations/guest-view";
