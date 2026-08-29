@@ -68,7 +68,8 @@ test.describe("mobile-first traveler flow", () => {
     const hotelHref = await hotelLink.getAttribute("href");
     expect(hotelHref).toBeTruthy();
 
-    await page.goto(hotelHref!);
+    await hotelLink.click();
+    await expect(page).toHaveURL(new RegExp(`/hotel/demo-`));
     await expect(page.locator(".premiumGallery img").first()).toBeVisible();
     await expect(page.locator(".hotelBookingRail")).toBeVisible();
     await expect(page.locator(".publicRoomMedia").first()).toBeVisible();
