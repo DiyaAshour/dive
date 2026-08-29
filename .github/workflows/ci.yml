@@ -84,17 +84,17 @@ jobs:
       - name: Verify partner settlement and payout flow
         run: npm run finance-settlement:smoke
 
-      - name: Torture booking and payment concurrency
-        run: npm run reliability-torture:smoke
-
-      - name: Verify loyalty domain rules
-        run: npm run loyalty-rule:smoke
-
       - name: Typecheck workspaces
         run: npm run typecheck
 
       - name: Build web application
         run: npm run build
+
+      - name: Torture booking and payment concurrency
+        run: npm run reliability-torture:smoke
+
+      - name: Verify loyalty domain rules
+        run: npm run loyalty-rule:smoke
 
       - name: Verify administrator HTTP flow
         run: npm run admin:http-smoke
