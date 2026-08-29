@@ -32,6 +32,7 @@ import "./site-launch.css";
 import "./visibility-boost.css";
 import "./sponsored-results.css";
 import "./search-v2.css";
+import "./property-content-manager.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
