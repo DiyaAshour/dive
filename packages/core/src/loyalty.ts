@@ -1,31 +1,44 @@
 export type HandMeKeyLoyaltyTier = "MEMBER" | "GOLD" | "BLACK";
 
-export const LOYALTY_ELIGIBLE_CURRENCY = "JOD" as const;
+export type LoyaltyRuleSet = Readonly<{
+  eligibleCurrency: string;
+  tiers: Readonly<{
+    MEMBER: Readonly<{minimumNights: number; pointsPerJod: number}>;
+    GOLD: Readonly<{minimumNights: number; pointsPerJod: number}>;
+    BLACK: Readonly<{minimumNights: number; pointsPerJod: number}>;
+  }>;
+}>;
 
-export const LOYALTY_TIERS = Object.freeze({
-  MEMBER: Object.freeze({minimumNights: 0, pointsPerJod: 10}),
-  GOLD: Object.freeze({minimumNights: 5, pointsPerJod: 12}),
-  BLACK: Object.freeze({minimumNights: 15, pointsPerJod: 15}),
+export const DEFAULT_LOYALTY_RULES: LoyaltyRuleSet = Object.freeze({
+  eligibleCurrency: "JOD",
+  tiers: Object.freeze({
+    MEMBER: Object.freeze({minimumNights: 0, pointsPerJod: 10}),
+    GOLD: Object.freeze({minimumNights: 5, pointsPerJod: 12}),
+    BLACK: Object.freeze({minimumNights: 15, pointsPerJod: 15}),
+  }),
 });
 
-export function loyaltyTierForNights(qualifyingNights: number): HandMeKeyLoyaltyTier {
+export const LOYALTY_ELIGIBLE_CURRENCY = DEFAULT_LOYALTY_RULES.eligibleCurrency as "JOD";
+export const LOYALTY_TIERS = DEFAULT_LOYALTY_RULES.tiers;
+
+export function loyaltyTierForNights(qualifyingNights: number, rules: LoyaltyRuleSet = DEFAULT_LOYALTY_RULES): HandMeKeyLoyaltyTier {
   const nights = normalizedWholeNumber(qualifyingNights, "qualifyingNights");
-  if (nights >= LOYALTY_TIERS.BLACK.minimumNights) return "BLACK";
-  if (nights >= LOYALTY_TIERS.GOLD.minimumNights) return "GOLD";
+  if (nights >= rules.tiers.BLACK.minimumNights) return "BLACK";
+  if (nights >= rules.tiers.GOLD.minimumNights) return "GOLD";
   return "MEMBER";
 }
 
-export function loyaltyPointsPerJod(tier: HandMeKeyLoyaltyTier): number {
-  return LOYALTY_TIERS[tier].pointsPerJod;
+export function loyaltyPointsPerJod(tier: HandMeKeyLoyaltyTier, rules: LoyaltyRuleSet = DEFAULT_LOYALTY_RULES): number {
+  return rules.tiers[tier].pointsPerJod;
 }
 
-export function calculateLoyaltyPoints(baseAmount: number, tier: HandMeKeyLoyaltyTier, currency: string): number {
-  if (currency.toUpperCase() !== LOYALTY_ELIGIBLE_CURRENCY) return 0;
+export function calculateLoyaltyPoints(baseAmount: number, tier: HandMeKeyLoyaltyTier, currency: string, rules: LoyaltyRuleSet = DEFAULT_LOYALTY_RULES): number {
+  if (currency.toUpperCase() !== rules.eligibleCurrency.toUpperCase()) return 0;
   if (!Number.isFinite(baseAmount) || baseAmount < 0) throw new RangeError("baseAmount must be a non-negative finite number");
-  return Math.floor((baseAmount + Number.EPSILON) * loyaltyPointsPerJod(tier));
+  return Math.floor((baseAmount + Number.EPSILON) * loyaltyPointsPerJod(tier, rules));
 }
 
-export function loyaltyTierProgress(qualifyingNights: number): Readonly<{
+export function loyaltyTierProgress(qualifyingNights: number, rules: LoyaltyRuleSet = DEFAULT_LOYALTY_RULES): Readonly<{
   tier: HandMeKeyLoyaltyTier;
   nextTier: HandMeKeyLoyaltyTier | null;
   currentMinimumNights: number;
@@ -34,20 +47,20 @@ export function loyaltyTierProgress(qualifyingNights: number): Readonly<{
   percent: number;
 }> {
   const nights = normalizedWholeNumber(qualifyingNights, "qualifyingNights");
-  const tier = loyaltyTierForNights(nights);
+  const tier = loyaltyTierForNights(nights, rules);
   if (tier === "BLACK") return {
     tier,
     nextTier: null,
-    currentMinimumNights: LOYALTY_TIERS.BLACK.minimumNights,
+    currentMinimumNights: rules.tiers.BLACK.minimumNights,
     nextMinimumNights: null,
     nightsToNextTier: 0,
     percent: 100,
   };
 
-  const currentMinimumNights = LOYALTY_TIERS[tier].minimumNights;
+  const currentMinimumNights = rules.tiers[tier].minimumNights;
   const nextTier: HandMeKeyLoyaltyTier = tier === "MEMBER" ? "GOLD" : "BLACK";
-  const nextMinimumNights = LOYALTY_TIERS[nextTier].minimumNights;
-  const span = nextMinimumNights - currentMinimumNights;
+  const nextMinimumNights = rules.tiers[nextTier].minimumNights;
+  const span = Math.max(1, nextMinimumNights - currentMinimumNights);
   const progress = Math.max(0, nights - currentMinimumNights);
   return {
     tier,
