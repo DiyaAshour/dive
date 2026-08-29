@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, BellRing, CalendarDays, CreditCard, MapPin, Sea
 import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
+import { demoDestinationsFallback, demoFeaturedHotelsFallback } from "@/lib/demo-catalog-fallback";
 import { guestDictionary } from "@/lib/guest-i18n";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
@@ -15,11 +16,13 @@ function flagEmoji(countryCode: string) {
 }
 
 export default async function HomePage() {
-  const [hotels,destinations,market] = await Promise.all([
+  const [liveHotels,liveDestinations,market] = await Promise.all([
     listFeaturedHotels(6).catch(() => []),
     listFeaturedDestinations({countryCode: "JO", limit: 5}).catch(() => []),
     requestGuestMarket(),
   ]);
+  const hotels = liveHotels.length ? liveHotels : demoFeaturedHotelsFallback(6);
+  const destinations = liveDestinations.length ? liveDestinations : demoDestinationsFallback(5);
   const locale=market.locale;
   const copy = guestDictionary(locale);
   const stay = defaultStayDates();
