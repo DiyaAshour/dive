@@ -36,6 +36,7 @@ import "./property-content-manager.css";
 import "./hotel-gallery-lightbox.css";
 import "./room-product-visuals.css";
 import "./dashboard-clarity.css";
+import "./mobile-first.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
