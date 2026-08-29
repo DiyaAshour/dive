@@ -3,7 +3,7 @@
    space as compact navigation before translated labels begin to collide. */
 
 .desktopMarketSwitcher{display:block}
-.mobileMarketSwitcher{display:none}
+.mobileMarketSwitcher,.mobileAppNav{display:none}
 
 @media (min-width:781px) and (max-width:1180px){
   .siteHeader{position:sticky;top:0;z-index:90;background:rgba(255,255,255,.97);backdrop-filter:blur(18px)}
@@ -29,17 +29,25 @@
   .desktopMarketSwitcher{display:none!important}
   .mobileMarketSwitcher{display:block!important;margin-top:6px;padding-top:9px;border-top:1px solid var(--line)}
   .mobileMarketSwitcher>div>button{width:100%;min-height:44px;justify-content:flex-start!important}
+
+  /* App-style persistent navigation for traveler surfaces. */
+  body:has(.mobileAppNav){padding-bottom:calc(72px + env(safe-area-inset-bottom))!important}
+  .mobileAppNav{position:fixed;z-index:88;inset-inline:8px;bottom:max(8px,env(safe-area-inset-bottom));display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;min-height:62px;padding:5px 6px;border:1px solid rgba(194,208,220,.95);border-radius:18px;background:rgba(255,255,255,.94);backdrop-filter:blur(20px);box-shadow:0 18px 44px rgba(8,31,52,.22)}
+  .mobileAppNav a{position:relative;display:flex;min-width:0;min-height:50px;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:13px;color:#6b7d8d;font-size:9px;font-weight:800;line-height:1;white-space:nowrap}
+  .mobileAppNav a svg{stroke-width:2.1}
+  .mobileAppNav a.active{color:var(--navy);background:#eef4f8}
+  .mobileAppNav a.active:before{content:"";position:absolute;top:2px;width:22px;height:3px;border-radius:999px;background:var(--navy)}
 }
 
 /* At zoom-equivalent tablet widths the marketing hero must reflow, not shrink. */
 @media (min-width:781px) and (max-width:1040px){
-  .premiumHeroGrid{grid-template-columns:1fr!important;gap:24px!important;padding:54px 0 76px!important}
+  .premiumHeroGrid{grid-template-columns:1fr!important;gap:24px!important;padding:46px 0 64px!important}
   .premiumHeroCopy{max-width:900px}
-  .premiumHeroCopy h1{max-width:900px!important;font-size:clamp(40px,6vw,58px)!important;line-height:1.02!important;margin:15px 0 18px!important}
-  .premiumHeroCopy>p{max-width:760px!important;font-size:16px!important;line-height:1.65!important}
+  .premiumHeroCopy h1{max-width:900px!important;font-size:clamp(38px,5.6vw,54px)!important;line-height:1.03!important;margin:13px 0 16px!important}
+  .premiumHeroCopy>p{max-width:760px!important;font-size:16px!important;line-height:1.6!important}
   .heroVisual{display:none!important}
-  .heroConfidence{margin-top:21px!important;gap:12px 18px!important}
-  .premiumSearchDock{margin-top:-28px!important;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr)!important}
+  .heroConfidence{margin-top:18px!important;gap:10px 16px!important}
+  .premiumSearchDock{margin-top:-22px!important;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr)!important}
   .premiumSearchDock label{min-width:0!important;padding:10px 12px!important}
   .premiumSearchDock label:nth-of-type(4){grid-column:1/2}
   .premiumSearchDock button{grid-column:2/-1;min-height:48px;padding:0 18px!important}
@@ -71,16 +79,19 @@
   .mobileSiteNav>summary{min-width:42px!important;min-height:42px!important;padding-inline:9px!important}
   .mobileSiteNav>summary span{display:none!important}
 
-  .premiumHeroGrid{padding:22px 0 25px!important;gap:10px!important}
+  .premiumHeroGrid{padding:18px 0 20px!important;gap:8px!important}
   .heroKicker{font-size:10px!important;padding:6px 9px!important;letter-spacing:.045em!important}
-  .premiumHeroCopy h1{font-size:clamp(31px,8.8vw,38px)!important;line-height:1.04!important;letter-spacing:-.04em!important;margin:9px 0 10px!important}
-  .premiumHeroCopy>p{font-size:14px!important;line-height:1.5!important;margin-block:0!important}
-  .heroConfidence{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:8px!important;margin-top:13px!important;padding-bottom:2px!important;scrollbar-width:none}
+  .premiumHeroCopy h1{font-size:clamp(30px,8.3vw,36px)!important;line-height:1.04!important;letter-spacing:-.04em!important;margin:8px 0 9px!important}
+  .premiumHeroCopy>p{font-size:13.5px!important;line-height:1.48!important;margin-block:0!important}
+  .heroConfidence{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:7px!important;margin-top:11px!important;padding-bottom:2px!important;scrollbar-width:none}
   .heroConfidence::-webkit-scrollbar{display:none}
-  .heroConfidence span{flex:0 0 auto!important;font-size:10px!important;white-space:nowrap!important;padding:6px 8px!important;border:1px solid rgba(16,40,64,.09);border-radius:999px;background:rgba(255,255,255,.66)}
-  .premiumSearchDock{margin:7px 0 0!important;padding:6px!important;border-radius:15px!important}
-  .premiumSearchDock label{padding:8px 9px!important}
+  .heroConfidence span{flex:0 0 auto!important;font-size:9.5px!important;white-space:nowrap!important;padding:6px 8px!important;border:1px solid rgba(16,40,64,.09);border-radius:999px;background:rgba(255,255,255,.66)}
+  .premiumSearchDock{margin:5px 0 0!important;padding:6px!important;border-radius:15px!important}
+  .premiumSearchDock label{padding:7px 9px!important}
   .premiumSearchDock label>span{font-size:9px!important}
   .premiumSearchDock small{font-size:9px!important}
   .premiumSearchDock button{min-height:48px!important;margin-top:4px!important}
+
+  .mobileAppNav{inset-inline:6px!important;bottom:max(6px,env(safe-area-inset-bottom))!important;min-height:60px!important;border-radius:17px!important}
+  .mobileAppNav a{min-height:48px!important;font-size:8.5px!important}
 }
