@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { createBookingHoldSchema, idempotencyKeySchema } from "@platform/contracts";
-import { createBookingHold } from "@platform/server";
+import { createBookingHold, VISIBILITY_BOOST_COOKIE } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
 import { idempotencyKey, requestUser } from "@/lib/request-auth";
 
@@ -11,7 +11,14 @@ export async function POST(request: NextRequest) {
     const parsedKey = idempotencyKeySchema.safeParse(idempotencyKey(request));
     if (!parsedKey.success) return validationError(parsedKey.error);
     const user = await requestUser(request);
-    const result = await createBookingHold(body.data, {userId: user?.id ?? null, idempotencyKey: parsedKey.data});
+    const travelerCountry = request.headers.get("x-vercel-ip-country") ?? request.headers.get("cf-ipcountry") ?? request.headers.get("x-country-code");
+    const visibilityBoostToken = request.cookies.get(VISIBILITY_BOOST_COOKIE)?.value ?? null;
+    const result = await createBookingHold(body.data, {
+      userId: user?.id ?? null,
+      idempotencyKey: parsedKey.data,
+      travelerCountry,
+      visibilityBoostToken,
+    });
     return ok(result, {status: result.reused ? 200 : 201});
   } catch (error) {
     return handleApiError(error);
