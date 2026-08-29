@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { HotelMobileCommerceEnhancer } from "@/components/hotel-mobile-commerce";
 import { SiteLaunchGate } from "@/components/site-launch-gate";
 import { direction } from "@/lib/i18n";
@@ -61,5 +61,5 @@ export const viewport: Viewport = {
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
   const initialNow = Date.now();
   const [locale, launchConfig] = await Promise.all([requestLocale(), getSiteLaunchConfig()]);
-  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={locale} config={launchConfig} initialNow={initialNow}>{children}</SiteLaunchGate><HotelMobileCommerceEnhancer/></body></html>;
+  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={locale} config={launchConfig} initialNow={initialNow}>{children}</SiteLaunchGate><Suspense fallback={null}><HotelMobileCommerceEnhancer/></Suspense></body></html>;
 }
