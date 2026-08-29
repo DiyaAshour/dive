@@ -61,7 +61,7 @@ test.describe("mobile-first traveler flow", () => {
     await page.locator(".mobileSearchSheetHeader button").click();
   });
 
-  test("hotel room selection, gallery and checkout are phone-safe", async ({page}) => {
+  test("hotel room selection, compact stay essentials, gallery and checkout are phone-safe", async ({page}) => {
     await page.goto("/search?destination=Amman");
     const hotelLink = page.locator('a[href^="/hotel/demo-"]').first();
     await expect(hotelLink).toBeVisible();
@@ -81,6 +81,25 @@ test.describe("mobile-first traveler flow", () => {
     expect(bookingWorkspace).not.toBeNull();
     expect(trustLayer).not.toBeNull();
     expect(bookingWorkspace!.y).toBeLessThan(trustLayer!.y);
+
+    const essentials = page.locator(".stayEssentials");
+    await expect(essentials).toBeVisible();
+    const quickStrip = essentials.locator(".stayEssentialsQuick > div");
+    const quickStyle = await quickStrip.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {display:style.display,overflowX:style.overflowX};
+    });
+    expect(quickStyle.display).toBe("flex");
+    expect(["auto","scroll"]).toContain(quickStyle.overflowX);
+
+    const groups = essentials.locator(".stayEssentialGroup");
+    if (await groups.count() >= 2) {
+      const first = await groups.nth(0).boundingBox();
+      const second = await groups.nth(1).boundingBox();
+      expect(first).not.toBeNull();
+      expect(second).not.toBeNull();
+      expect(Math.abs(first!.y-second!.y)).toBeLessThanOrEqual(2);
+    }
 
     const firstRoom = page.locator(".roomOfferCard").first();
     const rateToggle = firstRoom.locator(".mobileRoomRateToggle");
@@ -116,6 +135,36 @@ test.describe("mobile-first traveler flow", () => {
     await page.goto(checkoutHref!);
     await expect(page.locator(".checkout")).toBeVisible();
     await expect(page.locator(".walletReserveButton")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+});
+
+test.describe("desktop hotel layout guard", () => {
+  test.use({viewport:{width:1366,height:768}});
+
+  test("mobile stay essentials overrides never leak into desktop", async ({page}) => {
+    await page.goto("/search?destination=Amman");
+    const hotelLink = page.locator('a[href^="/hotel/demo-"]').first();
+    await expect(hotelLink).toBeVisible();
+    const hotelHref = await hotelLink.getAttribute("href");
+    expect(hotelHref).toBeTruthy();
+    await page.goto(hotelHref!);
+
+    const essentials = page.locator(".stayEssentials");
+    await expect(essentials).toBeVisible();
+    const quickStrip = essentials.locator(".stayEssentialsQuick > div");
+    const quickStyle = await quickStrip.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {display:style.display,overflowX:style.overflowX,gridTemplateColumns:style.gridTemplateColumns};
+    });
+    expect(quickStyle.display).toBe("grid");
+    expect(quickStyle.overflowX).not.toBe("auto");
+    expect(quickStyle.gridTemplateColumns.split(" ").length).toBeGreaterThanOrEqual(3);
+
+    const groupGrid = essentials.locator(".stayEssentialsGroups");
+    const groupStyle = await groupGrid.evaluate((element) => getComputedStyle(element).gridTemplateColumns);
+    expect(groupStyle.split(" ").length).toBeGreaterThanOrEqual(4);
+    await expect(page.locator(".stayEssentialsIntro p")).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 });
