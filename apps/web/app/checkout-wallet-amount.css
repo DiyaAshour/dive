@@ -1,0 +1,26 @@
+.checkoutWalletAmountEditor{margin:8px 0 12px;padding:12px 13px;border:1px solid #d8e6ef;border-radius:13px;background:linear-gradient(180deg,#f8fcff,#fff);box-shadow:0 5px 16px rgba(13,82,126,.045)}
+.checkoutWalletAmountMeta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:9px}
+.checkoutWalletAmountMeta>div{display:flex;min-width:0;flex-direction:column;gap:2px}
+.checkoutWalletAmountMeta strong{font-size:10.5px;color:#183b55;line-height:1.35}
+.checkoutWalletAmountMeta small{font-size:8.5px;color:#718492;line-height:1.4}
+.checkoutWalletAmountMeta button{flex:0 0 auto;min-height:31px;border:1px solid #bfd5e4;border-radius:9px;background:#fff;color:#0d5b8c;padding:6px 9px;font-size:8.5px;font-weight:900;cursor:pointer}
+.checkoutWalletAmountMeta button:hover{background:#eff8fd}
+.checkoutWalletAmountField{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;min-height:45px;border:1px solid #b9d1e1;border-radius:11px;background:#fff;overflow:hidden;box-shadow:inset 0 1px 0 rgba(16,74,111,.025)}
+.checkoutWalletAmountField:focus-within{border-color:#5e9fc6;box-shadow:0 0 0 3px rgba(33,121,175,.09)}
+.checkoutWalletAmountField input{width:100%;min-width:0;height:43px;border:0!important;outline:0!important;background:transparent!important;padding:0 12px!important;font-size:17px!important;font-weight:900!important;color:#0e3554!important;box-shadow:none!important;text-align:start}
+.checkoutWalletAmountField>span{align-self:stretch;display:grid;place-items:center;min-width:54px;padding:0 10px;border-inline-start:1px solid #d9e5ed;background:#f4f8fb;color:#536c7d;font-size:10px;font-weight:900}
+.checkoutWalletAmountError{margin:7px 2px 0;color:#b33c35;font-size:8.5px;font-weight:800;line-height:1.4}
+@media(max-width:700px){
+  .checkoutWalletAmountEditor{margin-top:7px;padding:11px;border-radius:12px}
+  .checkoutWalletAmountMeta{align-items:center;gap:8px}
+  .checkoutWalletAmountMeta strong{font-size:9.5px}
+  .checkoutWalletAmountMeta small{font-size:7.8px}
+  .checkoutWalletAmountMeta button{min-height:29px;padding:5px 8px;font-size:7.8px}
+  .checkoutWalletAmountField{min-height:43px}
+  .checkoutWalletAmountField input{height:41px;font-size:16px!important}
+  .checkoutWalletAmountField>span{min-width:48px;font-size:9px}
+}
+@media(max-width:360px){
+  .checkoutWalletAmountMeta{align-items:flex-start;flex-direction:column}
+  .checkoutWalletAmountMeta button{align-self:flex-start}
+}
