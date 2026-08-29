@@ -1,7 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { VisibilityBoostCampaignInput } from "@platform/contracts";
 import { database } from "@platform/database";
-import { notFound } from "../errors";
+import { badRequest, notFound } from "../errors";
 import { requireHotelPermission } from "../hotels/authorization";
 
 const ENTITY_TYPE = "VisibilityBoostCampaign";
@@ -42,6 +42,29 @@ async function latestCampaign(hotelId: string, campaignId: string) {
     select: {after: true},
   });
   return asStoredCampaign(log?.after ?? null);
+}
+
+async function visibilityBoostHotelState(hotelId: string) {
+  return database().hotel.findUnique({
+    where: {id: hotelId},
+    select: {status: true, verified: true, commissionRate: true},
+  });
+}
+
+function isVisibilityBoostEligibleHotel(hotel: Awaited<ReturnType<typeof visibilityBoostHotelState>>) {
+  return Boolean(hotel && hotel.status === "ACTIVE" && hotel.verified);
+}
+
+async function requireVisibilityBoostEligibleHotel(hotelId: string) {
+  const hotel = await visibilityBoostHotelState(hotelId);
+  if (!hotel) notFound("Hotel");
+  if (!isVisibilityBoostEligibleHotel(hotel)) {
+    badRequest(
+      "VISIBILITY_BOOST_PROPERTY_NOT_LIVE",
+      "Visibility Boost is available only for verified properties that are live on HandMeKey",
+    );
+  }
+  return hotel;
 }
 
 function attributionSecret() {
@@ -93,6 +116,8 @@ export async function resolveVisibilityBoostAttribution(token:string | null | un
   const payload = parseAttributionToken(token);
   const country = travelerCountry?.trim().toUpperCase();
   if (!payload || !country || payload.hotelId !== selection.hotelId) return null;
+  const hotel = await visibilityBoostHotelState(selection.hotelId);
+  if (!isVisibilityBoostEligibleHotel(hotel)) return null;
   const campaign = await latestCampaign(selection.hotelId,payload.campaignId);
   if (!campaign || campaign.status !== "ACTIVE") return null;
   const today = new Date().toISOString().slice(0,10);
@@ -126,8 +151,7 @@ export async function listHotelVisibilityBoostCampaigns(actorUserId: string, hot
 
 export async function createHotelVisibilityBoostCampaign(actorUserId: string, hotelId: string, input: VisibilityBoostCampaignInput) {
   await requireHotelPermission(actorUserId, hotelId, "rates:manage");
-  const hotel = await database().hotel.findUnique({where: {id: hotelId}, select: {commissionRate: true}});
-  if (!hotel) notFound("Hotel");
+  const hotel = await requireVisibilityBoostEligibleHotel(hotelId);
   const now = new Date().toISOString();
   const baseCommissionRate = Number(hotel.commissionRate);
   const campaign: StoredVisibilityBoostCampaign = {
@@ -153,6 +177,7 @@ export async function updateHotelVisibilityBoostCampaign(actorUserId: string, ho
   await requireHotelPermission(actorUserId, hotelId, "rates:manage");
   const before = await latestCampaign(hotelId, campaignId);
   if (!before) notFound("Visibility boost campaign");
+  if (input.status === "ACTIVE") await requireVisibilityBoostEligibleHotel(hotelId);
   const after: StoredVisibilityBoostCampaign = {
     ...input,
     id: before.id,
@@ -174,6 +199,8 @@ export async function updateHotelVisibilityBoostCampaign(actorUserId: string, ho
 }
 
 export async function activeVisibilityBoostsForHotel(hotelId: string, options: Readonly<{countryCode?: string; bookingDate?: string; stayStart?: string; nights?: number}> = {}) {
+  const hotel = await visibilityBoostHotelState(hotelId);
+  if (!isVisibilityBoostEligibleHotel(hotel)) return [];
   const logs = await database().auditLog.findMany({
     where: {hotelId, entityType: ENTITY_TYPE},
     orderBy: {createdAt: "desc"},
