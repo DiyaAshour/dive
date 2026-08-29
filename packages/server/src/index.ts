@@ -34,6 +34,7 @@ export * from "./promotions/service";
 export * from "./messaging/service";
 export * from "./growth/analytics";
 export * from "./growth/watches";
+export * from "./growth/visibility-boost";
 export * from "./loyalty/service";
 export * from "./wallet/service";
 export * from "./blog/service";
