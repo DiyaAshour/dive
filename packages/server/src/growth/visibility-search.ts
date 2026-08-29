@@ -19,6 +19,7 @@ type CampaignSnapshot = Readonly<{
 
 type VisibilityTag = Readonly<{sponsored: true; campaignId: string; extraCommissionPercent: number}>;
 type VisibilityTagged<T> = T & Readonly<{visibilityBoost: VisibilityTag | null}>;
+type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
 
 function snapshot(value: unknown): CampaignSnapshot | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -86,12 +87,12 @@ async function applyVisibilityBoost<T extends Readonly<{id:string}>>(results:T[]
   return bestByHotel.size ? rankWithCampaigns(results,bestByHotel) : results.map((result)=>tagged(result,undefined));
 }
 
-export async function searchHotelsWithVisibilityBoost(input: DiscoverySearchInput, context: Readonly<{travelerCountry?: string}> = {}) {
+export async function searchHotelsWithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
   const base = await searchHotels(input);
   return {...base, results: await applyVisibilityBoost(base.results,input,context.travelerCountry)};
 }
 
-export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchInput, context: Readonly<{travelerCountry?: string}> = {}) {
+export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
   const base = await searchHotelsV2(input);
   return {...base, results: await applyVisibilityBoost(base.results,input,context.travelerCountry)};
 }
