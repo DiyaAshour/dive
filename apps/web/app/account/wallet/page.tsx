@@ -14,6 +14,14 @@ export default async function WalletPage() {
   if (!user) redirect("/login?next=/account/wallet");
   const [wallet,rewards,locale] = await Promise.all([getWalletOverview(user.id),getLoyaltyOverview(user.id),requestLocale()]);
   const ar = locale === "ar";
+  const redemptionAvailable = wallet.rewardsEnabled && wallet.redemptionEnabled && wallet.membershipStatus === "ACTIVE";
+  const unavailableReason = !wallet.rewardsEnabled
+    ? (ar?"برنامج Rewards متوقف مؤقتًا. رصيد النقاط والمحفظة محفوظان.":"Rewards is temporarily paused. Your points and Wallet balance are preserved.")
+    : wallet.membershipStatus === "SUSPENDED"
+      ? (ar?"عضوية Rewards موقوفة حاليًا، لذلك تحويل النقاط إلى Wallet غير متاح.":"Your Rewards membership is suspended, so points cannot currently be converted to Wallet.")
+      : !wallet.redemptionEnabled
+        ? (ar?"تحويل Rewards إلى Wallet متوقف مؤقتًا من إدارة البرنامج.":"Rewards-to-Wallet conversion is temporarily paused by program administration.")
+        : null;
 
   return <AccountShell
     active="wallet"
@@ -33,7 +41,7 @@ export default async function WalletPage() {
       <article><span><Landmark size={20}/></span><div><h3>{ar?"المحفظة + الفندق":"Wallet + hotel"}</h3><p>{ar?"إذا كانت خطة السعر تسمح بالدفع في الفندق، استخدم رصيدك الآن وادفع الباقي عند الوصول.":"When the rate plan allows pay-at-hotel, use Wallet now and settle the remainder at the property."}</p></div></article>
     </div>
 
-    <WalletConverter locale={locale} initialWalletBalance={wallet.balance} initialPointsBalance={rewards.pointsBalance} currency={wallet.currency} pointsPerJod={wallet.pointsPerJod} minimumRedemptionPoints={wallet.minimumRedemptionPoints} redemptionStepPoints={wallet.redemptionStepPoints}/>
+    <WalletConverter locale={locale} initialWalletBalance={wallet.balance} initialPointsBalance={rewards.pointsBalance} currency={wallet.currency} pointsPerJod={wallet.pointsPerJod} minimumRedemptionPoints={wallet.minimumRedemptionPoints} redemptionStepPoints={wallet.redemptionStepPoints} redemptionAvailable={redemptionAvailable} unavailableReason={unavailableReason}/>
 
     <section className="walletActivityCard">
       <div className="walletSectionHead"><div><span className="accountCardLabel">{ar?"دفتر المحفظة":"Wallet ledger"}</span><h2>{ar?"آخر الحركات":"Recent activity"}</h2></div><Link href="/account/rewards">{ar?"عرض نقاط Rewards":"View Rewards points"}<ArrowUpRight size={15}/></Link></div>
