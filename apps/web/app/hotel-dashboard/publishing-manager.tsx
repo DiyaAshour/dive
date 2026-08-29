@@ -23,6 +23,9 @@ export default function PublishingManager({hotelId, readiness, locale}: {hotelId
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const canSubmit = readiness.ready && readiness.status === "DRAFT";
+  const pendingChecks = readiness.checks.filter((check) => !check.passed);
+  const completedCount = readiness.checks.length - pendingChecks.length;
+  const completionPercent = readiness.checks.length ? Math.round((completedCount / readiness.checks.length) * 100) : 100;
 
   async function submit() {
     setBusy(true);
@@ -40,17 +43,19 @@ export default function PublishingManager({hotelId, readiness, locale}: {hotelId
     }
   }
 
-  return <section className="panel" style={{marginTop:24}}>
-    <div className="sectionHeading"><div><span className="eyebrow">{ar?"التحكم بالنشر":"Publishing control"}</span><h2>{ar?"جاهزية النشر":"Go-live readiness"}</h2></div><div className={readiness.ready ? "statusOk" : "statusReview"}>{readiness.ready ? (ar?"جاهزة":"READY") : (ar?"غير مكتملة":"INCOMPLETE")}</div></div>
+  return <section className="panel publishingChecklist" style={{marginTop:24}}>
+    <div className="sectionHeading"><div><span className="eyebrow">{ar?"التحكم بالنشر":"Publishing control"}</span><h2>{ar?"جاهزية النشر":"Go-live readiness"}</h2><p className="muted">{ar?"هذه القائمة تعرض الأشياء الناقصة فقط. بمجرد حفظ العنصر بنجاح يختفي من هنا تلقائيًا.":"This list shows only unfinished requirements. Once an item is saved successfully it disappears automatically."}</p></div><div className={readiness.ready ? "statusOk" : "statusReview"}>{readiness.ready ? (ar?"جاهزة":"READY") : `${completionPercent}%`}</div></div>
+    <div className="publishingProgress" aria-label={ar?"تقدم جاهزية النشر":"Publishing readiness progress"}><span style={{width:`${completionPercent}%`}}/></div>
+    <div className="publishingProgressMeta"><strong>{completedCount}/{readiness.checks.length} {ar?"مكتمل":"complete"}</strong><span>{pendingChecks.length ? `${pendingChecks.length} ${ar?"متبقٍ":"remaining"}` : (ar?"كل المتطلبات مكتملة":"All requirements complete")}</span></div>
     <p className="muted">{ar?"نسخة":"Revision"} {readiness.publishRevision}{readiness.publishedRevision ? ` · ${ar?"النسخة المنشورة":"published revision"} ${readiness.publishedRevision}` : (ar?" · لم تنشر بعد":" · not published yet")}. {ar?"أي تعديل أثناء المراجعة يلغي الطلب القديم تلقائيًا.":"Changes made during review automatically invalidate the old submission."}</p>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:10,marginTop:18}}>
-      {readiness.checks.map((check)=>{const localized=localizeCheck(check,ar);return <div className="alertCard" key={check.code}>{check.passed ? <CircleCheck size={19}/> : <CircleX size={19}/>}<div><strong>{localized.label}</strong><p>{localized.detail}</p></div></div>})}
-    </div>
+    {pendingChecks.length > 0 ? <div className="publishingPendingGrid">
+      {pendingChecks.map((check)=>{const localized=localizeCheck(check,ar);return <div className="alertCard publishingPendingItem" key={check.code}><CircleX size={19}/><div><strong>{localized.label}</strong><p>{localized.detail}</p></div></div>})}
+    </div> : <div className="publishingAllDone"><CircleCheck size={22}/><div><strong>{ar?"اكتملت متطلبات المنشأة":"Property requirements complete"}</strong><p>{ar?"لا يوجد أي عنصر ناقص في قائمة الجاهزية الآن.":"There are no unfinished readiness items right now."}</p></div></div>}
     <div className="alertCard" style={{marginTop:14}}><ShieldCheck size={19}/><div><strong>{readiness.sellableDays} {ar?"يوم قابل للبيع تم التحقق منه":"sellable days verified"}</strong><p>{ar?`تفحص بوابة النشر ${readiness.reviewWindowDays} يومًا قادمًا وتتطلب أسعارًا وقيودًا ومخزونًا مكتملًا.`:`The publishing gate checks the next ${readiness.reviewWindowDays} days and requires complete rates, restrictions and inventory.`}</p></div></div>
     {readiness.latestReview && <div className="panel" style={{marginTop:14}}><strong>{ar?"آخر مراجعة":"Latest review"}: {readiness.latestReview.status}</strong><p className="muted">{ar?"النسخة المقدمة":"Submitted revision"} {readiness.latestReview.submittedRevision}</p>{readiness.latestReview.decisionReason && <p>{readiness.latestReview.decisionReason}</p>}</div>}
     <div style={{display:"flex",gap:12,alignItems:"center",marginTop:18,flexWrap:"wrap"}}>
       <button className="primaryButton" type="button" onClick={submit} disabled={!canSubmit || busy}><Send size={17}/> {busy ? (ar?"جارٍ الإرسال…":"Submitting...") : readiness.status === "PENDING_REVIEW" ? (ar?"قيد المراجعة":"Under review") : readiness.status === "ACTIVE" ? (ar?"المنشأة منشورة":"Property live") : readiness.status === "SUSPENDED" ? (ar?"المنشأة موقوفة":"Property suspended") : (ar?"إرسال للمراجعة":"Submit for review")}</button>
-      {!readiness.ready && readiness.status === "DRAFT" && <span className="muted">{ar?"أكمل جميع عناصر الجاهزية قبل الإرسال.":"Complete every readiness item before submission."}</span>}
+      {!readiness.ready && readiness.status === "DRAFT" && <span className="muted">{ar?"أكمل العناصر الظاهرة أعلاه قبل الإرسال.":"Complete the remaining items above before submission."}</span>}
       {message && <span>{message}</span>}
     </div>
   </section>;
