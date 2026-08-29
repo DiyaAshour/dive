@@ -44,6 +44,7 @@ import "./zoom-resilience.css";
 import "./home-commerce.css";
 import "./hotel-mobile-commerce.css";
 import "./hotel-essentials-compact.css";
+import "./hotel-mobile-head.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
