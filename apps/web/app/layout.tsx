@@ -39,6 +39,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
+  const initialNow = Date.now();
   const [locale, launchConfig] = await Promise.all([requestLocale(), getSiteLaunchConfig()]);
-  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={locale} config={launchConfig}>{children}</SiteLaunchGate></body></html>;
+  return <html lang={locale} dir={direction(locale)} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={locale} config={launchConfig} initialNow={initialNow}>{children}</SiteLaunchGate></body></html>;
 }
