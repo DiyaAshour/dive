@@ -28,28 +28,30 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
     <Link href="/account/alerts"><Bell size={16}/>{copy.nav.alerts}</Link>
   </>;
 
-  return <header className="siteHeader">
-    <div className="desktopMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/></div>
-    <div className="shell siteHeaderInner">
-      <Brand />
-      {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{navLinks}</nav>}
-      <div className="siteActions">
-        {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
-        {user ? <>
-          <Link className="accountButton" href="/account" title={`${copy.nav.account} · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
-          {!minimal && <SignOutButton locale={market.baseLocale}/>} 
-        </> : <Link className="accountButton" href="/login"><UserRound size={16}/><span>{copy.nav.signIn}</span></Link>}
-        {!minimal && <details className="mobileSiteNav">
-          <summary aria-label={menuLabel}><Menu size={20}/><span>{menuLabel}</span></summary>
-          <div className="mobileSiteNavPanel">
-            <nav aria-label={menuLabel}>{navLinks}</nav>
-            <Link className="mobilePartnerEntry" href="/partner"><Building2 size={17}/>{copy.nav.partner}</Link>
-            <div className="mobileMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
-            {user && <SignOutButton locale={market.baseLocale}/>} 
-          </div>
-        </details>}
+  return <>
+    <header className="siteHeader">
+      <div className="desktopMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/></div>
+      <div className="shell siteHeaderInner">
+        <Brand />
+        {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{navLinks}</nav>}
+        <div className="siteActions">
+          {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
+          {user ? <>
+            <Link className="accountButton" href="/account" title={`${copy.nav.account} · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
+            {!minimal && <SignOutButton locale={market.baseLocale}/>} 
+          </> : <Link className="accountButton" href="/login"><UserRound size={16}/><span>{copy.nav.signIn}</span></Link>}
+          {!minimal && <details className="mobileSiteNav">
+            <summary aria-label={menuLabel}><Menu size={20}/><span>{menuLabel}</span></summary>
+            <div className="mobileSiteNavPanel">
+              <nav aria-label={menuLabel}>{navLinks}</nav>
+              <Link className="mobilePartnerEntry" href="/partner"><Building2 size={17}/>{copy.nav.partner}</Link>
+              <div className="mobileMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
+              {user && <SignOutButton locale={market.baseLocale}/>} 
+            </div>
+          </details>}
+        </div>
       </div>
-    </div>
+    </header>
     {!minimal && <MobileAppNav locale={market.locale} rewardsHref={rewardsHref}/>} 
-  </header>;
+  </>;
 }
