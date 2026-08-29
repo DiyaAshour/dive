@@ -1,6 +1,7 @@
 "use client";
 
 import { BedDouble, ChevronDown, Info, MessageSquareText, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -16,12 +17,15 @@ type RoomTarget = Readonly<{
 }>;
 
 export function HotelMobileCommerceEnhancer() {
+  const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>("en");
   const [navHost, setNavHost] = useState<HTMLElement | null>(null);
   const [rooms, setRooms] = useState<RoomTarget[]>([]);
 
   useEffect(() => {
-    if (!window.location.pathname.startsWith("/hotel/")) return;
+    setNavHost(null);
+    setRooms([]);
+    if (!pathname.startsWith("/hotel/")) return;
     const page = document.querySelector<HTMLElement>(".hotelExperience");
     if (!page) return;
 
@@ -63,7 +67,7 @@ export function HotelMobileCommerceEnhancer() {
       rateOptions.append(controlHost);
 
       const price = rows[0]?.querySelector<HTMLElement>(".ratePrice strong")?.textContent?.trim() ?? "";
-      return [{key: card.dataset.roomTypeId || `room-${index}`, card, controlHost, summaryHost, rateCount: rows.length, price}];
+      return [{key: `room-${index}`, card, controlHost, summaryHost, rateCount: rows.length, price}];
     });
     setRooms(preparedRooms);
 
@@ -79,7 +83,7 @@ export function HotelMobileCommerceEnhancer() {
       if (detailLayer?.id === "hotel-mobile-details") detailLayer.removeAttribute("id");
       if (reviews?.id === "hotel-mobile-reviews") reviews.removeAttribute("id");
     };
-  }, []);
+  }, [pathname]);
 
   return <>
     {navHost && createPortal(<MobileHotelQuickNav locale={locale}/>, navHost)}
