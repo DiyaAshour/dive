@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, BedDouble, CalendarDays, DollarSign, Hotel, Landmark, MessageSquare, Settings2, Star, Tags } from "lucide-react";
+import { BarChart3, BedDouble, CalendarDays, DollarSign, Hotel, Landmark, MessageSquare, Rocket, Settings2, Star, Tags } from "lucide-react";
 import { Brand } from "./brand";
 import { LanguageSwitcher } from "./language-switcher";
 import type { Locale } from "@/lib/i18n";
@@ -11,7 +11,7 @@ type PartnerSidebarProps = Readonly<{
   city?: string;
   status?: string;
   locale: Locale;
-  active: "overview" | "rooms" | "rates" | "reservations" | "finance" | "performance" | "promotions" | "messages" | "reviews";
+  active: "overview" | "rooms" | "rates" | "reservations" | "finance" | "performance" | "promotions" | "visibility" | "messages" | "reviews";
 }>;
 
 export function PartnerSidebar({hotelId, hotelName, city, status, active, locale}: PartnerSidebarProps) {
@@ -34,6 +34,7 @@ export function PartnerSidebar({hotelId, hotelName, city, status, active, locale
       <span>{copy.grow}</span>
       <Link className={active === "performance" ? "active" : ""} href={href("/hotel-dashboard/performance")}><BarChart3 size={18}/>{copy.performance}</Link>
       <Link className={active === "promotions" ? "active" : ""} href={href("/hotel-dashboard/promotions")}><Tags size={18}/>{copy.promotions}</Link>
+      <Link className={active === "visibility" ? "active" : ""} href={href("/hotel-dashboard/visibility-boost")}><Rocket size={18}/>{locale === "ar" ? "زيادة الظهور" : "Visibility Boost"}</Link>
       <span>{copy.guests}</span>
       <Link className={active === "messages" ? "active" : ""} href={href("/hotel-dashboard/messages")}><MessageSquare size={18}/>{copy.messages}</Link>
       <Link className={active === "reviews" ? "active" : ""} href={href("/hotel-dashboard/reviews")}><Star size={18}/>{copy.reviews}</Link>
