@@ -17,3 +17,4 @@ export * from "./admin";
 export * from "./blog";
 export * from "./communications";
 export * from "./finance";
+export * from "./loyalty-admin";
