@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import type {Locale} from "@/lib/i18n";
 
 type Content = {
@@ -17,6 +18,7 @@ type Content = {
 
 export default function PublicContentManager({hotelId, content, locale}: {hotelId: string; content: Content; locale: Locale}) {
   const ar=locale==="ar";
+  const router=useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -43,6 +45,7 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message ?? "Unable to save public content");
       setMessage(ar?"تم حفظ محتوى الفندق العام":"Public hotel content saved");
+      router.refresh();
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : "Unable to save public content");
     } finally {
