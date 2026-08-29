@@ -61,7 +61,7 @@ test.describe("mobile-first traveler flow", () => {
     await page.locator(".mobileSearchSheetHeader button").click();
   });
 
-  test("hotel room selection, compact stay essentials, gallery and checkout are phone-safe", async ({page}) => {
+  test("hotel identity, room selection, compact stay essentials, gallery and checkout are phone-safe", async ({page}) => {
     await page.goto("/search?destination=Amman");
     const hotelLink = page.locator('a[href^="/hotel/demo-"]').first();
     await expect(hotelLink).toBeVisible();
@@ -75,6 +75,28 @@ test.describe("mobile-first traveler flow", () => {
     await expect(page.locator(".publicRoomMedia").first()).toBeVisible();
     await expect(page.locator(".hotelMobileQuickNav")).toBeVisible();
     await expect(page.locator(".mobileRoomCommerceSummary").first()).toBeVisible();
+
+    const hotelHead = page.locator(".premiumHotelHead");
+    await expect(hotelHead).toBeVisible();
+    const titleSize = await hotelHead.locator("h1").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    expect(titleSize).toBeLessThanOrEqual(27);
+
+    const quickFacts = hotelHead.locator(".hotelQuickFacts > div");
+    await expect(quickFacts).toHaveCount(2);
+    const checkInFact = await quickFacts.nth(0).boundingBox();
+    const checkOutFact = await quickFacts.nth(1).boundingBox();
+    expect(checkInFact).not.toBeNull();
+    expect(checkOutFact).not.toBeNull();
+    expect(Math.abs(checkInFact!.y-checkOutFact!.y)).toBeLessThanOrEqual(2);
+    expect(checkInFact!.height).toBeLessThanOrEqual(50);
+    expect(checkOutFact!.height).toBeLessThanOrEqual(50);
+
+    const rating = hotelHead.locator(".hotelRatingSummary");
+    if (await rating.count()) {
+      const ratingBox = await rating.boundingBox();
+      expect(ratingBox).not.toBeNull();
+      expect(ratingBox!.height).toBeLessThanOrEqual(62);
+    }
 
     const bookingWorkspace = await page.locator(".hotelBookingWorkspace").boundingBox();
     const trustLayer = await page.locator(".hotelTrustLayer").boundingBox();
@@ -152,13 +174,17 @@ test.describe("mobile-first traveler flow", () => {
 test.describe("desktop hotel layout guard", () => {
   test.use({viewport:{width:1366,height:768}});
 
-  test("mobile stay essentials overrides never leak into desktop", async ({page}) => {
+  test("mobile hotel overrides never leak into desktop", async ({page}) => {
     await page.goto("/search?destination=Amman");
     const hotelLink = page.locator('a[href^="/hotel/demo-"]').first();
     await expect(hotelLink).toBeVisible();
     const hotelHref = await hotelLink.getAttribute("href");
     expect(hotelHref).toBeTruthy();
     await page.goto(hotelHref!);
+
+    const hotelHead = page.locator(".premiumHotelHead");
+    const headDisplay = await hotelHead.evaluate((element) => getComputedStyle(element).display);
+    expect(headDisplay).toBe("grid");
 
     const essentials = page.locator(".stayEssentials");
     await expect(essentials).toBeVisible();
