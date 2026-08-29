@@ -21,12 +21,19 @@ const SETTINGS_FILTER = {
 } as const;
 
 export async function getSiteLaunchConfig(): Promise<SiteLaunchConfig> {
-  const latest = await database().auditLog.findFirst({
-    where: SETTINGS_FILTER,
-    orderBy: {createdAt: "desc"},
-    select: {after: true},
-  });
-  return parseSiteLaunchConfig(latest?.after);
+  try {
+    const latest = await database().auditLog.findFirst({
+      where: SETTINGS_FILTER,
+      orderBy: {createdAt: "desc"},
+      select: {after: true},
+    });
+    return parseSiteLaunchConfig(latest?.after);
+  } catch {
+    // Launch settings must never make the entire public site unavailable.
+    // If the production database is temporarily unreachable or not yet
+    // configured, render the site with the safe default instead.
+    return {...DEFAULT_SITE_LAUNCH_CONFIG};
+  }
 }
 
 export async function updateSiteLaunchConfig(actorUserId: string, input: SiteLaunchConfig): Promise<SiteLaunchConfig> {
