@@ -12,6 +12,7 @@ export * from "./reviews";
 export * from "./promotions";
 export * from "./messaging";
 export * from "./growth";
+export * from "./visibility-boost";
 export * from "./admin";
 export * from "./blog";
 export * from "./communications";
