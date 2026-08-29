@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { getPublicHotelSeoDetails } from "@platform/server";
+import { getPublicHotelGallery, getPublicHotelSeoDetails } from "@platform/server";
 import { requestLocale } from "@/lib/request-locale";
 import { siteUrl } from "@/lib/site-url";
+import { HotelGalleryController } from "./hotel-gallery-controller";
 
 type Params = Promise<{id:string}>;
 
@@ -25,7 +26,7 @@ export async function generateMetadata({params}:Readonly<{params:Params}>):Promi
 
 export default async function HotelSeoLayout({children,params}:Readonly<{children:ReactNode;params:Params}>) {
   const [{id},locale] = await Promise.all([params,requestLocale()]);
-  const hotel = await getPublicHotelSeoDetails(id);
+  const [hotel,gallery] = await Promise.all([getPublicHotelSeoDetails(id),getPublicHotelGallery(id)]);
   const canonical = siteUrl(`/hotel/${hotel.slug}`);
   const destination = hotel.primaryDestination;
   const destinationUrl = destination ? siteUrl(`/hotels/${countrySlug(hotel.countryCode)}/${destination.slug}`) : null;
@@ -54,7 +55,7 @@ export default async function HotelSeoLayout({children,params}:Readonly<{childre
       ],
     },
   ];
-  return <>{children}{schemas.map((schema,index)=><script key={index} type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(schema).replace(/</g,"\\u003c")}}/>)}</>;
+  return <>{children}<HotelGalleryController photos={gallery} hotelName={hotel.name} locale={locale}/>{schemas.map((schema,index)=><script key={index} type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(schema).replace(/</g,"\\u003c")}}/>)}</>;
 }
 
 function countrySlug(code:string){return code.toUpperCase()==="JO"?"jordan":code.toLowerCase();}
