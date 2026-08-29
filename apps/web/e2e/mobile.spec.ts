@@ -20,9 +20,24 @@ test.describe("mobile-first traveler flow", () => {
     await expectNoHorizontalOverflow(page);
 
     await page.goto("/search?destination=Amman");
+    await expect(page.locator(".mobileSearchCommand")).toBeVisible();
+    await expect(page.locator(".searchSummaryBar")).toBeHidden();
+    await expect(page.locator(".searchFilters")).toBeHidden();
     await expect(page.locator(".premiumResultCard").first()).toBeVisible();
     await expect(page.locator(".resultCta").first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
+
+    await page.locator(".mobileSearchFilterButton").click();
+    await expect(page.locator(".mobileSearchSheet")).toBeVisible();
+    await expect(page.locator(".mobileSearchFilterForm")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.locator(".mobileSearchSheetHeader button").click();
+    await expect(page.locator(".mobileSearchSheet")).toBeHidden();
+
+    await page.locator(".mobileSearchCommandMain").click();
+    await expect(page.locator(".mobileSearchEditForm")).toBeVisible();
+    await expect(page.locator('.mobileSearchEditForm input[name="destination"]')).toHaveValue("Amman");
+    await page.locator(".mobileSearchSheetHeader button").click();
   });
 
   test("hotel room selection, gallery and checkout are phone-safe", async ({page}) => {
