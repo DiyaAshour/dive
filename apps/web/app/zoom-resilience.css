@@ -1,0 +1,48 @@
+/* Browser zoom / constrained-window resilience.
+   Browser zoom reduces the effective CSS viewport. Treat medium-width desktop
+   space as compact navigation before translated labels begin to collide. */
+
+@media (min-width:781px) and (max-width:1180px){
+  .siteHeader{position:sticky;top:0;z-index:90;background:rgba(255,255,255,.97);backdrop-filter:blur(18px)}
+  .siteHeaderInner{height:68px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important}
+  .siteNav,.siteActions>.partnerEntry{display:none!important}
+  .siteActions{display:flex!important;align-items:center!important;justify-self:end!important;gap:7px!important}
+  .accountButton{min-height:42px;padding:0 12px!important;white-space:nowrap}
+  .mobileSiteNav{display:block!important;position:relative}
+  .mobileSiteNav>summary{list-style:none;display:flex;align-items:center;justify-content:center;gap:6px;min-width:42px;min-height:42px;padding:0 11px;border:1px solid var(--line-strong);border-radius:12px;background:#fff;color:var(--navy);font-size:11px;font-weight:850;cursor:pointer}
+  .mobileSiteNav>summary::-webkit-details-marker{display:none}
+  .mobileSiteNav[open]>summary{background:#f3f6f8}
+  .mobileSiteNavPanel{position:absolute;inset-inline-end:0;top:calc(100% + 8px);width:min(340px,calc(100vw - 32px));max-height:calc(100dvh - 88px);overflow:auto;padding:10px;border:1px solid #dbe3ea;border-radius:16px;background:#fff;box-shadow:0 18px 48px rgba(12,35,56,.18)}
+  .mobileSiteNavPanel nav{display:grid;gap:3px}
+  .mobileSiteNavPanel nav a,.mobilePartnerEntry,.mobileSiteNavPanel .partnerEntry{display:flex!important;align-items:center;gap:10px;min-height:46px;padding:10px 12px;border-radius:10px;color:#2f455a;font-size:13px;font-weight:750}
+  .mobilePartnerEntry{margin-top:6px;border-top:1px solid var(--line);border-radius:0;padding-top:13px!important}
+  .mobileSiteNavPanel .partnerEntry{width:100%;justify-content:flex-start!important;margin-top:2px!important;color:#667789!important}
+}
+
+/* At zoom-equivalent tablet widths the marketing hero must reflow, not shrink. */
+@media (min-width:781px) and (max-width:1040px){
+  .premiumHeroGrid{grid-template-columns:1fr!important;gap:24px!important;padding:54px 0 76px!important}
+  .premiumHeroCopy{max-width:900px}
+  .premiumHeroCopy h1{max-width:900px!important;font-size:clamp(40px,6vw,58px)!important;line-height:1.02!important;margin:15px 0 18px!important}
+  .premiumHeroCopy>p{max-width:760px!important;font-size:16px!important;line-height:1.65!important}
+  .heroVisual{display:none!important}
+  .heroConfidence{margin-top:21px!important;gap:12px 18px!important}
+  .premiumSearchDock{margin-top:-28px!important;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr)!important}
+  .premiumSearchDock label{min-width:0!important;padding:10px 12px!important}
+  .premiumSearchDock label:nth-of-type(4){grid-column:1/2}
+  .premiumSearchDock button{grid-column:2/-1;min-height:48px;padding:0 18px!important}
+}
+
+/* Long Arabic labels need the compact header sooner than English. */
+@media (min-width:781px) and (max-width:1260px){
+  html[dir="rtl"] .siteHeaderInner{gap:10px}
+}
+
+@media (min-width:781px) and (max-width:900px){
+  .wordmarkText{font-size:18px!important}
+  .accountButton span{max-width:110px;overflow:hidden;text-overflow:ellipsis}
+  .premiumSearchDock{grid-template-columns:1fr 1fr!important}
+  .premiumSearchDock label:nth-of-type(1){grid-column:1/-1}
+  .premiumSearchDock label:nth-of-type(4){grid-column:auto}
+  .premiumSearchDock button{grid-column:1/-1}
+}
