@@ -72,6 +72,27 @@ test.describe("mobile-first traveler flow", () => {
     await expect(page.locator(".premiumGallery img").first()).toBeVisible();
     await expect(page.locator(".hotelBookingRail")).toBeVisible();
     await expect(page.locator(".publicRoomMedia").first()).toBeVisible();
+    await expect(page.locator(".hotelMobileQuickNav")).toBeVisible();
+    await expect(page.locator(".mobileRoomCommerceSummary").first()).toBeVisible();
+
+    const bookingWorkspace = await page.locator(".hotelBookingWorkspace").boundingBox();
+    const trustLayer = await page.locator(".hotelTrustLayer").boundingBox();
+    expect(bookingWorkspace).not.toBeNull();
+    expect(trustLayer).not.toBeNull();
+    expect(bookingWorkspace!.y).toBeLessThan(trustLayer!.y);
+
+    const firstRoom = page.locator(".roomOfferCard").first();
+    const rateToggle = firstRoom.locator(".mobileRoomRateToggle");
+    if (await rateToggle.count()) {
+      const secondaryRate = firstRoom.locator(".mobileSecondaryRate").first();
+      await expect(rateToggle).toBeVisible();
+      await expect(secondaryRate).toBeHidden();
+      await rateToggle.click();
+      await expect(rateToggle).toHaveAttribute("aria-expanded", "true");
+      await expect(secondaryRate).toBeVisible();
+      await rateToggle.click();
+      await expect(secondaryRate).toBeHidden();
+    }
     await expectNoHorizontalOverflow(page);
 
     await page.locator(".premiumGallery img").first().click();
