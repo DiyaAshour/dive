@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Activity, BookOpenText, Building2, FileCheck2, Globe2, LayoutDashboard, Mail, MessageSquareWarning, Rocket, Users, WalletCards} from "lucide-react";
+import {Activity, BookOpenText, Building2, FileCheck2, Gem, Globe2, LayoutDashboard, Mail, MessageSquareWarning, Rocket, Users, WalletCards} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 import {direction} from "@/lib/i18n";
 import {portalDictionary} from "@/lib/portal-i18n";
@@ -7,7 +7,7 @@ import {AdminSignOutButton} from "./admin-sign-out-button";
 import {Brand} from "./brand";
 import {LanguageSwitcher} from "./language-switcher";
 
-type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "distribution" | "finance" | "launch" | "access" | "audit";
+type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
 type Principal = Readonly<{
   user: {displayName: string; email: string};
 }>;
@@ -30,6 +30,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const distributionLabel = locale === "ar" ? "التوزيع والقنوات" : "Distribution";
   const googleHotelsLabel = locale === "ar" ? "فنادق Google" : "Google Hotels";
   const financeLabel = locale === "ar" ? "الدفعات والتسويات" : "Payouts & settlement";
+  const rewardsLabel = locale === "ar" ? "المكافآت والعضويات" : "Rewards & memberships";
   const launchLabel = locale === "ar" ? "ما قبل الإطلاق" : "Pre-launch";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
@@ -48,6 +49,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <span>{locale === "ar" ? "المالية" : "Finance"}</span>
         <Link className={active === "finance" ? "active" : ""} href="/admin/finance/payouts"><WalletCards size={17}/>{financeLabel}</Link>
         <span>{admin.control}</span>
+        <Link className={active === "rewards" ? "active" : ""} href="/admin/rewards"><Gem size={17}/>{rewardsLabel}</Link>
         <Link className={active === "launch" ? "active" : ""} href="/admin/site"><Rocket size={17}/>{launchLabel}</Link>
         <Link className={active === "access" ? "active" : ""} href={dashboardHref("access")}><Users size={17}/>{admin.access}</Link>
         <Link className={active === "audit" ? "active" : ""} href={dashboardHref("audit")}><Activity size={17}/>{admin.audit}</Link>
