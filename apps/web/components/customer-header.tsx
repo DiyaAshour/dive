@@ -36,6 +36,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
         {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{navLinks}</nav>}
         <div className="siteActions">
           {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
+          <div className="compactMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
           {user ? <>
             <Link className="accountButton" href="/account" title={`${copy.nav.account} · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
             {!minimal && <SignOutButton locale={market.baseLocale}/>} 
@@ -45,7 +46,6 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
             <div className="mobileSiteNavPanel">
               <nav aria-label={menuLabel}>{navLinks}</nav>
               <Link className="mobilePartnerEntry" href="/partner"><Building2 size={17}/>{copy.nav.partner}</Link>
-              <div className="mobileMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
               {user && <SignOutButton locale={market.baseLocale}/>} 
             </div>
           </details>}
