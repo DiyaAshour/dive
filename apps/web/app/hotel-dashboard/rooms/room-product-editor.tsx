@@ -6,6 +6,7 @@ import type {FormEvent} from "react";
 import {useRouter} from "next/navigation";
 import {Baby, Bath, BedDouble, CheckCircle2, Circle, Home, Image as ImageIcon, Plus, Ruler, Save, Trash2, UserRound} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
+import AmenityDragDropEditor from "./amenity-drag-drop";
 
 const UNIT_TYPES = ["ROOM", "STUDIO", "SUITE", "APARTMENT", "VILLA", "CHALET", "BUNGALOW", "HOLIDAY_HOME", "DORMITORY_ROOM", "BED_IN_DORMITORY"] as const;
 const BED_TYPES = ["SINGLE", "DOUBLE", "QUEEN", "KING", "EXTRA_LARGE_DOUBLE", "SOFA_BED", "BUNK_BED", "FUTON", "MURPHY_BED"] as const;
@@ -50,7 +51,10 @@ export default function RoomProductEditor({hotelId, locale, initialRoom}: Readon
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedAmenityObjects = FACILITIES.filter(([code]) => selectedFacilities.includes(code)).map(([code, name, , category]) => ({code, name, category}));
+  const selectedAmenityObjects = selectedFacilities.flatMap((code) => {
+    const found = FACILITIES.find(([facilityCode]) => facilityCode === code);
+    return found ? [{code: found[0], name: found[1], category: found[3]}] : [];
+  });
   const checks = [
     {label: ar ? "اسم وكود الوحدة" : "Unit name and code", passed: room.name.trim().length >= 2 && room.code.trim().length >= 2},
     {label: ar ? "سعة ضيوف منطقية" : "Valid guest occupancy", passed: occupancyIsValid(room, beds)},
@@ -86,7 +90,6 @@ export default function RoomProductEditor({hotelId, locale, initialRoom}: Readon
   function update<K extends keyof RoomDraft>(key: K, value: RoomDraft[K]) {setRoom((current) => ({...current, [key]: value}));}
   function updateBed(index: number, patch: Partial<BedDraft>) {setBeds((items) => items.map((bed, position) => position === index ? {...bed, ...patch} : bed));}
   function removeBed(index: number) {setBeds((items) => items.filter((_, position) => position !== index));}
-  function toggleFacility(code: string) {setSelectedFacilities((items) => items.includes(code) ? items.filter((item) => item !== code) : [...items, code]);}
 
   return <form className="roomStudio" onSubmit={submit}>
     <div className="roomStudioMain">
@@ -117,7 +120,7 @@ export default function RoomProductEditor({hotelId, locale, initialRoom}: Readon
         <button className="secondaryButton roomAddBed" type="button" onClick={() => setBeds((items) => [...items, {area: ar ? `غرفة النوم ${room.bedroomCount || 1}` : `Bedroom ${room.bedroomCount || 1}`, type: "SINGLE", quantity: 1, sortOrder: items.length}])}><Plus size={16}/>{ar ? "إضافة سرير أو مساحة" : "Add bed or sleeping area"}</button>
       </div><div className="roomEditorGrid roomExtrasGrid"><NumberField label={ar ? "أسرّة إضافية عند الطلب" : "Extra beds on request"} value={room.extraBedCount} min={0} max={100} onChange={(value) => update("extraBedCount", value)}/><NumberField label={ar ? "مهود أطفال عند الطلب" : "Cribs on request"} value={room.cribCount} min={0} max={100} onChange={(value) => update("cribCount", value)}/><label className="roomInlineCheck"><input type="checkbox" checked={room.allowsCribAndExtraBed} onChange={(event) => update("allowsCribAndExtraBed", event.target.checked)}/><span><strong>{ar ? "السماح بالمهد والسرير الإضافي معًا" : "Crib and extra bed may be requested together"}</strong></span></label></div></section>
 
-      <section className="panel roomEditorSection"><div className="roomEditorHead"><CheckCircle2 size={20}/><div><span className="eyebrow">04</span><h2>{ar ? "مرافق الغرفة" : "Room facilities"}</h2></div></div><div className="facilityPicker">{FACILITIES.map(([code, nameEn, nameAr]) => <label className={selectedFacilities.includes(code) ? "selected" : ""} key={code}><input type="checkbox" checked={selectedFacilities.includes(code)} onChange={() => toggleFacility(code)}/><span>{ar ? nameAr : nameEn}</span></label>)}</div><label className="roomCustomAmenities">{ar ? "مرافق مخصصة" : "Custom facilities"}<small>{ar ? "كل سطر: CODE | الاسم | التصنيف اختياري" : "One per line: CODE | display name | optional category"}</small><textarea rows={5} value={customAmenities} onChange={(event) => setCustomAmenities(event.target.value)} placeholder="FIREPLACE | Fireplace | Comfort"/></label></section>
+      <section className="panel roomEditorSection"><div className="roomEditorHead"><CheckCircle2 size={20}/><div><span className="eyebrow">04</span><h2>{ar ? "مرافق الغرفة" : "Room facilities"}</h2><p>{ar ? "اسحب المرافق واخترها بصريًا بدل إدخالها كنص." : "Drag, select and reorder facilities visually."}</p></div></div><AmenityDragDropEditor ar={ar} facilities={FACILITIES} selected={selectedFacilities} customValue={customAmenities} onSelectedChange={setSelectedFacilities} onCustomValueChange={setCustomAmenities}/></section>
     </div>
 
     <aside className="roomStudioAside">
@@ -137,7 +140,7 @@ function unitTypeLabel(value: UnitType, ar: boolean) {const labels: Record<UnitT
 function bedLabel(value: BedType, ar: boolean) {const labels: Record<BedType, [string, string]> = {SINGLE: ["single bed", "سرير فردي"], DOUBLE: ["double bed", "سرير مزدوج"], QUEEN: ["queen bed", "سرير كوين"], KING: ["king bed", "سرير كينغ"], EXTRA_LARGE_DOUBLE: ["extra-large double bed", "سرير مزدوج كبير جدًا"], SOFA_BED: ["sofa bed", "سرير أريكة"], BUNK_BED: ["bunk bed", "سرير بطابقين"], FUTON: ["futon bed", "سرير فوتون"], MURPHY_BED: ["Murphy bed", "سرير جداري"]}; return labels[value][ar ? 1 : 0];}
 function bedAreaLabel(value: string, ar: boolean) {if (!ar) return value; const bedroom = /^bedroom\s*(\d+)?$/i.exec(value.trim()); if (bedroom) return bedroom[1] ? `غرفة النوم ${bedroom[1]}` : "غرفة النوم"; if (/^living room$/i.test(value.trim())) return "غرفة المعيشة"; return value;}
 function facilityLabel(code: string, ar: boolean) {const found = FACILITIES.find(([facilityCode]) => facilityCode === code); return found ? found[ar ? 2 : 1] : code.replaceAll("_", " ");}
-function parseAmenities(value: string, ar: boolean): Amenity[] {return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {const [code, name, category] = line.split("|").map((part) => part.trim()); if (!code || !name) throw new Error(ar ? `سطر المرفق ${index + 1} يجب أن يحتوي CODE | الاسم` : `Facility line ${index + 1} must include CODE | display name`); return {code: code.toUpperCase(), name, category: category || null};});}
+function parseAmenities(value: string, ar: boolean): Amenity[] {return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {const [code, name, category] = line.split("|").map((part) => part.trim()); if (!code || !name) throw new Error(ar ? `المرفق المخصص ${index + 1} غير مكتمل` : `Custom facility ${index + 1} is incomplete`); return {code: code.toUpperCase(), name, category: category || null};});}
 function customAmenityCount(value: string) {return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).length;}
 function bedsAreValid(beds: BedDraft[]) {const keys = beds.map((bed) => `${bed.area.trim().toLocaleLowerCase()}::${bed.type}`); return beds.length > 0 && beds.every((bed) => bed.area.trim() && bed.quantity > 0) && new Set(keys).size === keys.length;}
 function occupancyIsValid(room: RoomDraft, beds: BedDraft[]) {const totalBeds = beds.reduce((sum, bed) => sum + bed.quantity, 0); const base = room.maxAdults <= room.maxGuests && room.maxGuests <= room.maxAdults + room.maxChildren + room.maxInfants && (room.maxChildren === 0 || room.maxChildren < room.maxGuests) && (room.maxInfants === 0 || room.maxInfants < room.maxGuests); if (!base) return false; if (room.unitType === "DORMITORY_ROOM") return room.maxAdults >= 2 && totalBeds >= 2; if (room.unitType === "BED_IN_DORMITORY") return room.maxGuests === 1 && room.maxAdults === 1 && totalBeds === 1; return true;}
