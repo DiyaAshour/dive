@@ -1,5 +1,5 @@
 import { discoverySearchSchema } from "@platform/contracts";
-import { searchHotels } from "@platform/server";
+import { searchHotelsWithVisibilityBoost } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
 
 export async function GET(request: Request) {
@@ -20,7 +20,8 @@ export async function GET(request: Request) {
       sort: query.get("sort") ?? "RECOMMENDED",
     });
     if (!parsed.success) return validationError(parsed.error);
-    return ok(await searchHotels(parsed.data));
+    const travelerCountry = request.headers.get("cf-ipcountry") ?? request.headers.get("x-vercel-ip-country") ?? optional(query.get("travelerCountry"));
+    return ok(await searchHotelsWithVisibilityBoost(parsed.data, {travelerCountry}));
   } catch (error) {
     return handleApiError(error);
   }
