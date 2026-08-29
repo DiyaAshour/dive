@@ -37,3 +37,25 @@ test("home hero reflows cleanly at zoom-equivalent tablet widths",async({page})=
     await expectNoDocumentOverflow(page,`home hero ${width}px`);
   }
 });
+
+test("iPhone 16 Pro Max keeps the first screen compact and search-led",async({page})=>{
+  await page.setViewportSize({width:430,height:932});
+  await setArabic(page);
+  await expect(page.locator(".mobileSiteNav")).toBeVisible();
+  await expect(page.locator(".desktopMarketSwitcher")).toBeHidden();
+  await expect(page.locator(".premiumHeroCopy h1")).toBeVisible();
+  const metrics=await page.evaluate(()=>{
+    const heading=document.querySelector<HTMLElement>(".premiumHeroCopy h1");
+    const search=document.querySelector<HTMLElement>(".premiumSearchDock");
+    if(!heading||!search)throw new Error("home hero/search missing");
+    return {
+      headingSize:parseFloat(getComputedStyle(heading).fontSize),
+      headingBottom:heading.getBoundingClientRect().bottom,
+      searchTop:search.getBoundingClientRect().top,
+    };
+  });
+  expect(metrics.headingSize).toBeLessThanOrEqual(38.5);
+  expect(metrics.searchTop).toBeLessThan(650);
+  expect(metrics.searchTop).toBeGreaterThan(metrics.headingBottom);
+  await expectNoDocumentOverflow(page,"iPhone 16 Pro Max home");
+});
