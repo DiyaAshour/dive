@@ -1,0 +1,61 @@
+/* Keep room imagery visually important inside the booking workspace. */
+.hotelExperience .publicRoomProduct{
+  grid-template-columns:minmax(310px,38%) minmax(0,1fr)!important;
+  min-height:250px!important;
+  align-items:stretch;
+}
+.hotelExperience .publicRoomMedia{
+  position:relative;
+  min-height:250px!important;
+  overflow:hidden;
+  background:#e8eef4;
+}
+.hotelExperience .publicRoomMedia img{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:250px;
+  object-fit:cover;
+  object-position:center;
+}
+.hotelExperience .publicRoomMedia img[role="button"]{cursor:zoom-in}
+
+@media(max-width:1120px) and (min-width:901px){
+  .hotelExperience .publicRoomProduct{
+    grid-template-columns:minmax(300px,36%) minmax(0,1fr)!important;
+    min-height:240px!important;
+  }
+  .hotelExperience .publicRoomMedia,
+  .hotelExperience .publicRoomMedia img{
+    min-height:240px!important;
+  }
+}
+
+@media(max-width:900px) and (min-width:641px){
+  .hotelExperience .publicRoomProduct{
+    grid-template-columns:minmax(260px,40%) minmax(0,1fr)!important;
+    min-height:220px!important;
+  }
+  .hotelExperience .publicRoomMedia,
+  .hotelExperience .publicRoomMedia img{
+    min-height:220px!important;
+  }
+}
+
+@media(max-width:640px){
+  .hotelExperience .publicRoomProduct{
+    grid-template-columns:1fr!important;
+    min-height:0!important;
+  }
+  .hotelExperience .publicRoomMedia{
+    width:100%;
+    height:auto!important;
+    min-height:0!important;
+    aspect-ratio:16/10;
+  }
+  .hotelExperience .publicRoomMedia img{
+    width:100%;
+    height:100%!important;
+    min-height:0!important;
+  }
+}
