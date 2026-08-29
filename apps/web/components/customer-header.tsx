@@ -5,6 +5,7 @@ import { requestGuestMarket } from "@/lib/request-guest-market";
 import { currentUser } from "@/lib/server-session";
 import { Brand } from "./brand";
 import { MarketSwitcher } from "./market-switcher";
+import { MobileAppNav } from "./mobile-app-nav";
 import { SignOutButton } from "./sign-out-button";
 
 type CustomerHeaderProps = Readonly<{minimal?: boolean}>;
@@ -17,10 +18,11 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   const guideLabel = market.locale === "ar" ? "دليل السفر" : market.locale === "zh" ? "旅行指南" : "Travel guide";
   const menuLabel = market.locale === "ar" ? "القائمة" : market.locale === "zh" ? "菜单" : "Menu";
   const marketEdge = market.direction === "rtl" ? "right" : "left";
+  const rewardsHref = `/rewards/${market.baseLocale}`;
 
   const navLinks = <>
     <Link href="/search">{copy.nav.stays}</Link>
-    <Link href={`/rewards/${market.baseLocale}`}><Sparkles size={15}/>{rewardsLabel}</Link>
+    <Link href={rewardsHref}><Sparkles size={15}/>{rewardsLabel}</Link>
     <Link href={`/blog/${market.baseLocale}`}><BookOpenText size={15}/>{guideLabel}</Link>
     <Link href="/trips">{copy.nav.trips}</Link>
     <Link href="/account/alerts"><Bell size={16}/>{copy.nav.alerts}</Link>
@@ -48,5 +50,6 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
         </details>}
       </div>
     </div>
+    {!minimal && <MobileAppNav locale={market.locale} rewardsHref={rewardsHref}/>} 
   </header>;
 }
