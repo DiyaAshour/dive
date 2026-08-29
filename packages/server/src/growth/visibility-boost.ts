@@ -1,10 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { VisibilityBoostCampaignInput } from "@platform/contracts";
 import { database } from "@platform/database";
 import { notFound } from "../errors";
 import { requireHotelPermission } from "../hotels/authorization";
 
 const ENTITY_TYPE = "VisibilityBoostCampaign";
+const ATTRIBUTION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+
+export const VISIBILITY_BOOST_COOKIE = "hmk_visibility_boost";
+export const VISIBILITY_BOOST_COOKIE_MAX_AGE = ATTRIBUTION_MAX_AGE_SECONDS;
 
 type StoredVisibilityBoostCampaign = VisibilityBoostCampaignInput & Readonly<{
   id: string;
@@ -12,6 +16,16 @@ type StoredVisibilityBoostCampaign = VisibilityBoostCampaignInput & Readonly<{
   totalCommissionRate: number;
   createdAt: string;
   updatedAt: string;
+}>;
+
+type AttributionPayload = Readonly<{hotelId:string;campaignId:string;expiresAt:number}>;
+
+type AttributionSelection = Readonly<{
+  hotelId:string;
+  arrival:string;
+  departure:string;
+  adults:number;
+  children:number;
 }>;
 
 function asStoredCampaign(value: unknown): StoredVisibilityBoostCampaign | null {
@@ -28,6 +42,67 @@ async function latestCampaign(hotelId: string, campaignId: string) {
     select: {after: true},
   });
   return asStoredCampaign(log?.after ?? null);
+}
+
+function attributionSecret() {
+  const secret = process.env.BOOKING_TOKEN_SECRET;
+  if (!secret || secret.length < 32) throw new Error("BOOKING_TOKEN_SECRET must be at least 32 characters");
+  return secret;
+}
+
+function attributionMac(encodedPayload:string) {
+  return createHmac("sha256", attributionSecret()).update(`visibility-boost:${encodedPayload}`).digest("base64url");
+}
+
+function parseAttributionToken(token:string | null | undefined): AttributionPayload | null {
+  if (!token) return null;
+  const [encodedPayload, suppliedMac] = token.split(".");
+  if (!encodedPayload || !suppliedMac) return null;
+  const expectedMac = attributionMac(encodedPayload);
+  const supplied = Buffer.from(suppliedMac);
+  const expected = Buffer.from(expectedMac);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload,"base64url").toString("utf8")) as Partial<AttributionPayload>;
+    if (!payload.hotelId || !payload.campaignId || !Number.isFinite(payload.expiresAt) || Number(payload.expiresAt) <= Date.now()) return null;
+    return {hotelId:payload.hotelId,campaignId:payload.campaignId,expiresAt:Number(payload.expiresAt)};
+  } catch {
+    return null;
+  }
+}
+
+function stayNights(arrival:string,departure:string) {
+  return Math.max(1,Math.round((Date.parse(`${departure}T00:00:00.000Z`)-Date.parse(`${arrival}T00:00:00.000Z`))/86_400_000));
+}
+
+function segmentMatches(campaign:StoredVisibilityBoostCampaign, selection:AttributionSelection) {
+  if (campaign.guestSegment === "ALL") return true;
+  if (campaign.guestSegment === "FAMILIES") return selection.children > 0;
+  if (campaign.guestSegment === "COUPLES") return selection.children === 0 && selection.adults === 2;
+  if (campaign.guestSegment === "SOLO") return selection.children === 0 && selection.adults === 1;
+  return false;
+}
+
+export function visibilityBoostAttributionToken(hotelId:string,campaignId:string) {
+  const payload:AttributionPayload = {hotelId,campaignId,expiresAt:Date.now()+ATTRIBUTION_MAX_AGE_SECONDS*1000};
+  const encodedPayload = Buffer.from(JSON.stringify(payload),"utf8").toString("base64url");
+  return `${encodedPayload}.${attributionMac(encodedPayload)}`;
+}
+
+export async function resolveVisibilityBoostAttribution(token:string | null | undefined, travelerCountry:string | null | undefined, selection:AttributionSelection) {
+  const payload = parseAttributionToken(token);
+  const country = travelerCountry?.trim().toUpperCase();
+  if (!payload || !country || payload.hotelId !== selection.hotelId) return null;
+  const campaign = await latestCampaign(selection.hotelId,payload.campaignId);
+  if (!campaign || campaign.status !== "ACTIVE") return null;
+  const today = new Date().toISOString().slice(0,10);
+  if (today < campaign.bookingStartsOn || today > campaign.bookingEndsOn) return null;
+  if (!campaign.targetCountries.includes(country)) return null;
+  if (selection.arrival < campaign.stayStartsOn || selection.departure > campaign.stayEndsOn) return null;
+  const nights = stayNights(selection.arrival,selection.departure);
+  if (nights < campaign.minimumNights || (campaign.maximumNights !== null && nights > campaign.maximumNights)) return null;
+  if (!segmentMatches(campaign,selection)) return null;
+  return {campaignId:campaign.id,extraCommissionPercent:campaign.extraCommissionPercent};
 }
 
 export async function listHotelVisibilityBoostCampaigns(actorUserId: string, hotelId: string) {
