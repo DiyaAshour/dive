@@ -9,9 +9,12 @@ export async function GET(request: NextRequest) {
     const user = await requestAdminUser(request);
     if (!user) return unauthorized();
     const url = new URL(request.url);
-    const search = url.searchParams.get("search")?.trim() || undefined;
-    const userId = url.searchParams.get("userId")?.trim() || undefined;
-    return ok(await getAdminRewardsControlCenter(user.id, {search, userId}));
+    const search = url.searchParams.get("search")?.trim() || "";
+    const userId = url.searchParams.get("userId")?.trim() || "";
+    const options: {search?:string;userId?:string} = {};
+    if (search) options.search = search;
+    if (userId) options.userId = userId;
+    return ok(await getAdminRewardsControlCenter(user.id, options));
   } catch (error) {
     return handleApiError(error);
   }
