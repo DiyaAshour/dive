@@ -16,7 +16,11 @@ export async function PATCH(request: NextRequest, {params}: {params: Promise<{us
     const parsed = updateUserSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return validationError(parsed.error);
     const {userId} = await params;
-    return ok(await updatePlatformManagedUser(user.id, userId, parsed.data));
+    const update = {
+      ...(parsed.data.displayName !== undefined ? {displayName: parsed.data.displayName} : {}),
+      ...(parsed.data.platformRole !== undefined ? {platformRole: parsed.data.platformRole} : {}),
+    };
+    return ok(await updatePlatformManagedUser(user.id, userId, update));
   } catch (error) {
     return handleApiError(error);
   }
