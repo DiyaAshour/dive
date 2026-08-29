@@ -40,6 +40,7 @@ import "./mobile-first.css";
 import "./responsive-global.css";
 import "./responsive-polish.css";
 import "./zoom-resilience.css";
+import "./home-commerce.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),

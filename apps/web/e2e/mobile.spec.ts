@@ -13,10 +13,31 @@ async function expectNoHorizontalOverflow(page: Page) {
 test.describe("mobile-first traveler flow", () => {
   test.use({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
 
-  test("home and search stay inside the phone viewport", async ({page}) => {
+  test("home commerce surface and search stay inside the phone viewport", async ({page}) => {
     await page.goto("/");
     await expect(page.locator(".mobileSiteNav > summary")).toBeVisible();
-    await expect(page.locator(".premiumSearchDock")).toBeVisible();
+    await expect(page.locator(".homeSearchDock")).toBeVisible();
+    await expect(page.locator(".homeSearchWhere")).toBeVisible();
+
+    const checkIn = await page.locator(".homeSearchCheckIn").boundingBox();
+    const checkOut = await page.locator(".homeSearchCheckOut").boundingBox();
+    expect(checkIn).not.toBeNull();
+    expect(checkOut).not.toBeNull();
+    expect(Math.abs(checkIn!.y-checkOut!.y)).toBeLessThanOrEqual(2);
+    expect(checkIn!.width).toBeGreaterThan(120);
+    expect(checkOut!.width).toBeGreaterThan(120);
+
+    const stayGrid = page.locator(".stayCardGrid");
+    await expect(stayGrid).toBeVisible();
+    const gridStyle = await stayGrid.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {display:style.display,overflowX:style.overflowX,scrollSnapType:style.scrollSnapType};
+    });
+    expect(gridStyle.display).toBe("flex");
+    expect(["auto","scroll"]).toContain(gridStyle.overflowX);
+    expect(gridStyle.scrollSnapType).toContain("x");
+    await expect(page.locator(".stayCard").first()).toBeVisible();
+    await expect(page.locator(".stayCardCtaCopy").first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await page.goto("/search?destination=Amman");

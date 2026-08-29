@@ -1,0 +1,47 @@
+/* Homepage commerce polish: compact search + mobile hotel carousel.
+   Loaded last so it can refine the mobile-first layer without changing the core brand. */
+
+.homeSearchFieldLabel{display:flex!important;align-items:center;gap:6px}.homeSearchFieldLabel svg{flex:0 0 auto;color:var(--navy)}
+.stayCardCtaCopy{display:grid;gap:2px;min-width:0}.stayCardCtaCopy small{font-size:9px;font-weight:700;color:#8a96a6;line-height:1.2}.stayCardCtaCopy strong{font-size:13px;color:var(--navy);line-height:1.25}.stayCardCtaArrow{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;background:#f1f5f8;color:var(--navy);transition:.18s ease}.stayCard:hover .stayCardCtaArrow{background:var(--navy);color:#fff}
+
+@media (max-width:780px){
+  .premiumHero .homeSearchDock{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:0!important;margin-top:7px!important;padding:6px!important;border-radius:18px!important;overflow:visible!important;box-shadow:0 13px 34px rgba(16,40,64,.13)!important}
+  .premiumHero .homeSearchDock label{min-width:0!important;min-height:63px!important;margin:0!important;padding:8px 10px!important;border:0!important;border-bottom:1px solid var(--line)!important;background:#fff!important;border-radius:0!important}
+  .premiumHero .homeSearchDock .homeSearchWhere{grid-column:1/-1!important;border-radius:12px 12px 0 0!important}
+  .premiumHero .homeSearchDock .homeSearchCheckIn{grid-column:1!important}
+  .premiumHero .homeSearchDock .homeSearchCheckOut{grid-column:2!important;border-inline-start:1px solid var(--line)!important}
+  .premiumHero .homeSearchDock .homeSearchGuests{grid-column:1/-1!important;border-bottom:0!important}
+  .premiumHero .homeSearchDock label>span{font-size:9px!important;letter-spacing:.055em!important}
+  .premiumHero .homeSearchDock input{min-width:0!important;padding:3px 0 0!important;font-size:16px!important;line-height:1.25!important}
+  .premiumHero .homeSearchDock small{margin-top:1px!important;font-size:8.5px!important;line-height:1.25!important}
+  .premiumHero .homeSearchDock button{grid-column:1/-1!important;min-height:50px!important;margin-top:6px!important;border-radius:12px!important}
+
+  .customerPage .discoverySection{padding:36px 0 48px!important}
+  .customerPage .discoverySection .premiumSectionHead{align-items:flex-start!important;margin-bottom:15px!important}
+  .customerPage .discoverySection .premiumSectionHead h2{font-size:25px!important;line-height:1.08!important}
+  .customerPage .discoverySection .premiumSectionHead p{font-size:12.5px!important;line-height:1.45!important}
+  .customerPage .stayCardGrid{display:flex!important;grid-template-columns:none!important;gap:12px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory;scroll-padding-inline:0;padding:1px 0 8px!important;overscroll-behavior-inline:contain;scrollbar-width:none}
+  .customerPage .stayCardGrid::-webkit-scrollbar{display:none}
+  .customerPage .stayCard{flex:0 0 min(84vw,330px)!important;width:min(84vw,330px)!important;scroll-snap-align:start;scroll-snap-stop:normal;border-radius:18px!important;box-shadow:0 8px 24px rgba(16,40,64,.06)}
+  .customerPage .stayCardMedia{height:190px!important}
+  .customerPage .verifiedPill{left:10px!important;top:10px!important;padding:5px 8px!important;font-size:9px!important}
+  .customerPage .stayCardBody{padding:14px!important}
+  .customerPage .stayCardMeta{font-size:10px!important}
+  .customerPage .stayCardBody h3{font-size:19px!important;line-height:1.18!important;margin:5px 0 8px!important}
+  .customerPage .stayRating{margin:5px 0 9px!important}
+  .customerPage .stayAmenities{display:flex!important;flex-wrap:nowrap!important;gap:5px!important;min-height:25px!important;overflow:hidden!important}
+  .customerPage .stayAmenities span{flex:0 0 auto;font-size:9px!important;padding:4px 6px!important}
+  .customerPage .stayCardCta{margin-top:11px!important;padding-top:11px!important;gap:10px!important}
+  .customerPage .stayCardCtaCopy small{font-size:8px!important}
+  .customerPage .stayCardCtaCopy strong{font-size:12px!important}
+  .customerPage .stayCardCtaArrow{width:32px;height:32px;border-radius:10px}
+}
+
+@media (max-width:480px){
+  .customerPage .premiumHeroGrid{padding-bottom:13px!important}
+  .customerPage .heroConfidence{display:flex!important;flex-wrap:wrap!important;overflow:visible!important;gap:6px!important;margin-top:10px!important;padding-bottom:0!important}
+  .customerPage .heroConfidence span{flex:0 0 auto!important;font-size:8.8px!important;padding:5px 7px!important}
+  .customerPage .premiumHero .homeSearchDock{margin-top:5px!important}
+  .customerPage .premiumHero .homeSearchDock label{min-height:59px!important;padding:7px 9px!important}
+  .customerPage .discoverySection{padding-top:30px!important}
+}
