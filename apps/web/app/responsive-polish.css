@@ -1,0 +1,53 @@
+/* Final responsive isolation and device polish. Loaded after every other stylesheet. */
+
+/* The account rewards dashboard and public rewards landing intentionally share legacy class names.
+   Scope the two experiences so one surface cannot leak layout behavior into the other. */
+.rewardsLanding .rewardsHero{display:block;border-radius:0;box-shadow:none}
+.rewardsLanding .rewardsSectionHead{display:block;max-width:780px}
+.accountExperience .rewardsHero{display:grid}
+.accountExperience .rewardsSectionHead{display:flex}
+
+/* Dynamic viewport + safe areas for iOS/Android browser chrome and installed PWAs. */
+@supports (height:100dvh){
+  .authPage,.partnerMarketingPage,.partnerAuthPage,.partnerOnboardingPage,.adminLoginPage,.searchExperience,.hotelExperience,.checkoutExperience,.accountExperience,.bookingCenterPage{min-height:100dvh}
+  .hotelGalleryLightbox{height:100dvh;max-height:100dvh}
+}
+@supports (padding-top:env(safe-area-inset-top)){
+  @media (max-width:780px){
+    .siteHeader{padding-top:env(safe-area-inset-top)}
+    .partnerSidebar,.adminSidebar{padding-top:max(8px,env(safe-area-inset-top))!important}
+    .mobileSiteNavPanel{max-height:calc(100dvh - 80px - env(safe-area-inset-top));overflow:auto}
+    .hotelExperience .hotelBookingRail{bottom:max(8px,env(safe-area-inset-bottom))!important}
+    .walletReserveButton{bottom:max(8px,env(safe-area-inset-bottom))!important}
+  }
+}
+
+/* Public rewards mobile layout remains full-bleed; account rewards remains a card. */
+@media (max-width:780px){
+  .rewardsLanding .rewardsHero{padding:44px 0!important;border-radius:0!important}
+  .rewardsLanding .rewardsHeroGrid{grid-template-columns:1fr!important;gap:24px!important}
+  .rewardsLanding .rewardsSectionHead{display:block!important;margin-bottom:22px!important}
+  .rewardsLanding .rewardsSectionHead h2{font-size:clamp(28px,8vw,38px)!important}
+  .accountExperience .rewardsHero{grid-template-columns:1fr!important;padding:20px!important;border-radius:18px!important}
+  .accountExperience .rewardsSectionHead{display:flex!important;align-items:flex-start!important;flex-direction:column!important}
+}
+
+/* Do not let translated labels force document overflow. */
+html[lang="ar"] :where(button,a,label,strong,span),html[lang="zh"] :where(button,a,label,strong,span){min-width:0}
+html[lang="zh"] :where(h1,h2,h3,p,a,button,span,strong){word-break:break-word}
+
+/* Keyboard users should keep a visible focus ring at every size. */
+:where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid rgba(33,78,118,.28);outline-offset:2px}
+
+/* Pointer devices keep hover affordances; touch-only devices avoid sticky hover transforms. */
+@media (hover:none){
+  .stayCard:hover,.premiumResultCard:hover,.tripBookingCard:hover,.bookingActionCard:hover{transform:none!important}
+  .primary:hover,.primaryButton:hover,.resultCta:hover,.bookRateButton:hover{transform:none!important}
+}
+
+/* Printing booking details should not include sticky navigation or controls. */
+@media print{
+  .siteHeader,.partnerSidebar,.adminSidebar,.hotelBookingRail,.mobileSiteNav{display:none!important}
+  body{background:#fff!important;overflow:visible!important}
+  .shell,.partnerMain,.adminMain{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+}
