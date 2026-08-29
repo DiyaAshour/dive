@@ -1,7 +1,7 @@
 "use client";
 
 import { BedDouble, ChevronDown, Info, MessageSquareText, Sparkles } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -18,6 +18,8 @@ type RoomTarget = Readonly<{
 
 export function HotelMobileCommerceEnhancer() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKey = searchParams.toString();
   const [locale, setLocale] = useState<Locale>("en");
   const [navHost, setNavHost] = useState<HTMLElement | null>(null);
   const [rooms, setRooms] = useState<RoomTarget[]>([]);
@@ -83,7 +85,7 @@ export function HotelMobileCommerceEnhancer() {
       if (detailLayer?.id === "hotel-mobile-details") detailLayer.removeAttribute("id");
       if (reviews?.id === "hotel-mobile-reviews") reviews.removeAttribute("id");
     };
-  }, [pathname]);
+  }, [pathname, searchKey]);
 
   return <>
     {navHost && createPortal(<MobileHotelQuickNav locale={locale}/>, navHost)}
