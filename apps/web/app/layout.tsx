@@ -30,6 +30,7 @@ import "./admin-email.css";
 import "./production-ops.css";
 import "./site-launch.css";
 import "./visibility-boost.css";
+import "./sponsored-results.css";
 import "./search-v2.css";
 
 export const metadata: Metadata = {
