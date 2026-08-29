@@ -13,6 +13,7 @@ import "./account.css";
 import "./trips.css";
 import "./rewards.css";
 import "./wallet.css";
+import "./checkout-wallet-amount.css";
 import "./content.css";
 import "./blog-cms.css";
 import "./blog-taxonomy.css";
