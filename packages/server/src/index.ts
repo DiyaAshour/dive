@@ -5,6 +5,7 @@ export * from "./auth/recovery";
 export * from "./account/service";
 export * from "./admin/authorization";
 export * from "./admin/service";
+export * from "./admin/access";
 export * from "./hotels/authorization";
 export * from "./hotels/service";
 export * from "./hotels/rate-management";
