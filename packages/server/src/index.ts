@@ -10,14 +10,14 @@ export * from "./hotels/service";
 export * from "./hotels/rate-management";
 export * from "./hotels/content";
 export * from "./publishing/service";
-export {listFeaturedHotels, searchHotels} from "./discovery/service";
+export * from "./discovery/service";
 export * from "./discovery/destinations";
 export * from "./discovery/search-v2";
-export {resolvePublicHotelIdentifier, listHotelSitemapEntries} from "./discovery/seo";
-export * from "./discovery/demo-safe-public";
+export * from "./discovery/seo";
 export * from "./distribution/google-hotels";
 export * from "./media/service";
 export * from "./media/photo-gallery";
+export * from "./media/public-gallery";
 export * from "./media/cleanup";
 export * from "./storage/provider";
 export * from "./storage/registry";
@@ -29,7 +29,7 @@ export * from "./bookings/experience";
 export * from "./operations/service";
 export * from "./operations/reservation-management";
 export * from "./operations/guest-view";
-export {getReviewEligibility, createGuestReview, replyToGuestReview} from "./reviews/service";
+export * from "./reviews/service";
 export * from "./reviews/management";
 export * from "./promotions/engine";
 export * from "./promotions/service";
@@ -56,3 +56,12 @@ export * from "./payments/provider";
 export * from "./payments/registry";
 export * from "./payments/paytabs";
 export * from "./payments/service";
+
+// Public hotel pages use resilient readers: real database data when available,
+// and the built-in demo catalog for demo-* slugs when production DB is absent.
+export {
+  getPublicHotelDetails,
+  getPublicHotelSeoDetails,
+  getPublicHotelReviews,
+  getPublicHotelGallery,
+} from "./discovery/demo-safe-public";
