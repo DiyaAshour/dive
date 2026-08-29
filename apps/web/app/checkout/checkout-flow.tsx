@@ -57,6 +57,7 @@ export function CheckoutFlow(props: Props) {
   const [guestEmail,setGuestEmail] = useState(props.initialGuestEmail);
   const [paymentMode,setPaymentMode] = useState<PaymentMode|null>(null);
   const [useWallet,setUseWallet] = useState(false);
+  const [walletAmount,setWalletAmount] = useState("");
   const selection = {hotelId:props.hotelId,roomTypeId:props.roomTypeId,ratePlanId:props.ratePlanId,arrival:props.arrival,departure:props.departure,adults:props.adults,children:props.children};
 
   useEffect(() => {
@@ -80,14 +81,25 @@ export function CheckoutFlow(props: Props) {
   const payNowAllowed = Boolean(quote?.allowedPaymentModes.includes("PAY_NOW"));
   const payAtHotelAllowed = Boolean(quote?.allowedPaymentModes.includes("PAY_AT_HOTEL"));
   const walletUsable = Boolean(wallet && quote && wallet.currency === quote.hotel.currency && wallet.balance > 0);
-  const walletPreview = quote && walletUsable && useWallet ? roundMoney(Math.min(wallet?.balance ?? 0, quote.amounts.total)) : 0;
+  const walletMaximum = quote && walletUsable ? roundMoney(Math.min(wallet?.balance ?? 0, quote.amounts.total)) : 0;
+  const walletPreview = quote && walletUsable && useWallet ? walletAmountFromInput(walletAmount,walletMaximum) : 0;
+  const walletAmountInvalid = Boolean(useWallet && walletUsable && walletPreview <= 0);
   const remainingPreview = quote ? Math.max(0, roundMoney(quote.amounts.total - walletPreview)) : 0;
   const fullyCoveredByWallet = Boolean(quote && walletPreview > 0 && remainingPreview <= 0);
   const effectivePaymentMode: PaymentMode|null = fullyCoveredByWallet
     ? (payNowAllowed ? "PAY_NOW" : payAtHotelAllowed ? "PAY_AT_HOTEL" : null)
     : paymentMode;
   const noUsablePayment = !fullyCoveredByWallet && !payAtHotelAllowed && (!payNowAllowed || !onlinePaymentAvailable);
-  const canSubmit = useMemo(() => Boolean(quote && effectivePaymentMode && guestName.trim().length >= 2 && guestEmail.includes("@") && !submitting && !noUsablePayment), [quote,effectivePaymentMode,guestName,guestEmail,submitting,noUsablePayment]);
+  const canSubmit = useMemo(() => Boolean(quote && effectivePaymentMode && guestName.trim().length >= 2 && guestEmail.includes("@") && !submitting && !noUsablePayment && !walletAmountInvalid), [quote,effectivePaymentMode,guestName,guestEmail,submitting,noUsablePayment,walletAmountInvalid]);
+
+  function toggleWallet(checked:boolean) {
+    setUseWallet(checked);
+    if (!checked) return;
+    setWalletAmount((current) => {
+      const currentAmount = walletAmountFromInput(current,walletMaximum);
+      return walletInputText(currentAmount > 0 ? currentAmount : walletMaximum);
+    });
+  }
 
   async function submit() {
     if (!quote || !effectivePaymentMode || !canSubmit) return;
@@ -161,12 +173,38 @@ export function CheckoutFlow(props: Props) {
 
       <div className="walletPaymentHead"><div><span className="eyebrow">{ar?"طريقة الدفع":zh?"付款方式":"Payment method"}</span><h3>{ar?"اختر كيف تريد تسديد الحجز":zh?"选择付款方式":"Choose how to pay"}</h3></div></div>
 
-      {walletUsable && wallet && <label className={`checkoutWalletOption ${useWallet?"active":""}`}>
-        <input type="checkbox" checked={useWallet} onChange={(event)=>setUseWallet(event.target.checked)}/>
-        <span className="checkoutWalletIcon"><WalletCards size={22}/></span>
-        <span className="checkoutWalletCopy"><strong>HandMeKey Wallet</strong><small>{ar?"الرصيد المتاح":zh?"可用余额":"Available balance"} · {displayMoney(wallet.balance,wallet.currency,props.targetCurrency,props.locale,fxCopy.approx)}</small></span>
-        <span className="checkoutWalletUse">{useWallet?(ar?"سيتم استخدامه":zh?"已应用":"Applied"):(ar?"استخدم الرصيد":zh?"使用余额":"Use balance")}</span>
-      </label>}
+      {walletUsable && wallet && <>
+        <label className={`checkoutWalletOption ${useWallet?"active":""}`}>
+          <input type="checkbox" checked={useWallet} onChange={(event)=>toggleWallet(event.target.checked)}/>
+          <span className="checkoutWalletIcon"><WalletCards size={22}/></span>
+          <span className="checkoutWalletCopy"><strong>HandMeKey Wallet</strong><small>{ar?"الرصيد المتاح":zh?"可用余额":"Available balance"} · {displayMoney(wallet.balance,wallet.currency,props.targetCurrency,props.locale,fxCopy.approx)}</small></span>
+          <span className="checkoutWalletUse">{useWallet?(ar?"مفعّل":zh?"已启用":"Enabled"):(ar?"استخدم الرصيد":zh?"使用余额":"Use balance")}</span>
+        </label>
+        {useWallet && <div className="checkoutWalletAmountEditor">
+          <div className="checkoutWalletAmountMeta">
+            <div><strong>{ar?"كم تريد استخدامه من المحفظة؟":zh?"您想使用多少钱包余额？":"How much Wallet credit do you want to use?"}</strong><small>{ar?`الحد الأقصى لهذا الحجز ${walletMaximum.toFixed(2)} ${wallet.currency}`:zh?`本次预订最多可使用 ${walletMaximum.toFixed(2)} ${wallet.currency}`:`Maximum for this booking: ${walletMaximum.toFixed(2)} ${wallet.currency}`}</small></div>
+            <button type="button" onClick={()=>setWalletAmount(walletInputText(walletMaximum))}>{ar?"استخدم الحد الأقصى":zh?"使用最高金额":"Use maximum"}</button>
+          </div>
+          <label className="checkoutWalletAmountField">
+            <input
+              aria-label={ar?"المبلغ المراد استخدامه من المحفظة":zh?"要使用的钱包金额":"Wallet amount to use"}
+              type="number"
+              inputMode="decimal"
+              min="0.01"
+              max={walletMaximum}
+              step="0.01"
+              value={walletAmount}
+              onChange={(event)=>setWalletAmount(event.target.value)}
+              onBlur={(event)=>{
+                const nextAmount=walletAmountFromInput(event.target.value,walletMaximum);
+                setWalletAmount(nextAmount>0?walletInputText(nextAmount):"");
+              }}
+            />
+            <span>{wallet.currency}</span>
+          </label>
+          {walletAmountInvalid && <p className="checkoutWalletAmountError">{ar?"أدخل مبلغًا أكبر من صفر لاستخدام رصيد المحفظة.":zh?"请输入大于 0 的钱包使用金额。":"Enter an amount greater than zero to use Wallet credit."}</p>}
+        </div>}
+      </>}
 
       {!walletUsable && props.initialGuestEmail && <div className="checkoutWalletEmpty"><WalletCards size={18}/><div><strong>HandMeKey Wallet</strong><span>{ar?"لا يوجد رصيد متاح حاليًا. يمكنك تحويل نقاط Rewards إلى رصيد من صفحة المحفظة.":zh?"目前没有可用钱包余额。您可以在钱包页面将 Rewards 积分兑换为余额。":"No wallet balance is available yet. Convert Rewards points to credit from your Wallet page."}</span></div><a href="/account/wallet">{ar?"فتح المحفظة":zh?"打开钱包":"Open Wallet"}</a></div>}
 
@@ -240,6 +278,8 @@ async function requestJson<T=unknown>(url:string, init?:RequestInit):Promise<T> 
 
 function messageFrom(value:unknown,locale:GuestLocale):string { return value instanceof Error ? value.message : locale==="ar"?"حدث خطأ غير متوقع":locale==="zh"?"发生了意外错误":"An unexpected error occurred"; }
 function roundMoney(value:number):number { return Math.round((value + Number.EPSILON) * 100) / 100; }
+function walletAmountFromInput(value:string,maximum:number):number { const parsed=Number(value.replace(",",".")); if(!Number.isFinite(parsed)||parsed<=0||maximum<=0) return 0; return roundMoney(Math.min(parsed,maximum)); }
+function walletInputText(value:number):string { return roundMoney(Math.max(0,value)).toFixed(2); }
 function displayMoney(value:number,sourceCurrency:string,targetCurrency:GuestCurrency,locale:GuestLocale,approx:string):string {const display=guestMoney(value,sourceCurrency,targetCurrency,locale);return display.converted?`${approx} ${display.text}`:display.text;}
 function policyLine(rule:{minimumDaysBeforeArrival:number;penaltyType:string;penaltyValue?:number|null},locale:GuestLocale):string { return locale==="ar"?`${rule.minimumDaysBeforeArrival}+ يوم قبل الوصول: ${penaltyLabel(rule.penaltyType,rule.penaltyValue,locale)}`:locale==="zh"?`入住前 ${rule.minimumDaysBeforeArrival}+ 天：${penaltyLabel(rule.penaltyType,rule.penaltyValue,locale)}`:`${rule.minimumDaysBeforeArrival}+ day${rule.minimumDaysBeforeArrival===1?"":"s"} before arrival: ${penaltyLabel(rule.penaltyType,rule.penaltyValue,locale)}`; }
 function penaltyLabel(type:string,value:number|null|undefined,locale:GuestLocale):string {
