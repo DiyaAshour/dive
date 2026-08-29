@@ -2,6 +2,7 @@ import { roundMoney } from "@platform/core";
 import { database } from "@platform/database";
 import { ApplicationError, badRequest, notFound } from "../errors";
 import { cancelBooking, type BookingAccessContext } from "../bookings/service";
+import { getLoyaltyProgramConfig } from "../loyalty/config";
 import { settleCompletedStayRewards } from "../loyalty/service";
 
 export const WALLET_CURRENCY = "JOD";
@@ -20,6 +21,9 @@ export type WalletOverview = Readonly<{
   redemptionStepPoints: number;
   convertiblePoints: number;
   convertibleAmount: number;
+  rewardsEnabled: boolean;
+  redemptionEnabled: boolean;
+  membershipStatus: "ACTIVE" | "SUSPENDED";
   recentActivity: ReadonlyArray<Readonly<{
     id: string;
     bookingId: string | null;
@@ -36,20 +40,27 @@ export async function getWalletOverview(userId: string): Promise<WalletOverview>
   await settleCompletedStayRewards(userId);
   await reconcileWalletRefunds(userId);
   const db = database();
-  const [wallet, loyalty, activity] = await Promise.all([
+  const [wallet, loyalty, activity, program] = await Promise.all([
     db.walletAccount.upsert({where: {userId}, create: {userId, currency: WALLET_CURRENCY}, update: {}}),
     db.loyaltyAccount.upsert({where: {userId}, create: {userId}, update: {}}),
     db.walletLedgerEntry.findMany({where: {userId}, orderBy: {createdAt: "desc"}, take: ACTIVITY_LIMIT}),
+    getLoyaltyProgramConfig(),
   ]);
-  const convertiblePoints = loyalty.pointsBalance - (loyalty.pointsBalance % REDEMPTION_STEP_POINTS);
+  const redemptionAvailable = program.enabled && program.redemptionEnabled && loyalty.status === "ACTIVE";
+  const convertiblePoints = redemptionAvailable
+    ? loyalty.pointsBalance - (loyalty.pointsBalance % program.redemptionStepPoints)
+    : 0;
   return {
     currency: wallet.currency,
     balance: Number(wallet.balance),
-    pointsPerJod: REWARDS_POINTS_PER_JOD,
-    minimumRedemptionPoints: MIN_REDEMPTION_POINTS,
-    redemptionStepPoints: REDEMPTION_STEP_POINTS,
+    pointsPerJod: program.walletPointsPerJod,
+    minimumRedemptionPoints: program.minimumRedemptionPoints,
+    redemptionStepPoints: program.redemptionStepPoints,
     convertiblePoints,
-    convertibleAmount: roundMoney(convertiblePoints / REWARDS_POINTS_PER_JOD),
+    convertibleAmount: roundMoney(convertiblePoints / program.walletPointsPerJod),
+    rewardsEnabled: program.enabled,
+    redemptionEnabled: program.redemptionEnabled,
+    membershipStatus: loyalty.status,
     recentActivity: activity.map((entry) => ({
       id: entry.id,
       bookingId: entry.bookingId,
@@ -64,11 +75,14 @@ export async function getWalletOverview(userId: string): Promise<WalletOverview>
 }
 
 export async function convertRewardsToWallet(userId: string, rawPoints: number, idempotencyKey: string) {
+  const program = await getLoyaltyProgramConfig();
+  if (!program.enabled) badRequest("REWARDS_DISABLED", "HandMeKey Rewards is currently disabled");
+  if (!program.redemptionEnabled) badRequest("REWARDS_REDEMPTION_DISABLED", "Rewards redemption is currently disabled");
   const points = Math.trunc(rawPoints);
   if (!Number.isFinite(rawPoints) || points !== rawPoints) badRequest("INVALID_POINTS", "Points must be a whole number");
-  if (points < MIN_REDEMPTION_POINTS) badRequest("REDEMPTION_TOO_SMALL", `Redeem at least ${MIN_REDEMPTION_POINTS} points`);
-  if (points % REDEMPTION_STEP_POINTS !== 0) badRequest("INVALID_REDEMPTION_STEP", `Redeem points in steps of ${REDEMPTION_STEP_POINTS}`);
-  const amount = roundMoney(points / REWARDS_POINTS_PER_JOD);
+  if (points < program.minimumRedemptionPoints) badRequest("REDEMPTION_TOO_SMALL", `Redeem at least ${program.minimumRedemptionPoints} points`);
+  if (points % program.redemptionStepPoints !== 0) badRequest("INVALID_REDEMPTION_STEP", `Redeem points in steps of ${program.redemptionStepPoints}`);
+  const amount = roundMoney(points / program.walletPointsPerJod);
   const walletKey = `WALLET_REWARDS:${userId}:${idempotencyKey}`;
   const loyaltyKey = `LOYALTY_REDEMPTION:${userId}:${idempotencyKey}`;
   const db = database();
@@ -81,6 +95,7 @@ export async function convertRewardsToWallet(userId: string, rawPoints: number, 
       const duplicate = await tx.walletLedgerEntry.findUnique({where: {idempotencyKey: walletKey}, select: {id: true}});
       if (duplicate) return;
       const loyalty = await tx.loyaltyAccount.upsert({where: {userId}, create: {userId}, update: {}});
+      if (loyalty.status === "SUSPENDED") throw new ApplicationError("REWARDS_MEMBERSHIP_SUSPENDED", "Rewards membership is suspended", 403);
       if (loyalty.pointsBalance < points) badRequest("INSUFFICIENT_REWARDS", "You do not have enough Rewards points");
       const wallet = await tx.walletAccount.upsert({where: {userId}, create: {userId, currency: WALLET_CURRENCY}, update: {}});
       if (wallet.currency !== WALLET_CURRENCY) throw new ApplicationError("WALLET_CURRENCY_MISMATCH", "Wallet currency is not supported for Rewards conversion", 409);
@@ -91,7 +106,7 @@ export async function convertRewardsToWallet(userId: string, rawPoints: number, 
         points: -points,
         currency: WALLET_CURRENCY,
         eligibleAmount: amount,
-        pointsPerUnit: REWARDS_POINTS_PER_JOD,
+        pointsPerUnit: program.walletPointsPerJod,
         tierAtPosting: loyalty.tier,
         description: `${points} Rewards points converted to HandMeKey Wallet`,
         idempotencyKey: loyaltyKey,
