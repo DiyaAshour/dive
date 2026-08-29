@@ -34,20 +34,19 @@ export default async function VisibilityBoostPage({searchParams}:{searchParams:P
     <section className="partnerMain">
       <PartnerLanguageBar locale={locale}/>
       <div className="partnerTopbar"><div><span className="partnerPageEyebrow">GROW</span><h1>{ar ? "زيادة الظهور" : "Visibility Boost"}</h1><p>{ar ? "استهدف الأسواق التي تريدها وارفع ظهور الفندق مقابل عمولة إضافية فقط على حجوزات الحملة." : "Target the markets you want and increase property visibility with extra commission only on campaign bookings."}</p></div></div>
-      {eligible ? <VisibilityBoostManager hotelId={selected.id} baseCommissionRate={Number(workspace.commissionRate)} initialCampaigns={campaigns} locale={locale}/> : <section className="boostEligibilityPanel" aria-labelledby="visibility-eligibility-title">
-        <div className="boostEligibilityMark" aria-hidden="true">HMK</div>
-        <div className="boostEligibilityBody">
-          <span className="boostKicker">{ar ? "الأهلية التجارية" : "Commercial eligibility"}</span>
-          <h2 id="visibility-eligibility-title">{ar ? "زيادة الظهور غير متاحة لهذه المنشأة بعد" : "Visibility Boost is not available for this property yet"}</h2>
-          <p>{ar ? "تتوفر الأداة فقط بعد اعتماد المنشأة ونشرها مباشرة على HandMeKey. المنشآت المسودة أو غير الموثقة لا يمكنها إنشاء أو تشغيل حملات زيادة ظهور." : "This tool becomes available only after the property is approved, verified and live on HandMeKey. Draft or unverified properties cannot create or activate visibility campaigns."}</p>
-          <div className="boostEligibilityStatus">
-            <div><span>{ar ? "المنشأة" : "Property"}</span><strong>{workspace.name}</strong></div>
-            <div><span>{ar ? "الحالة الحالية" : "Current status"}</span><strong>{propertyStatusLabel(workspace.status, workspace.verified, ar)}</strong></div>
-            <div><span>{ar ? "المطلوب" : "Required"}</span><strong>{ar ? "ACTIVE + موثقة" : "ACTIVE + verified"}</strong></div>
-          </div>
-          <div className="boostEligibilityNote">{ar ? "أي حملة أُنشئت سابقًا بالخطأ لن تدخل في ترتيب البحث ولن تُنسب لها عمولة إضافية ما دامت المنشأة غير مؤهلة." : "Any campaign created previously in error is excluded from search ranking and extra-commission attribution while the property remains ineligible."}</div>
-        </div>
-      </section>}
+      {eligible ? <VisibilityBoostManager hotelId={selected.id} baseCommissionRate={Number(workspace.commissionRate)} initialCampaigns={campaigns} locale={locale}/> : <div className="boostWorkspace">
+        <section className="boostPanel boostCampaignsPanel">
+          <div className="boostPanelHead"><div><div><span className="boostKicker">{ar ? "الأهلية التجارية" : "Commercial eligibility"}</span><h3>{ar ? "زيادة الظهور غير متاحة لهذه المنشأة بعد" : "Visibility Boost is not available for this property yet"}</h3><p>{ar ? "تتوفر الأداة فقط بعد اعتماد المنشأة وتوثيقها ونشرها مباشرة على HandMeKey." : "This tool becomes available only after the property is approved, verified and live on HandMeKey."}</p></div></div></div>
+          <div className="boostEmpty"><strong>{ar ? "لا يمكن إنشاء أو تشغيل حملة الآن" : "Campaign creation and activation are locked"}</strong><span>{ar ? "المنشآت المسودة أو غير الموثقة لا يمكنها شراء ظهور إضافي. أكمل إعداد المنشأة واعتمادها أولًا، ثم ستفتح هذه الأداة تلقائيًا." : "Draft or unverified properties cannot buy additional visibility. Complete property setup and approval first; this tool will unlock automatically once the property is live and verified."}</span></div>
+        </section>
+        <section className="boostTermsStrip" aria-label={ar ? "حالة أهلية المنشأة" : "Property eligibility status"}>
+          <div><span>{ar ? "المنشأة" : "Property"}</span><strong>{workspace.name}</strong></div>
+          <div><span>{ar ? "الحالة الحالية" : "Current status"}</span><strong>{propertyStatusLabel(workspace.status, workspace.verified, ar)}</strong></div>
+          <div><span>{ar ? "حالة التوثيق" : "Verification"}</span><strong>{workspace.verified ? (ar ? "موثقة" : "Verified") : (ar ? "غير موثقة" : "Not verified")}</strong></div>
+          <div><span>{ar ? "المطلوب" : "Required"}</span><strong>{ar ? "ACTIVE + موثقة" : "ACTIVE + verified"}</strong></div>
+        </section>
+        <div className="boostMessage">{ar ? "أي حملة أُنشئت سابقًا بالخطأ لن تدخل في ترتيب البحث ولن تُنسب لها عمولة إضافية ما دامت المنشأة غير مؤهلة." : "Any campaign created previously in error is excluded from search ranking and extra-commission attribution while the property remains ineligible."}</div>
+      </div>}
     </section>
   </main>;
 }
