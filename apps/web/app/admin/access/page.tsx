@@ -36,6 +36,7 @@ export default async function AdminAccessPage() {
   };
 
   const ar = locale === "ar";
+  const ownerPinned = data.ownerMode === "CONFIGURED";
   return <AdminShell locale={locale} principal={principal} active="access" counts={counts}>
     <header className="adminTopbar adminAccessTopbar">
       <div>
@@ -51,6 +52,13 @@ export default async function AdminAccessPage() {
         <div><span className="eyebrow">{ar ? "سيطرة المنصة" : "Platform authority"}</span><h2><Users size={21}/> {ar ? "الحسابات والأدوار" : "Accounts & roles"}</h2></div>
       </div>
       <PlatformAccessControl locale={locale} initialData={data}/>
+      <div className={`ownerRootStatus ${ownerPinned ? "pinned" : "legacy"}`}>
+        <ShieldCheck size={19}/>
+        <div>
+          <strong>{ownerPinned ? (ar ? "هوية Platform Owner مثبتة" : "Platform Owner identity is pinned") : (ar ? "وضع المالك القديم ما زال فعالًا" : "Legacy owner fallback is still active")}</strong>
+          <span>{ownerPinned ? (ar ? "صلاحية المالك مرتبطة بحساب واحد ثابت ولا تعتمد على ترتيب إنشاء مسؤولي المنصة." : "Root authority is bound to one configured account and no longer depends on administrator creation order.") : (ar ? "عرّف PLATFORM_OWNER_USER_ID أو PLATFORM_OWNER_EMAIL في بيئة الإنتاج لتثبيت حساب المالك نهائيًا." : "Set PLATFORM_OWNER_USER_ID or PLATFORM_OWNER_EMAIL in production to pin the owner account permanently.")}</span>
+        </div>
+      </div>
       <PlatformSessionControl
         locale={locale}
         isOwner={data.actor.isOwner}
