@@ -10,5 +10,11 @@ type Props = Readonly<{
 
 export async function SiteBrand(props: Props) {
   const identity = await getSiteIdentityConfig();
-  return <Brand {...props} brandName={identity.brandName} logoUrl={identity.logoUrl}/>;
+  return <Brand
+    {...props}
+    brandName={identity.brandName}
+    logoUrl={identity.logoUrl}
+    wordmarkUrl={identity.wordmarkUrl}
+    lightLogoUrl={identity.lightLogoUrl}
+  />;
 }
