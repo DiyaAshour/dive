@@ -6,6 +6,7 @@ import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import PlatformAccessControl from "./platform-access-control";
+import PlatformSessionControl from "./platform-session-control";
 
 export const metadata: Metadata = {title: "Platform Administrators Control Panel"};
 export const dynamic = "force-dynamic";
@@ -50,6 +51,11 @@ export default async function AdminAccessPage() {
         <div><span className="eyebrow">{ar ? "سيطرة المنصة" : "Platform authority"}</span><h2><Users size={21}/> {ar ? "الحسابات والأدوار" : "Accounts & roles"}</h2></div>
       </div>
       <PlatformAccessControl locale={locale} initialData={data}/>
+      <PlatformSessionControl
+        locale={locale}
+        isOwner={data.actor.isOwner}
+        users={data.users.map((user) => ({id:user.id,displayName:user.displayName,email:user.email,isOwner:user.isOwner}))}
+      />
     </section>
   </AdminShell>;
 }
