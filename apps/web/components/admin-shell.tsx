@@ -31,7 +31,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const googleHotelsLabel = locale === "ar" ? "فنادق Google" : "Google Hotels";
   const financeLabel = locale === "ar" ? "الدفعات والتسويات" : "Payouts & settlement";
   const rewardsLabel = locale === "ar" ? "المكافآت والعضويات" : "Rewards & memberships";
-  const launchLabel = locale === "ar" ? "هوية الموقع والإطلاق" : "Site identity & launch";
+  const launchLabel = locale === "ar" ? "هوية البراند والإطلاق" : "Brand identity & launch";
   const accessLabel = locale === "ar" ? "المستخدمون والصلاحيات" : "Users & access";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
