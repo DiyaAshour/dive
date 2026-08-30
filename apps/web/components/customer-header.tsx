@@ -3,10 +3,10 @@ import { Bell, BookOpenText, Building2, Menu, Sparkles, UserRound } from "lucide
 import { guestDictionary } from "@/lib/guest-i18n";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { currentUser } from "@/lib/server-session";
-import { Brand } from "./brand";
 import { MarketSwitcher } from "./market-switcher";
 import { MobileAppNav } from "./mobile-app-nav";
 import { SignOutButton } from "./sign-out-button";
+import { SiteBrand } from "./site-brand";
 
 type CustomerHeaderProps = Readonly<{minimal?: boolean}>;
 
@@ -32,7 +32,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
     <header className="siteHeader">
       <div className="desktopMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/></div>
       <div className="shell siteHeaderInner">
-        <Brand />
+        <SiteBrand />
         {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{navLinks}</nav>}
         <div className="siteActions">
           {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
