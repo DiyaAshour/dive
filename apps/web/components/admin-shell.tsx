@@ -4,8 +4,8 @@ import type {Locale} from "@/lib/i18n";
 import {direction} from "@/lib/i18n";
 import {portalDictionary} from "@/lib/portal-i18n";
 import {AdminSignOutButton} from "./admin-sign-out-button";
-import {Brand} from "./brand";
 import {LanguageSwitcher} from "./language-switcher";
+import {SiteBrand} from "./site-brand";
 
 type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
 type Principal = Readonly<{
@@ -31,11 +31,11 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const googleHotelsLabel = locale === "ar" ? "فنادق Google" : "Google Hotels";
   const financeLabel = locale === "ar" ? "الدفعات والتسويات" : "Payouts & settlement";
   const rewardsLabel = locale === "ar" ? "المكافآت والعضويات" : "Rewards & memberships";
-  const launchLabel = locale === "ar" ? "ما قبل الإطلاق" : "Pre-launch";
+  const launchLabel = locale === "ar" ? "هوية الموقع والإطلاق" : "Site identity & launch";
   const accessLabel = locale === "ar" ? "المستخدمون والصلاحيات" : "Users & access";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
-      <div className="adminBrand"><Brand href="/admin" inverse/><span>{admin.name}</span></div>
+      <div className="adminBrand"><SiteBrand href="/admin" inverse/><span>{admin.name}</span></div>
       <nav className="adminNav" aria-label={admin.name}>
         <span>{admin.operate}</span>
         <Link className={active === "overview" ? "active" : ""} href={dashboardHref("overview")}><LayoutDashboard size={17}/>{admin.overview}</Link>
