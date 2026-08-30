@@ -12,6 +12,7 @@ type S3CompatibleOptions = Readonly<{
 }>;
 
 const EMPTY_PAYLOAD_HASH = sha256("");
+const MAX_PREFIX_READ_BYTES = 128 * 1024;
 
 export class S3CompatibleStorage implements ObjectStorageProvider {
   readonly name = "s3-compatible";
@@ -61,7 +62,7 @@ export class S3CompatibleStorage implements ObjectStorageProvider {
   }
 
   async readPrefix(objectKey: string, maxBytes: number): Promise<Uint8Array> {
-    const byteCount = Math.max(1, Math.min(Math.trunc(maxBytes), 64));
+    const byteCount = Math.max(1, Math.min(Math.trunc(maxBytes), MAX_PREFIX_READ_BYTES));
     const url = this.objectUrl(objectKey);
     const range = `bytes=0-${byteCount - 1}`;
     const headers = authorizationHeaders("GET", url, this.options, {range});

@@ -9,7 +9,7 @@ import {getSiteLaunchConfig} from "@/lib/site-launch";
 import SiteIdentityControl from "./site-identity-control";
 import SiteLaunchControl from "./site-launch-control";
 
-export const metadata: Metadata = {title: "Site Control"};
+export const metadata: Metadata = {title: "Brand & Site Control"};
 export const dynamic = "force-dynamic";
 
 export default async function SiteLaunchAdminPage() {
@@ -26,8 +26,8 @@ export default async function SiteLaunchAdminPage() {
 
   return <AdminShell locale={locale} principal={principal} active="launch" counts={counts}>
     <header className="adminTopbar">
-      <div><span className="eyebrow">{ar ? "تحكم المنصة" : "PLATFORM CONTROL"}</span><h1>{ar ? "هوية الموقع والإطلاق" : "Site identity & launch"}</h1><p>{ar ? "تحكم بهوية HandMeKey العامة، SEO ووضع الإطلاق من مكان واحد." : "Control the public brand identity, SEO and launch state from one place."}</p></div>
-      <div className="adminSessionBadge"><ShieldCheck size={18}/><span><strong>{access.actor.isOwner ? (ar ? "Platform Owner" : "Platform Owner") : (ar ? "جلسة مسؤول" : "Administrator session")}</strong><small>{ar ? "التغييرات الحساسة تسجل في سجل التدقيق" : "Sensitive changes are written to the audit log"}</small></span></div>
+      <div><span className="eyebrow">{ar ? "تحكم المنصة" : "PLATFORM CONTROL"}</span><h1>{ar ? "هوية البراند والإطلاق" : "Brand identity & launch"}</h1><p>{ar ? "تحكم بملفات هوية HandMeKey العامة ووضع الإطلاق من مكان واحد. عناوين ووصف SEO تبقى ضمن قوالب الصفحات." : "Control public brand assets and launch state from one place. SEO titles and descriptions remain owned by page templates."}</p></div>
+      <div className="adminSessionBadge"><ShieldCheck size={18}/><span><strong>{access.actor.isOwner ? "Platform Owner" : (ar ? "جلسة مسؤول" : "Administrator session")}</strong><small>{ar ? "التغييرات الحساسة تسجل في سجل التدقيق" : "Sensitive changes are written to the audit log"}</small></span></div>
     </header>
 
     <SiteIdentityControl

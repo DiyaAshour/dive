@@ -7,6 +7,8 @@ export type SiteIdentityConfig = Readonly<{
   siteTitle: string;
   description: string;
   logoUrl: string | null;
+  wordmarkUrl: string | null;
+  lightLogoUrl: string | null;
   faviconUrl: string | null;
   ogImageUrl: string | null;
   supportEmail: string;
@@ -27,6 +29,8 @@ const DEFAULT_SITE_IDENTITY: SiteIdentityConfig = {
   siteTitle: "HandMeKey — Hotels, clearly priced",
   description: "Search verified hotels, compare live rates and book with the final stay price visible before checkout.",
   logoUrl: null,
+  wordmarkUrl: null,
+  lightLogoUrl: null,
   faviconUrl: null,
   ogImageUrl: null,
   supportEmail: "",
@@ -86,7 +90,9 @@ function validateConfig(input: SiteIdentityInput): SiteIdentityConfig {
     brandName,
     siteTitle,
     description,
-    logoUrl: cleanHttpUrl(input.logoUrl, "logo"),
+    logoUrl: cleanHttpUrl(input.logoUrl, "logo mark"),
+    wordmarkUrl: cleanHttpUrl(input.wordmarkUrl, "wordmark"),
+    lightLogoUrl: cleanHttpUrl(input.lightLogoUrl, "light logo"),
     faviconUrl: cleanHttpUrl(input.faviconUrl, "favicon"),
     ogImageUrl: cleanHttpUrl(input.ogImageUrl, "social image"),
     supportEmail,
@@ -132,6 +138,8 @@ function normalizeStoredConfig(value: unknown): SiteIdentityConfig {
     siteTitle: stringOr(record.siteTitle, DEFAULT_SITE_IDENTITY.siteTitle),
     description: stringOr(record.description, DEFAULT_SITE_IDENTITY.description),
     logoUrl: nullableString(record.logoUrl),
+    wordmarkUrl: nullableString(record.wordmarkUrl),
+    lightLogoUrl: nullableString(record.lightLogoUrl),
     faviconUrl: nullableString(record.faviconUrl),
     ogImageUrl: nullableString(record.ogImageUrl),
     supportEmail: stringOr(record.supportEmail, ""),
