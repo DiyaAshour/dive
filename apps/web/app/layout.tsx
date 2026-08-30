@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense, type ReactNode } from "react";
+import { getSiteIdentityConfig } from "@platform/server";
 import { HotelMobileCommerceEnhancer } from "@/components/hotel-mobile-commerce";
 import { SiteLaunchGate } from "@/components/site-launch-gate";
 import { direction } from "@/lib/i18n";
@@ -30,6 +31,7 @@ import "./booking-center.css";
 import "./admin.css";
 import "./admin-rewards.css";
 import "./admin-access.css";
+import "./admin-site-identity.css";
 import "./admin-email.css";
 import "./production-ops.css";
 import "./site-launch.css";
@@ -49,12 +51,31 @@ import "./hotel-mobile-commerce.css";
 import "./hotel-essentials-compact.css";
 import "./hotel-mobile-head.css";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl()),
-  title: {default: "HandMeKey — Hotels, clearly priced", template: "%s · HandMeKey"},
-  description: "Search verified hotels, compare live rates and book with the final stay price visible before checkout.",
-  alternates: {types: {"application/rss+xml": siteUrl("/feed.xml")}},
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const identity = await getSiteIdentityConfig();
+  return {
+    metadataBase: new URL(siteUrl()),
+    applicationName: identity.brandName,
+    title: {default: identity.siteTitle, template: `%s · ${identity.brandName}`},
+    description: identity.description,
+    icons: identity.faviconUrl ? {icon: identity.faviconUrl, shortcut: identity.faviconUrl, apple: identity.faviconUrl} : undefined,
+    openGraph: {
+      type: "website",
+      siteName: identity.brandName,
+      title: identity.siteTitle,
+      description: identity.description,
+      images: identity.ogImageUrl ? [{url: identity.ogImageUrl}] : undefined,
+    },
+    twitter: {
+      card: identity.ogImageUrl ? "summary_large_image" : "summary",
+      title: identity.siteTitle,
+      description: identity.description,
+      images: identity.ogImageUrl ? [identity.ogImageUrl] : undefined,
+    },
+    robots: identity.indexable ? {index: true, follow: true} : {index: false, follow: false},
+    alternates: {types: {"application/rss+xml": siteUrl("/feed.xml")}},
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
