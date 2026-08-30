@@ -165,7 +165,12 @@ export async function completeSiteAssetUpload(actorUserId: string, assetKey: str
     await storage.deleteObject(assetKey).catch(() => undefined);
     throw new ApplicationError("IMAGE_DIMENSIONS_UNREADABLE", "Could not verify the image dimensions", 400);
   }
-  validateDimensions(initiated.kind, dimensions.width, dimensions.height);
+  try {
+    validateDimensions(initiated.kind, dimensions.width, dimensions.height);
+  } catch (error) {
+    await storage.deleteObject(assetKey).catch(() => undefined);
+    throw error;
+  }
 
   await database().auditLog.create({data: {
     actorUserId,
@@ -285,25 +290,34 @@ function pngDimensions(bytes: Uint8Array) {
   return {width: readU32BE(bytes, 16), height: readU32BE(bytes, 20)};
 }
 
-function icoDimensions(bytes: Uint8Array) {
-  if (bytes.length < 8) return null;
-  return {width: bytes[6] || 256, height: bytes[7] || 256};
+function icoDimensions(bytes: Uint8Array): {width: number; height: number} | null {
+  if (bytes.length < 6) return null;
+  const count = byteAt(bytes, 4) | (byteAt(bytes, 5) << 8);
+  if (count < 1 || bytes.length < 6 + (count * 16)) return null;
+  let width = 0;
+  let height = 0;
+  for (let index = 0; index < count; index += 1) {
+    const offset = 6 + (index * 16);
+    width = Math.max(width, byteAt(bytes, offset) || 256);
+    height = Math.max(height, byteAt(bytes, offset + 1) || 256);
+  }
+  return width && height ? {width, height} : null;
 }
 
 function jpegDimensions(bytes: Uint8Array): {width: number; height: number} | null {
   let offset = 2;
   while (offset + 8 < bytes.length) {
-    if (bytes[offset] !== 0xff) { offset += 1; continue; }
-    const marker = bytes[offset + 1];
+    if (byteAt(bytes, offset) !== 0xff) { offset += 1; continue; }
+    const marker = byteAt(bytes, offset + 1);
     if (marker === 0xd8 || marker === 0xd9) { offset += 2; continue; }
     if (offset + 4 >= bytes.length) break;
-    const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+    const length = (byteAt(bytes, offset + 2) << 8) | byteAt(bytes, offset + 3);
     if (length < 2) break;
     const isSof = marker >= 0xc0 && marker <= 0xcf && ![0xc4,0xc8,0xcc].includes(marker);
     if (isSof && offset + 8 < bytes.length) {
       return {
-        height: (bytes[offset + 5] << 8) | bytes[offset + 6],
-        width: (bytes[offset + 7] << 8) | bytes[offset + 8],
+        height: (byteAt(bytes, offset + 5) << 8) | byteAt(bytes, offset + 6),
+        width: (byteAt(bytes, offset + 7) << 8) | byteAt(bytes, offset + 8),
       };
     }
     offset += 2 + length;
@@ -313,33 +327,37 @@ function jpegDimensions(bytes: Uint8Array): {width: number; height: number} | nu
 
 function webpDimensions(bytes: Uint8Array): {width: number; height: number} | null {
   if (bytes.length < 30) return null;
-  const chunk = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+  const chunk = String.fromCharCode(byteAt(bytes, 12), byteAt(bytes, 13), byteAt(bytes, 14), byteAt(bytes, 15));
   if (chunk === "VP8X") {
     return {width: 1 + readU24LE(bytes, 24), height: 1 + readU24LE(bytes, 27)};
   }
   if (chunk === "VP8L" && bytes.length >= 25) {
-    const b1 = bytes[21], b2 = bytes[22], b3 = bytes[23], b4 = bytes[24];
+    const b1 = byteAt(bytes, 21), b2 = byteAt(bytes, 22), b3 = byteAt(bytes, 23), b4 = byteAt(bytes, 24);
     return {width: 1 + (((b2 & 0x3f) << 8) | b1), height: 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6))};
   }
-  if (chunk === "VP8 " && bytes.length >= 30 && bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a) {
-    return {width: ((bytes[27] << 8) | bytes[26]) & 0x3fff, height: ((bytes[29] << 8) | bytes[28]) & 0x3fff};
+  if (chunk === "VP8 " && bytes.length >= 30 && byteAt(bytes, 23) === 0x9d && byteAt(bytes, 24) === 0x01 && byteAt(bytes, 25) === 0x2a) {
+    return {width: ((byteAt(bytes, 27) << 8) | byteAt(bytes, 26)) & 0x3fff, height: ((byteAt(bytes, 29) << 8) | byteAt(bytes, 28)) & 0x3fff};
   }
   return null;
 }
 
-function startsWith(bytes: Uint8Array, signature: number[]) {
+function startsWith(bytes: Uint8Array, signature: readonly number[]) {
   return matchesAt(bytes, 0, signature);
 }
 
-function matchesAt(bytes: Uint8Array, offset: number, signature: number[]) {
+function matchesAt(bytes: Uint8Array, offset: number, signature: readonly number[]) {
   if (bytes.length < offset + signature.length) return false;
   return signature.every((value, index) => bytes[offset + index] === value);
 }
 
 function readU32BE(bytes: Uint8Array, offset: number) {
-  return ((bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]) >>> 0;
+  return ((byteAt(bytes, offset) * 0x1000000) + (byteAt(bytes, offset + 1) << 16) + (byteAt(bytes, offset + 2) << 8) + byteAt(bytes, offset + 3)) >>> 0;
 }
 
 function readU24LE(bytes: Uint8Array, offset: number) {
-  return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+  return byteAt(bytes, offset) | (byteAt(bytes, offset + 1) << 8) | (byteAt(bytes, offset + 2) << 16);
+}
+
+function byteAt(bytes: Uint8Array, offset: number): number {
+  return bytes[offset] ?? 0;
 }
