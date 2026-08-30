@@ -15,6 +15,12 @@ function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+function configuredPlatformOwnerIdentity() {
+  const id = process.env.PLATFORM_OWNER_USER_ID?.trim() || null;
+  const email = process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase() || null;
+  return {id, email, configured: Boolean(id || email)};
+}
+
 function cleanDisplayName(value: string) {
   const cleaned = value.trim().replace(/\s+/g, " ");
   if (cleaned.length < 2 || cleaned.length > 120) throw new ApplicationError("INVALID_DISPLAY_NAME", "Display name must be between 2 and 120 characters", 400);
@@ -33,6 +39,26 @@ function validatePassword(value: string) {
 }
 
 async function platformOwnerRecord() {
+  const configured = configuredPlatformOwnerIdentity();
+  if (configured.configured) {
+    const owner = await database().user.findFirst({
+      where: {
+        platformRole: "PLATFORM_ADMIN",
+        ...(configured.id ? {id: configured.id} : {}),
+        ...(configured.email ? {email: configured.email} : {}),
+      },
+      select: {id: true, email: true, displayName: true, createdAt: true},
+    });
+    if (!owner) {
+      throw new ApplicationError(
+        "PLATFORM_OWNER_INVALID",
+        "Configured platform owner must exist and have PLATFORM_ADMIN role",
+        503,
+      );
+    }
+    return owner;
+  }
+
   return database().user.findFirst({
     where: {platformRole: "PLATFORM_ADMIN"},
     orderBy: [{createdAt: "asc"}, {id: "asc"}],
@@ -50,6 +76,7 @@ export async function requirePlatformOwner(actorUserId: string) {
 export async function getPlatformAccessControl(actorUserId: string, query = "") {
   const actor = await requirePlatformAdmin(actorUserId);
   const owner = await platformOwnerRecord();
+  const ownerIdentity = configuredPlatformOwnerIdentity();
   const normalizedQuery = query.trim().slice(0, 120);
   const now = new Date();
   const users = await database().user.findMany({
@@ -94,6 +121,7 @@ export async function getPlatformAccessControl(actorUserId: string, query = "") 
   return {
     actor: {id: actor.id, isOwner: owner?.id === actor.id},
     owner,
+    ownerMode: ownerIdentity.configured ? "CONFIGURED" as const : "LEGACY_FIRST_ADMIN" as const,
     counts: {
       total: users.length,
       administrators: users.filter((user) => user.platformRole === "PLATFORM_ADMIN").length,
