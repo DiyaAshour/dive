@@ -19,6 +19,8 @@ export * from "./discovery/destinations";
 export * from "./discovery/search-v2";
 export {resolvePublicHotelIdentifier, listHotelSitemapEntries} from "./discovery/seo";
 export * from "./distribution/google-hotels";
+export * from "./connectivity/oracle-ohip";
+export * from "./connectivity/service";
 export * from "./media/service";
 export * from "./media/photo-gallery";
 export * from "./media/cleanup";
