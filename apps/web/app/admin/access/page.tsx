@@ -7,7 +7,7 @@ import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import PlatformAccessControl from "./platform-access-control";
 
-export const metadata: Metadata = {title: "Platform Access"};
+export const metadata: Metadata = {title: "Platform Administrators Control Panel"};
 export const dynamic = "force-dynamic";
 
 export default async function AdminAccessPage() {
@@ -39,10 +39,10 @@ export default async function AdminAccessPage() {
     <header className="adminTopbar adminAccessTopbar">
       <div>
         <span className="eyebrow">{ar ? "الهوية والصلاحيات" : "Identity & access"}</span>
-        <h1>{ar ? "Platform administrators control panel" : "Platform administrators control panel"}</h1>
+        <h1>Platform administrators control panel</h1>
         <p>{ar ? "إدارة الحسابات، مسؤولي المنصة، عضويات الفنادق، كلمات المرور والجلسات من مكان واحد." : "Create accounts, control platform administrators, assign hotel memberships, reset passwords and revoke sessions from one place."}</p>
       </div>
-      <div className="adminSessionBadge"><ShieldCheck size={18}/><span><strong>{data.actor.isOwner ? (ar ? "Platform Owner" : "Platform Owner") : (ar ? "Platform Administrator" : "Platform Administrator")}</strong><small>{principal.user.email}</small></span></div>
+      <div className="adminSessionBadge"><ShieldCheck size={18}/><span><strong>{data.actor.isOwner ? "Platform Owner" : "Platform Administrator"}</strong><small>{principal.user.email}</small></span></div>
     </header>
 
     <section className="adminSection adminAccessIntro">
