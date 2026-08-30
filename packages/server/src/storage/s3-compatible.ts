@@ -138,7 +138,7 @@ function presignUrl(input: PresignInput): URL {
   url.searchParams.set("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
   url.searchParams.set("X-Amz-Credential", `${input.accessKeyId}/${scope}`);
   url.searchParams.set("X-Amz-Date", amzDate);
-  url.searchParams.set("X-Amz-Expires", String(expiresInSeconds));
+  url.searchParams.set("X-Amz-Expires", String(input.expiresInSeconds));
   url.searchParams.set("X-Amz-SignedHeaders", signedHeaderNames.join(";"));
 
   const canonicalRequest = [
