@@ -1,5 +1,5 @@
 import type {NextRequest} from "next/server";
-import {getPlatformOwnerStatus, getSiteIdentityConfig, updateSiteIdentityConfig} from "@platform/server";
+import {getPlatformAccessControl, getSiteIdentityConfig, updateSiteIdentityConfig} from "@platform/server";
 import {handleApiError, ok} from "@/lib/api";
 import {requestAdminUser} from "@/lib/request-auth";
 
@@ -7,11 +7,11 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requestAdminUser(request);
     if (!user) return unauthorized();
-    const [config, owner] = await Promise.all([
+    const [config, access] = await Promise.all([
       getSiteIdentityConfig(),
-      getPlatformOwnerStatus(user.id),
+      getPlatformAccessControl(user.id),
     ]);
-    return ok({config, owner});
+    return ok({config, owner: access.owner, isOwner: access.actor.isOwner});
   } catch (error) {
     return handleApiError(error);
   }
