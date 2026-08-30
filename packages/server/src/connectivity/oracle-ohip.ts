@@ -46,7 +46,7 @@ export async function getOracleOhipAccessToken(config: OracleOhipConnectionConfi
     cache: "no-store",
   });
   const raw = await response.text();
-  if (!response.ok) throw new ApplicationError("OHIP_AUTH_FAILED", `Oracle OHIP authentication failed (${response.status})`, 502, {provider: "ORACLE_OHIP", status: response.status, response: raw.slice(0, 500)});
+  if (!response.ok) throw new ApplicationError("OHIP_AUTH_FAILED", `Oracle OHIP authentication failed (${response.status}): ${raw.slice(0, 180)}`, 502);
   let parsed: TokenResponse;
   try { parsed = JSON.parse(raw) as TokenResponse; } catch { throw new ApplicationError("OHIP_AUTH_INVALID_RESPONSE", "Oracle OHIP returned an invalid authentication response", 502); }
   if (!parsed.access_token) throw new ApplicationError("OHIP_AUTH_MISSING_TOKEN", "Oracle OHIP did not return an access token", 502);
@@ -69,7 +69,7 @@ export async function oracleOhipRequest<T>(config: OracleOhipConnectionConfig, p
     cache: "no-store",
   });
   const text = await response.text();
-  if (!response.ok) throw new ApplicationError("OHIP_API_FAILED", `Oracle OHIP API request failed (${response.status})`, 502, {provider: "ORACLE_OHIP", status: response.status, path, response: text.slice(0, 800)});
+  if (!response.ok) throw new ApplicationError("OHIP_API_FAILED", `Oracle OHIP API request failed (${response.status}) at ${path}: ${text.slice(0, 180)}`, 502);
   if (!text) return {} as T;
   try { return JSON.parse(text) as T; } catch { throw new ApplicationError("OHIP_API_INVALID_RESPONSE", "Oracle OHIP returned invalid JSON", 502); }
 }
