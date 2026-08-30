@@ -34,7 +34,7 @@ export async function revokePlatformManagedUserSession(actorUserId: string, user
   return database().$transaction(async (tx) => {
     const session = await tx.session.findUnique({
       where: {id: sessionId},
-      select: {id: true, userId: true, scope: true, userAgent: true, ipAddress: true},
+      select: {id: true, userId: true, scope: true},
     });
     if (!session || session.userId !== userId) notFound("Session");
 
@@ -45,13 +45,7 @@ export async function revokePlatformManagedUserSession(actorUserId: string, user
         action: "PLATFORM_USER_SESSION_REVOKED",
         entityType: "Session",
         entityId: sessionId,
-        after: {
-          userId,
-          scope: session.scope,
-          userAgent: session.userAgent,
-          ipAddress: session.ipAddress,
-          revoked: true,
-        },
+        after: {userId, scope: session.scope, revoked: true},
       },
     });
     return {userId, sessionId, revoked: true};
