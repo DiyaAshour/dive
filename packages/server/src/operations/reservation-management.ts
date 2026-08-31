@@ -255,6 +255,8 @@ export async function markHotelReservationNoShow(actorUserId: string, hotelId: s
       arrival: true,
       arrivalStatus: true,
       totalAmount: true,
+      commissionAmount: true,
+      currency: true,
       hotel: {select: {timezone: true}},
     },
   });
@@ -286,6 +288,20 @@ export async function markHotelReservationNoShow(actorUserId: string, hotelId: s
     if (!event || event.type !== "CANCELLED") {
       throw new ApplicationError("NO_SHOW_TRANSITION_FAILED", "No-show settlement event could not be verified", 409);
     }
+    const commissionReversed = Math.max(0, Number(initial.commissionAmount));
+    if (commissionReversed > 0) {
+      await tx.financialEvent.create({
+        data: {
+          bookingId,
+          hotelId,
+          type: "PLATFORM_COMMISSION",
+          amount: -commissionReversed,
+          currency: initial.currency,
+          referenceType: "BOOKING_NO_SHOW",
+          referenceId: event.id,
+        },
+      });
+    }
     await tx.booking.update({where: {id: bookingId}, data: {status: "NO_SHOW"}});
     await tx.auditLog.create({
       data: {
@@ -299,6 +315,7 @@ export async function markHotelReservationNoShow(actorUserId: string, hotelId: s
           status: "NO_SHOW",
           penaltyAmount: cancelled.cancellation.penaltyAmount,
           refundableAmount: cancelled.cancellation.refundableAmount,
+          commissionReversed,
           settlementEventId: event.id,
         },
       },
