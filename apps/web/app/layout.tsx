@@ -88,5 +88,5 @@ export const viewport: Viewport = {
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
   const initialNow = Date.now();
   const [market, launchConfig] = await Promise.all([requestGuestMarket(), getSiteLaunchConfig()]);
-  return <html lang={market.intlLocale} dir={market.direction} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={market.baseLocale} config={launchConfig} initialNow={initialNow}>{children}</SiteLaunchGate><Suspense fallback={null}><HotelMobileCommerceEnhancer/><HotelContentLocalizer/></Suspense></body></html>;
+  return <html lang={market.intlLocale} dir={market.direction} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={market.locale} config={launchConfig} initialNow={initialNow}>{children}</SiteLaunchGate><Suspense fallback={null}><HotelMobileCommerceEnhancer/><HotelContentLocalizer/></Suspense></body></html>;
 }
