@@ -281,7 +281,11 @@ async function buildSettlementSnapshot(hotelId: string, input: PartnerSettlement
     const walletRetained = Math.max(0, roundMoney(wallet.debited - wallet.refunded));
     const actualRetained = roundMoney(providerCaptured - providerRefunded + walletRetained);
     const baseCommission = Math.max(0, roundMoney(Number(booking.commissionAmount)));
-    const commissionDue = totalAmount > 0 ? roundMoney(baseCommission * (expectedRetained / totalAmount)) : 0;
+    const commissionDue = booking.status === "NO_SHOW"
+      ? 0
+      : totalAmount > 0
+        ? roundMoney(baseCommission * (expectedRetained / totalAmount))
+        : 0;
     const linePartnerNet = booking.paymentMode === "PAY_NOW" ? roundMoney(expectedRetained - commissionDue) : 0;
 
     if (booking.paymentMode === "PAY_NOW") {
