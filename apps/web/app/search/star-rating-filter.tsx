@@ -1,45 +1,90 @@
 "use client";
 
-import { useState } from "react";
-import { Star } from "lucide-react";
+import { useEffect } from "react";
 
-type Props={
-  initialValue?:string|null;
-  label:string;
-  clearLabel:string;
-  name?:string;
-  compact?:boolean;
-};
+export function SearchStarRatingEnhancer(){
+  useEffect(()=>{
+    const enhance=(select:HTMLSelectElement)=>{
+      if(select.dataset.starEnhanced==="true")return;
+      select.dataset.starEnhanced="true";
+      select.classList.add("searchStarNativeSelect");
 
-export function StarRatingFilter({initialValue,label,clearLabel,name="stars",compact=false}:Props){
-  const parsed=Number(initialValue??"");
-  const initial=Number.isInteger(parsed)&&parsed>=1&&parsed<=5?parsed:0;
-  const [selected,setSelected]=useState(initial);
-  const [preview,setPreview]=useState(0);
-  const visible=preview||selected;
+      const label=select.closest("label");
+      const labelText=label?.querySelector("span")?.textContent?.trim()||label?.childNodes[0]?.textContent?.trim()||"Star rating";
+      const picker=document.createElement("div");
+      picker.className="searchStarPicker";
+      picker.setAttribute("role","radiogroup");
+      picker.setAttribute("aria-label",labelText);
 
-  return <div className={`starRatingFilter${compact?" isCompact":""}`}>
-    <style>{`
-      .starRatingFilter{display:grid;gap:8px;min-width:0}
-      .starRatingFilterLabel{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:850;color:#435a70}
-      .starRatingFilterClear{border:0;background:transparent;color:#637a90;padding:0;font-size:10px;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-      .starRatingFilterClear:hover{color:#0d5fa7}
-      .starRatingPicker{display:flex;align-items:center;gap:6px;min-height:48px;padding:7px 9px;border:1px solid #d4dee7;border-radius:14px;background:linear-gradient(180deg,#fff,#f8fbfd);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
-      .starRatingButton{width:42px;height:34px;border:0;border-radius:9px;background:transparent;display:grid;place-items:center;color:#a8b4bf;cursor:pointer;transition:background .15s ease,color .15s ease,transform .15s ease}
-      .starRatingButton svg{fill:transparent;transition:fill .15s ease,stroke .15s ease,transform .15s ease}
-      .starRatingButton.isActive{color:#d79a11;background:#fff8df}
-      .starRatingButton.isActive svg{fill:currentColor}
-      .starRatingButton:hover{background:#f2f6fa;transform:translateY(-1px)}
-      .starRatingButton:focus-visible{outline:3px solid rgba(23,112,207,.22);outline-offset:2px}
-      .starRatingFilterValue{min-width:46px;margin-inline-start:auto;padding-inline-start:8px;border-inline-start:1px solid #e0e7ed;text-align:center;color:#314d65;font-size:11px;font-weight:900;white-space:nowrap}
-      .starRatingFilter.isCompact .starRatingPicker{min-height:50px}.starRatingFilter.isCompact .starRatingButton{width:40px;height:36px}
-      @media(max-width:420px){.starRatingPicker{gap:4px;padding:7px}.starRatingButton{width:38px}.starRatingFilterValue{min-width:40px;padding-inline-start:5px}}
-    `}</style>
-    <div className="starRatingFilterLabel"><span>{label}</span>{selected>0&&<button type="button" className="starRatingFilterClear" onClick={()=>{setSelected(0);setPreview(0);}}>{clearLabel}</button>}</div>
-    <input type="hidden" name={name} value={selected||""}/>
-    <div className="starRatingPicker" role="radiogroup" aria-label={label} onMouseLeave={()=>setPreview(0)}>
-      {[1,2,3,4,5].map((value)=><button key={value} type="button" className={`starRatingButton ${value<=visible?"isActive":""}`} role="radio" aria-checked={selected===value} aria-label={`${value} ${label}`} onMouseEnter={()=>setPreview(value)} onFocus={()=>setPreview(value)} onBlur={()=>setPreview(0)} onClick={()=>{setSelected((current)=>current===value?0:value);setPreview(0);}}><Star size={21} strokeWidth={1.9}/></button>)}
-      <span className="starRatingFilterValue">{selected?`${selected} ★`:"—"}</span>
-    </div>
-  </div>;
+      const buttons:Array<HTMLButtonElement>=[];
+      const valueLabel=document.createElement("span");
+      valueLabel.className="searchStarPickerValue";
+
+      const current=()=>{
+        const value=Number(select.value);
+        return Number.isInteger(value)&&value>=1&&value<=5?value:0;
+      };
+      const paint=(visible:number,selected=current())=>{
+        buttons.forEach((button,index)=>{
+          const value=index+1;
+          button.classList.toggle("isActive",value<=visible);
+          button.setAttribute("aria-checked",String(selected===value));
+        });
+        valueLabel.textContent=selected?`${selected} ★`:"—";
+      };
+      const choose=(value:number)=>{
+        const next=current()===value?0:value;
+        select.value=next?String(next):"";
+        select.dispatchEvent(new Event("input",{bubbles:true}));
+        select.dispatchEvent(new Event("change",{bubbles:true}));
+        paint(next,next);
+      };
+
+      for(let value=1;value<=5;value++){
+        const button=document.createElement("button");
+        button.type="button";
+        button.className="searchStarPickerButton";
+        button.setAttribute("role","radio");
+        button.setAttribute("aria-label",`${value} ${labelText}`);
+        button.textContent="★";
+        button.addEventListener("click",()=>choose(value));
+        button.addEventListener("mouseenter",()=>paint(value,current()));
+        button.addEventListener("focus",()=>paint(value,current()));
+        button.addEventListener("blur",()=>paint(current(),current()));
+        button.addEventListener("keydown",(event)=>{
+          if(event.key!=="ArrowRight"&&event.key!=="ArrowLeft")return;
+          event.preventDefault();
+          const direction=event.key==="ArrowRight"?1:-1;
+          const next=Math.min(5,Math.max(1,value+direction));
+          buttons[next-1]?.focus();
+        });
+        buttons.push(button);
+        picker.appendChild(button);
+      }
+
+      picker.addEventListener("mouseleave",()=>paint(current(),current()));
+      picker.appendChild(valueLabel);
+      select.insertAdjacentElement("afterend",picker);
+      paint(current(),current());
+    };
+
+    const enhanceAll=()=>document.querySelectorAll<HTMLSelectElement>('select[name="stars"]').forEach(enhance);
+    enhanceAll();
+    const observer=new MutationObserver(enhanceAll);
+    observer.observe(document.body,{childList:true,subtree:true});
+    return ()=>observer.disconnect();
+  },[]);
+
+  return <style>{`
+    .searchStarNativeSelect{display:none!important}
+    .searchStarPicker{display:flex;align-items:center;gap:5px;width:100%;min-height:48px;padding:7px 8px;border:1px solid #d3dde6;border-radius:13px;background:linear-gradient(180deg,#fff 0%,#f8fbfd 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+    .searchStarPickerButton{width:38px;height:34px;flex:0 0 38px;border:0;border-radius:9px;background:transparent;color:#a9b4be;font-size:23px;line-height:1;display:grid;place-items:center;cursor:pointer;transition:color .14s ease,background .14s ease,transform .14s ease}
+    .searchStarPickerButton.isActive{color:#d49a16;background:#fff6d9}
+    .searchStarPickerButton:hover{background:#f1f5f8;transform:translateY(-1px)}
+    .searchStarPickerButton.isActive:hover{background:#fff1c4}
+    .searchStarPickerButton:focus-visible{outline:3px solid rgba(23,112,207,.2);outline-offset:2px}
+    .searchStarPickerValue{min-width:45px;margin-inline-start:auto;padding-inline-start:8px;border-inline-start:1px solid #dfe7ed;text-align:center;color:#344f66;font-size:11px;font-weight:900;white-space:nowrap}
+    .mobileSearchSheet .searchStarPicker{min-height:52px;border-radius:14px}.mobileSearchSheet .searchStarPickerButton{height:38px;width:40px;flex-basis:40px;font-size:24px}
+    @media(max-width:390px){.searchStarPicker{gap:3px;padding:7px 6px}.searchStarPickerButton{width:35px;flex-basis:35px}.searchStarPickerValue{min-width:38px;padding-inline-start:4px}}
+  `}</style>;
 }
