@@ -5,6 +5,9 @@ import {requestAdminUser} from "@/lib/request-auth";
 
 type ExperimentCreateInput = Parameters<typeof createPlatformExperiment>[1];
 type ExperimentVariantInput = ExperimentCreateInput["variants"][number];
+type VariantConfiguration = Exclude<ExperimentVariantInput["configuration"], undefined>;
+type Eligibility = Exclude<ExperimentCreateInput["eligibility"], undefined>;
+type GuardrailMetrics = Exclude<ExperimentCreateInput["guardrailMetrics"], undefined>;
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,13 +44,10 @@ function parseExperimentPayload(raw: unknown): {ok:true;value:ExperimentCreateIn
     const variant = rawVariant as Record<string, unknown>;
     if (typeof variant.key !== "string" || typeof variant.name !== "string" || !Number.isInteger(variant.weight) || Number(variant.weight) <= 0) return {ok:false,message:"Each variant requires key, name and a positive integer weight"};
     if (variant.configuration !== undefined && variant.configuration !== null && (typeof variant.configuration !== "object" || Array.isArray(variant.configuration))) return {ok:false,message:"Variant configuration must be an object"};
-    const configuration = variant.configuration as ExperimentVariantInput["configuration"];
-    variants.push({
-      key:variant.key,
-      name:variant.name,
-      weight:Number(variant.weight),
-      ...(variant.configuration === undefined ? {} : {configuration}),
-    });
+    const base: ExperimentVariantInput = {key:variant.key,name:variant.name,weight:Number(variant.weight)};
+    variants.push(variant.configuration === undefined
+      ? base
+      : {...base, configuration: variant.configuration as VariantConfiguration});
   }
   const allocationBasis = value.allocationBasis;
   if (allocationBasis !== undefined && allocationBasis !== "USER" && allocationBasis !== "SESSION" && allocationBasis !== "DEVICE") return {ok:false,message:"allocationBasis must be USER, SESSION or DEVICE"};
@@ -67,9 +67,9 @@ function parseExperimentPayload(raw: unknown): {ok:true;value:ExperimentCreateIn
     description:typeof value.description === "string" ? value.description : null,
     ...(allocationBasis === undefined ? {} : {allocationBasis: allocationBasis as "USER"|"SESSION"|"DEVICE"}),
     ...(trafficPercent === undefined ? {} : {trafficPercent:Number(trafficPercent)}),
-    eligibility:(eligibility ?? null) as ExperimentCreateInput["eligibility"],
+    eligibility:(eligibility ?? null) as Eligibility,
     primaryMetric:value.primaryMetric,
-    guardrailMetrics:(Array.isArray(guardrailMetrics) ? guardrailMetrics : null) as ExperimentCreateInput["guardrailMetrics"],
+    guardrailMetrics:(Array.isArray(guardrailMetrics) ? guardrailMetrics : null) as GuardrailMetrics,
     startsAt:startsAt ?? null,
     endsAt:endsAt ?? null,
     variants,
