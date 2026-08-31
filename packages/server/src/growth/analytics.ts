@@ -1,5 +1,6 @@
 import type { DiscoverySearchInput, HotelPerformanceQuery } from "@platform/contracts";
 import { database } from "@platform/database";
+import { recordAnalyticsEvent } from "../analytics/platform";
 import { requireHotelPermission } from "../hotels/authorization";
 
 const MAX_IMPRESSIONS_PER_SEARCH = 100;
@@ -27,6 +28,25 @@ export async function captureSearchDemand(input: DiscoverySearchInput, hotelIds:
         metadata: {destination: input.destination.trim()},
       }})),
     ]);
+    await recordAnalyticsEvent({
+      name: "search_results_rendered",
+      source: "web",
+      properties: {
+        destination: input.destination.trim(),
+        destinationKey: destinationKey(input.destination),
+        arrival: input.arrival,
+        departure: input.departure,
+        adults: input.adults,
+        children: input.children,
+        resultCount: hotelIds.length,
+        hotelIds: [...hotelIds.slice(0, MAX_IMPRESSIONS_PER_SEARCH)],
+        stars: [...input.stars],
+        amenities: [...input.amenities],
+        freeCancellation: input.freeCancellation,
+        paymentMode: input.paymentMode ?? null,
+        sort: input.sort,
+      },
+    });
   });
 }
 
@@ -44,6 +64,17 @@ export async function captureCheckoutStarted(input: Readonly<{hotelId: string; r
       arrival: dateOnly(input.arrival),
       departure: dateOnly(input.departure),
     }});
+    await recordAnalyticsEvent({
+      name: "checkout_started",
+      source: "web",
+      hotelId: input.hotelId,
+      properties: {
+        roomTypeId: input.roomTypeId,
+        ratePlanId: input.ratePlanId,
+        arrival: input.arrival,
+        departure: input.departure,
+      },
+    });
   });
 }
 
@@ -121,6 +152,12 @@ async function captureGrowthEvent(type: "HOTEL_VIEW", hotelId: string, stay: Rea
       arrival: dateOnly(stay.arrival),
       departure: dateOnly(stay.departure),
     }});
+    await recordAnalyticsEvent({
+      name: "hotel_viewed",
+      source: "web",
+      hotelId,
+      properties: {arrival: stay.arrival, departure: stay.departure},
+    });
   });
 }
 
