@@ -20,7 +20,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   const rewardsHref = `/rewards/${market.baseLocale}`;
 
   const navLinks = <>
-    <Link href="/search">{copy.nav.stays}</Link>
+    <Link href="/search">{copy.home.search}</Link>
     <Link href={rewardsHref}><Sparkles size={15}/>{ui.header.rewards}</Link>
     <Link href={`/blog/${market.baseLocale}`}><BookOpenText size={15}/>{ui.header.guide}</Link>
     <Link href="/trips">{copy.nav.trips}</Link>
