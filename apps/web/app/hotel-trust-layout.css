@@ -19,6 +19,8 @@
   grid-column:1;
   order:2;
   height:100%;
+  margin-top:0!important;
+  align-self:stretch;
 }
 
 /* Stay essentials already covers these signals, so the duplicate highlights card stays hidden. */

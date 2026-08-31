@@ -15,14 +15,14 @@ export const publicStaySchema = z.object({
   }
 });
 
-export const discoverySortSchema = z.enum(["RECOMMENDED", "PRICE_ASC", "PRICE_DESC", "STARS_DESC"]);
+export const discoverySortSchema = z.enum(["RECOMMENDED", "PRICE_ASC", "PRICE_DESC", "STARS_DESC", "RATING_DESC"]);
 
 export const discoverySearchSchema = publicStaySchema.safeExtend({
   destination: z.string().trim().min(1).max(120),
   minPrice: z.coerce.number().finite().nonnegative().max(1_000_000).optional(),
   maxPrice: z.coerce.number().finite().nonnegative().max(1_000_000).optional(),
   stars: z.array(z.coerce.number().int().min(1).max(5)).max(5).default([]),
-  amenities: z.array(z.string().trim().min(1).max(50).transform((value) => value.toUpperCase())).max(20).default([]),
+  amenities: z.array(z.string().trim().min(1).max(80).transform((value) => value.toUpperCase())).max(60).default([]),
   freeCancellation: z.boolean().default(false),
   paymentMode: z.enum(["PAY_NOW", "PAY_AT_HOTEL"]).optional(),
   sort: discoverySortSchema.default("RECOMMENDED"),
