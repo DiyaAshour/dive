@@ -1,12 +1,13 @@
 import type {Metadata} from "next";
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {BadgeCheck, Building2, CircleCheck, Clock3, FileCheck2, ShieldCheck, Users} from "lucide-react";
-import {getAdminNavigationCounts, getPlatformAccessOverview, listPendingHotelDocuments, listPlatformAuditLog, listPlatformHotels, listPropertyReviewQueue} from "@platform/server";
+import {BadgeCheck, Building2, CircleCheck, FileCheck2, ShieldCheck, Users} from "lucide-react";
+import {getAdminNavigationCounts, getPlatformAccessOverview, listPendingHotelDocuments, listPlatformAuditActivity, listPlatformAuditActors, listPlatformHotels, listPropertyReviewQueue} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import {portalDictionary} from "@/lib/portal-i18n";
+import AuditActivityExplorer from "./audit-activity-explorer";
 import DocumentReviewQueue from "./document-review-queue";
 import ReviewQueue from "./review-queue";
 
@@ -20,12 +21,13 @@ export default async function AdminPage() {
   const copy = portalDictionary(locale);
   const admin = copy.admin;
 
-  const [hotels, reviews, documents, access, audit, counts] = await Promise.all([
+  const [hotels, reviews, documents, access, auditActivity, auditActors, counts] = await Promise.all([
     listPlatformHotels(principal.user.id),
     listPropertyReviewQueue(principal.user.id),
     listPendingHotelDocuments(principal.user.id),
     getPlatformAccessOverview(principal.user.id),
-    listPlatformAuditLog(principal.user.id, 50),
+    listPlatformAuditActivity(principal.user.id, 300),
+    listPlatformAuditActors(principal.user.id),
     getAdminNavigationCounts(principal.user.id),
   ]);
 
@@ -33,6 +35,7 @@ export default async function AdminPage() {
   const suspended = hotels.filter((hotel) => hotel.status === "SUSPENDED").length;
   const reviewProps = reviews.map((item) => ({...item, submittedAt: item.submittedAt.toISOString()}));
   const documentProps = documents.map((item) => ({...item, submittedAt: item.submittedAt.toISOString(), mediaObject: {...item.mediaObject, uploadedAt: item.mediaObject.uploadedAt?.toISOString() ?? null}}));
+  const auditProps = auditActivity.map((entry) => ({...entry, createdAt: entry.createdAt.toISOString()}));
   const pending = reviews.length + documents.length;
 
   return <AdminShell locale={locale} principal={principal} active="overview" counts={counts}>
@@ -86,14 +89,7 @@ export default async function AdminPage() {
     </section>
 
     <section id="audit" className="adminSection adminPanel">
-      <div className="adminSectionTitle"><div><span className="eyebrow">{admin.accountability}</span><h2>{admin.recentAudit}</h2><p>{admin.auditIntro}</p></div><Clock3 size={20}/></div>
-      <div className="adminAuditList">
-        {audit.length === 0 ? <p className="muted">{admin.noAudit}</p> : audit.map((entry) => <article key={entry.id}>
-          <span className="adminAuditDot"/>
-          <div><strong>{humanize(entry.action)}</strong><p>{entry.hotel?.name ?? entry.entityType}{entry.entityId ? ` · ${entry.entityId}` : ""}</p><small>{entry.actor ? `${entry.actor.displayName} · ${entry.actor.email}` : admin.systemAction}</small></div>
-          <time>{formatDateTime(entry.createdAt, locale)}</time>
-        </article>)}
-      </div>
+      <AuditActivityExplorer locale={locale} actors={auditActors} entries={auditProps}/>
     </section>
   </AdminShell>;
 }
