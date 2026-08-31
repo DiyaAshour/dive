@@ -131,6 +131,13 @@ try {
   assert.equal(noShow.cancellation.penaltyAmount, noShow.amounts.total);
   assert.equal(noShow.cancellation.refundableAmount, 0);
 
+  const noShowCommissionEvents = await database().financialEvent.findMany({
+    where: {bookingId: noShow.id, type: "PLATFORM_COMMISSION"},
+    select: {amount: true, referenceType: true},
+  });
+  assert.ok(noShowCommissionEvents.some((event) => event.referenceType === "BOOKING_NO_SHOW"));
+  assert.equal(noShowCommissionEvents.reduce((sum, event) => sum + Number(event.amount), 0), 0);
+
   const noShowSettlement = await server.runPartnerReconciliation(registered.user.id, hotel.id, {from: utcDay(1), to: utcDay(3)});
   assert.equal(noShowSettlement.status, "CLEAN");
   assert.equal(noShowSettlement.payAtHotelCommission, 0);
@@ -163,7 +170,7 @@ try {
   assert.equal(modifiedInventory?.available, 3);
   assert.equal(audits.length, 3);
 
-  console.log("[reservation-management-smoke] modify, cancellation, no-show, zero no-show commission, inventory, search and audit checks passed");
+  console.log("[reservation-management-smoke] modify, cancellation, no-show, zero no-show commission, ledger reversal, inventory, search and audit checks passed");
 } finally {
   if (hotelId) await cleanupHotel(hotelId);
   await database().user.deleteMany({where: {email}});
