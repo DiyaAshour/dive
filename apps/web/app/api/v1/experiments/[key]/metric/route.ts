@@ -16,8 +16,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{key:str
     if(body.metricEventId!==undefined&&(typeof body.metricEventId!=="string"||body.metricEventId.length>160))return bad("metricEventId must be a string up to 160 characters");
     if(body.properties!==undefined&&body.properties!==null&&(typeof body.properties!=="object"||Array.isArray(body.properties)))return bad("properties must be an object");
     const subject=await experimentRequestContext(request);
+    const metricEventId=typeof body.metricEventId==="string"?body.metricEventId:undefined;
     const result=await recordExperimentMetricForContext({
-      metricEventId:typeof body.metricEventId==="string"?body.metricEventId:undefined,
+      ...(metricEventId===undefined?{}:{metricEventId}),
       experimentKey:decodeURIComponent(key),
       context:subject.context,
       metric,
