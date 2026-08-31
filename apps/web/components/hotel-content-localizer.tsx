@@ -10,9 +10,11 @@ export function HotelContentLocalizer() {
     if (!pathname.startsWith("/hotel/")) return;
     const page = document.querySelector<HTMLElement>(".hotelExperience");
     if (!page) return;
-    const locale = (page.getAttribute("lang") || document.documentElement.lang || "en").trim().toLowerCase().split(/[-_]/)[0];
+    const pageElement = page;
+    const language = pageElement.getAttribute("lang") || document.documentElement.lang || "en";
+    const locale = language.trim().toLowerCase().split(/[-_]/)[0] || "en";
     const hotelId = decodeURIComponent(pathname.slice("/hotel/".length).split("/")[0] ?? "");
-    if (!hotelId || !locale) return;
+    if (!hotelId) return;
 
     const controller = new AbortController();
     async function localize() {
@@ -25,11 +27,11 @@ export function HotelContentLocalizer() {
         if (!translation) return;
 
         if (translation.name) {
-          const title = page.querySelector<HTMLElement>(".premiumHotelHead h1");
+          const title = pageElement.querySelector<HTMLElement>(".premiumHotelHead h1");
           if (title) title.textContent = translation.name;
         }
         if (translation.description) {
-          const about = page.querySelector<HTMLElement>(".hotelAbout");
+          const about = pageElement.querySelector<HTMLElement>(".hotelAbout");
           const description = about?.querySelector<HTMLParagraphElement>("p");
           if (description) {
             description.textContent = translation.description;
