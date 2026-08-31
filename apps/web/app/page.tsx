@@ -5,6 +5,7 @@ import { CustomerHeader } from "@/components/customer-header";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
 import { demoDestinationsFallback, demoFeaturedHotelsFallback } from "@/lib/demo-catalog-fallback";
 import { guestDictionary } from "@/lib/guest-i18n";
+import { guestUiCopy } from "@/lib/guest-ui-copy";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
 import destinationStyles from "./city-discovery.module.css";
@@ -25,18 +26,11 @@ export default async function HomePage() {
   const destinations = liveDestinations.length ? liveDestinations : demoDestinationsFallback(5);
   const locale=market.locale;
   const copy = guestDictionary(locale);
+  const ui = guestUiCopy(locale);
   const stay = defaultStayDates();
   const visualHotels = hotels.filter((hotel)=>hotel.coverPhoto).slice(0,3);
-  const destinationCopy = locale === "ar"
-    ? {eyebrow: "اكتشف الأردن", title: "الوجهات الرائجة", intro: "استكشف المدن والوجهات الأكثر حضورًا في الأردن. ابحث بالعربي أو الإنجليزي وسيطابق HandMeKey الاسم والتهجئات البديلة.", stays: "إقامة متاحة", explore: "استكشف الإقامات"}
-    : locale === "zh"
-      ? {eyebrow:"探索约旦",title:"热门目的地",intro:"探索约旦热门城市和目的地，并查看实时已验证酒店房量。",stays:"家住宿可订",explore:"查看住宿"}
-      : {eyebrow: "Explore Jordan", title: "Popular destinations", intro: "Explore Jordan destinations with bilingual aliases and live verified hotel inventory.", stays: "stays available", explore: "Explore stays"};
-  const homeEnhancement = locale === "ar"
-    ? {seeRooms:"شاهد الغرف والأسعار", clearPrice:"السعر الواضح قبل الحجز"}
-    : locale === "zh"
-      ? {seeRooms:"查看客房和价格",clearPrice:"预订前查看清晰价格"}
-      : {seeRooms:"See rooms & prices",clearPrice:"Clear price before booking"};
+  const destinationCopy = ui.destination;
+  const homeEnhancement = ui.destination;
   const regionNames = new Intl.DisplayNames([market.intlLocale], {type: "region"});
 
   return <main className="customerPage" lang={market.intlLocale} dir={market.direction}>
