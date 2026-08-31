@@ -36,7 +36,7 @@ export async function createPlatformExperiment(actorUserId: string, input: Reado
     action: "EXPERIMENT_CREATED",
     entityType: "Experiment",
     entityId: experiment.id,
-    after: {key: experiment.key, name: experiment.name, trafficPercent: experiment.trafficPercent, primaryMetric: experiment.primaryMetric, variants: experiment.variants.map((variant) => ({key: variant.key, weight: variant.weight}))},
+    after: {key: experiment.key, name: experiment.name, trafficPercent: experiment.trafficPercent, primaryMetric: experiment.primaryMetric, variants: input.variants.map((variant) => ({key: variant.key, weight: variant.weight}))},
   }});
   return experiment;
 }
