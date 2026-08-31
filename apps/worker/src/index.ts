@@ -2,7 +2,10 @@ import {
   evaluateActivePriceWatches,
   expirePendingMediaUploads,
   expireStaleHolds,
+  exportAnalyticsEventToStdout,
   processEmailOutbox,
+  processOutboxBatch,
+  processSearchIndexBatch,
   syncBookingLifecycleEmails,
   syncPriceWatchNotificationEmails,
 } from "@platform/server";
@@ -14,8 +17,15 @@ const priceWatchBatchSize = boundedInteger(process.env.PRICE_WATCH_BATCH_SIZE, 1
 const priceWatchIntervalMs = boundedInteger(process.env.PRICE_WATCH_INTERVAL_MS, 3_600_000, 60_000, 86_400_000);
 const emailBatchSize = boundedInteger(process.env.EMAIL_DELIVERY_BATCH_SIZE, 50, 1, 200);
 const emailSyncIntervalMs = boundedInteger(process.env.EMAIL_SYNC_INTERVAL_MS, 60_000, 15_000, 3_600_000);
+const searchIndexBatchSize = boundedInteger(process.env.SEARCH_INDEX_BATCH_SIZE, 50, 1, 200);
+const searchIndexIntervalMs = boundedInteger(process.env.SEARCH_INDEX_INTERVAL_MS, 15_000, 5_000, 300_000);
+const analyticsOutboxBatchSize = boundedInteger(process.env.ANALYTICS_OUTBOX_BATCH_SIZE, 100, 1, 500);
+const analyticsOutboxIntervalMs = boundedInteger(process.env.ANALYTICS_OUTBOX_INTERVAL_MS, 10_000, 5_000, 300_000);
+const analyticsStdoutExport = (process.env.ANALYTICS_STDOUT_EXPORT ?? "false").trim().toLowerCase() === "true";
 let nextPriceWatchAt = 0;
 let nextEmailSyncAt = 0;
+let nextSearchIndexAt = 0;
+let nextAnalyticsOutboxAt = 0;
 let running = false;
 let stopping = false;
 
@@ -34,6 +44,14 @@ async function tick(): Promise<void> {
       nextEmailSyncAt = Date.now() + emailSyncIntervalMs;
       await run("booking_email_events_synced", () => syncBookingLifecycleEmails(750));
       await run("price_watch_emails_synced", () => syncPriceWatchNotificationEmails(750));
+    }
+    if (Date.now() >= nextSearchIndexAt) {
+      nextSearchIndexAt = Date.now() + searchIndexIntervalMs;
+      await run("search_index_processed", () => processSearchIndexBatch({batchSize: searchIndexBatchSize}));
+    }
+    if (analyticsStdoutExport && Date.now() >= nextAnalyticsOutboxAt) {
+      nextAnalyticsOutboxAt = Date.now() + analyticsOutboxIntervalMs;
+      await run("analytics_outbox_processed", () => processOutboxBatch({analytics: exportAnalyticsEventToStdout}, {batchSize: analyticsOutboxBatchSize}));
     }
     await run("email_outbox_processed", () => processEmailOutbox(emailBatchSize));
   } finally {
