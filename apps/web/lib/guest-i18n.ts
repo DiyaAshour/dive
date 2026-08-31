@@ -19,7 +19,7 @@ type TranslatedLocale = Exclude<GuestLocale,"en"|"ar">;
 
 const translatedDictionaries = {
   zh,fr,de,es,it,tr,ru,ja,ko,hi,pt,id,th,
-} satisfies Record<TranslatedLocale,Dictionary>;
+} as unknown as Record<TranslatedLocale,Dictionary>;
 
 export function guestDictionary(locale:GuestLocale):Dictionary {
   if(locale==="en"||locale==="ar") return dictionary(locale);
