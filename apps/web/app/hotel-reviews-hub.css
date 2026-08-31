@@ -1,0 +1,102 @@
+/* One source of truth for guest reviews on hotel pages. */
+.hotelExperience .hotelDetailSection>.reviewsSection{display:none!important}
+.hotelReviewsHub.reviewsSection{display:block!important;padding-top:0!important;min-width:0;height:100%;border:1px solid #dce6ee;border-radius:18px;background:#fff;box-shadow:0 10px 28px rgba(16,45,69,.055);overflow:hidden}
+.hotelReviewsSummaryButton{width:100%;height:100%;min-height:214px;border:0;background:linear-gradient(145deg,#fff,#fbfdff);display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"icon copy score" "cue cue cue";align-items:center;gap:12px 14px;padding:20px;text-align:start;color:var(--ink);transition:background .18s ease,transform .18s ease}
+.hotelReviewsSummaryButton:hover{background:linear-gradient(145deg,#fff,#f5faff)}
+.hotelReviewsSummaryButton:focus-visible{outline:3px solid rgba(13,103,216,.23);outline-offset:-3px}
+.hotelReviewsSummaryIcon{grid-area:icon;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#edf6ff;color:#0e67ad}
+.hotelReviewsSummaryCopy{grid-area:copy;display:grid;gap:4px;min-width:0}
+.hotelReviewsSummaryCopy small{font-size:9px;line-height:1.2;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#708397}
+.hotelReviewsSummaryCopy strong{font-size:22px;line-height:1.12;color:#0d2942;letter-spacing:-.025em}
+.hotelReviewsSummaryCopy em{font-style:normal;font-size:10px;line-height:1.45;color:#6a7c8e}
+.hotelReviewsSummaryScore{grid-area:score;min-width:104px;border-radius:16px 16px 16px 5px;padding:13px 14px;background:linear-gradient(135deg,#0b5bc7,#073f8d);color:#fff;box-shadow:0 10px 20px rgba(11,91,199,.16)}
+.hotelReviewsHub.isPending .hotelReviewsSummaryScore{background:linear-gradient(135deg,#52677a,#35495a);box-shadow:none}
+.hotelReviewsSummaryScore b,.hotelReviewsSummaryScore span,.hotelReviewsSummaryScore small{display:block}
+.hotelReviewsSummaryScore b{font-size:30px;line-height:1}
+.hotelReviewsSummaryScore span{font-size:10px;font-weight:900;margin-top:5px}
+.hotelReviewsSummaryScore small{font-size:8px;color:#d1e2f4;margin-top:2px}
+.hotelReviewsOpenCue{grid-area:cue;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #e7edf2;padding-top:12px;color:#0b5d9e;font-size:10px;font-weight:900}
+[dir="rtl"] .hotelReviewsOpenCue svg{transform:rotate(180deg)}
+
+.hotelReviewsModalBackdrop{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,23,38,.56);backdrop-filter:blur(8px)}
+.hotelReviewsModal{width:min(940px,calc(100vw - 32px));max-height:min(88vh,820px);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.65);border-radius:24px;background:#fff;box-shadow:0 34px 100px rgba(5,21,36,.32)}
+.hotelReviewsModalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:22px 24px 18px;border-bottom:1px solid #e6ebf0;background:linear-gradient(145deg,#fff,#f7fbff)}
+.hotelReviewsModalHeader>div{min-width:0}
+.hotelReviewsModalHeader span{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:#718397}
+.hotelReviewsModalHeader h2{margin:5px 0 5px;font-size:28px;line-height:1.1;color:#0d2942;letter-spacing:-.035em}
+.hotelReviewsModalHeader p{max-width:650px;margin:0;color:#6b7d8e;font-size:11px;line-height:1.55}
+.hotelReviewsModalHeader>button{flex:0 0 auto;width:40px;height:40px;border:1px solid #dce5ec;border-radius:12px;background:#fff;color:#173a57;display:grid;place-items:center}
+.hotelReviewsModalHeader>button:hover{background:#f2f6f9}
+.hotelReviewsModalBody{overflow-y:auto;padding:20px 24px 26px;overscroll-behavior:contain}
+.hotelReviewsPendingState{min-height:350px;display:grid;place-items:center;align-content:center;text-align:center;padding:36px;border:1px dashed #c8d7e3;border-radius:20px;background:linear-gradient(145deg,#fbfdff,#f4f8fb)}
+.hotelReviewsPendingState>span{width:68px;height:68px;border-radius:20px;background:#edf6fb;color:#477895;display:grid;place-items:center}
+.hotelReviewsPendingState h3{font-size:24px;margin:15px 0 8px;color:#173a57}
+.hotelReviewsPendingState p{max-width:590px;margin:0;color:#66798a;font-size:12px;line-height:1.7}
+.hotelReviewsPendingState small{margin-top:17px;max-width:560px;border-radius:10px;background:#edf3f7;padding:9px 11px;color:#647586;font-size:9px;font-weight:800;line-height:1.45}
+.hotelReviewsScorePanel{display:grid;grid-template-columns:190px minmax(0,1fr);gap:18px;padding-bottom:20px;border-bottom:1px solid #e8edf2}
+.hotelReviewsOverall{border-radius:20px;background:linear-gradient(145deg,#0e5fa9,#0a3d73);color:#fff;padding:22px;display:flex;flex-direction:column;justify-content:center;min-height:180px}
+.hotelReviewsOverall strong{font-size:48px;line-height:1}
+.hotelReviewsOverall span{font-size:15px;font-weight:900;margin-top:8px}
+.hotelReviewsOverall small{margin-top:4px;font-size:9px;color:#cce0f3}
+.hotelReviewsCategoryGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;align-content:center}
+.hotelReviewsCategory>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.hotelReviewsCategory>div:first-child span{font-size:10px;color:#53687a;font-weight:800}
+.hotelReviewsCategory>div:first-child strong{font-size:12px;color:#143a59}
+.hotelReviewsCategory>div:last-child{height:6px;border-radius:999px;background:#e8eef3;overflow:hidden}
+.hotelReviewsCategory i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#0d67d8,#34a7ff)}
+.hotelReviewsListSection{padding-top:22px}
+.hotelReviewsListHead{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:13px}
+.hotelReviewsListHead span{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.09em;color:#8392a1;font-weight:900}
+.hotelReviewsListHead h3{font-size:20px;margin:4px 0 0;color:#173a57}
+.hotelReviewsListHead>strong{font-size:9px;border-radius:999px;background:#eef5fb;color:#17649d;padding:7px 10px;white-space:nowrap}
+.hotelReviewsList{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.hotelReviewsList>article{min-width:0;border:1px solid #dfe7ed;border-radius:16px;padding:16px;background:#fff}
+.hotelReviewCardHead{display:flex;align-items:center;gap:10px}
+.hotelReviewScore{display:inline-flex;align-items:center;gap:5px;border-radius:9px;background:#0e5e9e;color:#fff;padding:6px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+.hotelReviewCardHead>div{display:grid;gap:2px;min-width:0}
+.hotelReviewCardHead>div>strong{font-size:11px;color:#1c3d57;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hotelReviewCardHead small{display:flex;align-items:center;gap:4px;color:#7a8b99;font-size:8px}
+.hotelReviewsList h4{font-size:14px;margin:14px 0 6px;color:#173a57}
+.hotelReviewsList>article>p{margin:0;color:#526779;font-size:11px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.hotelReviewReply{margin-top:13px;border-radius:12px;background:#f3f7fa;padding:11px}
+.hotelReviewReply strong{font-size:9px;color:#294b65}
+.hotelReviewReply p{margin:4px 0 0!important;font-size:10px!important;line-height:1.6!important;color:#617485!important}
+
+@media(max-width:780px){
+  .hotelReviewsHub.reviewsSection{border-radius:17px!important;margin-top:0!important}
+  .hotelReviewsSummaryButton{min-height:142px;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px;padding:14px}
+  .hotelReviewsSummaryIcon{width:40px;height:40px;border-radius:12px}
+  .hotelReviewsSummaryCopy small{font-size:7.5px}
+  .hotelReviewsSummaryCopy strong{font-size:18px}
+  .hotelReviewsSummaryCopy em{font-size:8.5px}
+  .hotelReviewsSummaryScore{min-width:82px;padding:10px 11px;border-radius:13px 13px 13px 4px}
+  .hotelReviewsSummaryScore b{font-size:24px}
+  .hotelReviewsSummaryScore span{font-size:8.5px}
+  .hotelReviewsOpenCue{padding-top:9px;font-size:9px}
+  .hotelReviewsModalBackdrop{align-items:flex-end;padding:0;background:rgba(8,23,38,.48)}
+  .hotelReviewsModal{width:100%;max-height:92dvh;border-radius:22px 22px 0 0;border-bottom:0}
+  .hotelReviewsModalHeader{padding:17px 16px 14px;gap:14px}
+  .hotelReviewsModalHeader h2{font-size:23px}
+  .hotelReviewsModalHeader p{font-size:9.5px;line-height:1.5}
+  .hotelReviewsModalHeader>button{width:36px;height:36px;border-radius:10px}
+  .hotelReviewsModalBody{padding:14px 14px calc(22px + env(safe-area-inset-bottom))}
+  .hotelReviewsPendingState{min-height:310px;padding:28px 18px;border-radius:17px}
+  .hotelReviewsPendingState>span{width:58px;height:58px;border-radius:17px}
+  .hotelReviewsPendingState h3{font-size:21px}
+  .hotelReviewsPendingState p{font-size:10.5px}
+  .hotelReviewsPendingState small{font-size:8px}
+  .hotelReviewsScorePanel{grid-template-columns:1fr;gap:12px}
+  .hotelReviewsOverall{min-height:126px;padding:17px}
+  .hotelReviewsOverall strong{font-size:40px}
+  .hotelReviewsCategoryGrid{grid-template-columns:1fr;gap:10px}
+  .hotelReviewsList{grid-template-columns:1fr}
+  .hotelReviewsListHead{align-items:center}
+}
+
+@media(max-width:390px){
+  .hotelReviewsSummaryButton{grid-template-columns:36px minmax(0,1fr) 74px;padding:12px 11px}
+  .hotelReviewsSummaryIcon{width:36px;height:36px}
+  .hotelReviewsSummaryCopy strong{font-size:16px}
+  .hotelReviewsSummaryScore{min-width:74px;padding:9px}
+  .hotelReviewsSummaryScore b{font-size:21px}
+}
