@@ -7,6 +7,7 @@ export * from "./admin/authorization";
 export * from "./admin/service";
 export * from "./admin/audit";
 export * from "./admin/access";
+export * from "./admin/access-directory";
 export * from "./admin/session-control";
 export * from "./admin/site-identity";
 export * from "./admin/site-assets";
