@@ -69,6 +69,7 @@ export * from "./reliability/outbox";
 export * from "./reliability/jobs";
 export * from "./analytics/platform";
 export * from "./experiments/service";
+export * from "./experiments/admin";
 export * from "./search/platform";
 
 // Public hotel pages use resilient readers: real database data when available,
