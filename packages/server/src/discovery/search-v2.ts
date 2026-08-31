@@ -9,8 +9,25 @@ import { destinationScope, normalizeDestinationQuery, resolveDestinationQuery } 
 type CursorPayload = Readonly<{v: 1; offset: number; fingerprint: string}>;
 type SearchCandidate = Readonly<{id: string; slug: string; name: string; city: string; area: string | null; countryCode: string; starRating: number | null; updatedAt: Date}>;
 type SearchResult = Awaited<ReturnType<typeof buildSearchResult>>;
+type PublicHotel = Awaited<ReturnType<typeof getPublicHotelDetails>>;
+type PublicOffer = PublicHotel["offers"][number];
+type AdvancedAmenityFilters = Readonly<{amenities:string[]; guestRatingMin:number|null; propertyTypes:string[]; areas:string[]}>;
 
 const MAX_SCAN_PER_PAGE = 160;
+const FILTER_PREFIX="FILTER:";
+const AMENITY_ALIASES:Readonly<Record<string,readonly string[]>>={
+  SPA:["SPA","WELLNESS","SPA_WELLNESS"],
+  RESTAURANT:["RESTAURANT","DINING"],
+  AIRPORT_SHUTTLE:["AIRPORT_SHUTTLE","AIRPORT_TRANSFER","SHUTTLE"],
+  BEACH_ACCESS:["BEACH_ACCESS","BEACH","PRIVATE_BEACH"],
+  FAMILY_ROOMS:["FAMILY_ROOMS","FAMILY_ROOM"],
+  BUSINESS_CENTER:["BUSINESS_CENTER","BUSINESS"],
+  AIR_CONDITIONING:["AIR_CONDITIONING","AC","AIR_CONDITIONER"],
+  ROOM_SERVICE:["ROOM_SERVICE"],
+  BAR:["BAR","LOUNGE"],
+  EV_CHARGING:["EV_CHARGING","ELECTRIC_VEHICLE_CHARGING","EV_CHARGER"],
+  WHEELCHAIR_ACCESS:["WHEELCHAIR_ACCESS","ACCESSIBLE","ACCESSIBILITY","WHEELCHAIR"],
+};
 
 export async function searchHotelsV2(input: DiscoverySearchInput) {
   const db = database();
@@ -21,9 +38,13 @@ export async function searchHotelsV2(input: DiscoverySearchInput) {
   const pageSize = input.pageSize;
   const where = candidateWhere(input, destination, scope?.ids ?? []);
   const candidateCount = await db.hotel.count({where});
-  const scanGoal = input.sort === "PRICE_ASC" || input.sort === "PRICE_DESC"
-    ? Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 5, 60))
-    : Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 2, 30));
+  const advanced=parseAdvancedAmenityFilters(input.amenities);
+  const hasAdvanced=advanced.guestRatingMin!==null||advanced.propertyTypes.length>0||advanced.areas.length>0;
+  const scanGoal = hasAdvanced
+    ? MAX_SCAN_PER_PAGE
+    : input.sort === "PRICE_ASC" || input.sort === "PRICE_DESC"
+      ? Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 5, 60))
+      : Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 2, 30));
 
   const candidates = await db.hotel.findMany({
     where,
@@ -110,8 +131,12 @@ async function evaluateCandidate(candidate: SearchCandidate, input: DiscoverySea
     adults: input.adults,
     children: input.children,
   }, {trackView: false});
-  if (input.amenities.length && !input.amenities.every((code) => hotel.amenities.some((amenity) => amenity.code === code))) return null;
+  const advanced=parseAdvancedAmenityFilters(input.amenities);
+  if(advanced.guestRatingMin!==null&&(hotel.reviewSummary.overall===null||hotel.reviewSummary.overall<advanced.guestRatingMin))return null;
+  if(advanced.areas.length&&(!hotel.area||!advanced.areas.includes(normalizeFilterText(hotel.area))))return null;
+  if(advanced.amenities.length&&!advanced.amenities.every((code)=>hotelHasAmenity(hotel,code)))return null;
   const offers = hotel.offers.filter((offer) => {
+    if(advanced.propertyTypes.length&&!advanced.propertyTypes.some((type)=>offerMatchesPropertyType(hotel,offer,type)))return false;
     if (input.freeCancellation && !offer.freeCancellationNow) return false;
     if (input.paymentMode && !offer.paymentModes.includes(input.paymentMode)) return false;
     if (input.minPrice !== undefined && offer.averageNightlyTotal < input.minPrice) return false;
@@ -140,6 +165,50 @@ function buildSearchResult(hotel: Awaited<ReturnType<typeof getPublicHotelDetail
     from,
   };
 }
+
+function parseAdvancedAmenityFilters(values:readonly string[]):AdvancedAmenityFilters{
+  const amenities:string[]=[];const propertyTypes:string[]=[];const areas:string[]=[];let guestRatingMin:number|null=null;
+  for(const raw of values){
+    const value=raw.trim().toUpperCase();
+    if(!value)continue;
+    if(value.startsWith("FILTER:RATING:")){
+      const rating=Number(value.slice("FILTER:RATING:".length));
+      if(Number.isFinite(rating)&&rating>=1&&rating<=10)guestRatingMin=Math.max(guestRatingMin??0,rating);
+      continue;
+    }
+    if(value.startsWith("FILTER:PROPERTY:")){
+      const type=value.slice("FILTER:PROPERTY:".length).trim();if(type)propertyTypes.push(type);continue;
+    }
+    if(value.startsWith("FILTER:AREA:")){
+      const area=value.slice("FILTER:AREA:".length).trim();if(area)areas.push(normalizeFilterText(area));continue;
+    }
+    if(value.startsWith(FILTER_PREFIX))continue;
+    amenities.push(value);
+  }
+  return {amenities:[...new Set(amenities)],guestRatingMin,propertyTypes:[...new Set(propertyTypes)],areas:[...new Set(areas)]};
+}
+
+function hotelHasAmenity(hotel:PublicHotel,requested:string):boolean{
+  const aliases=AMENITY_ALIASES[requested]??[requested];
+  const matches=(code:string)=>aliases.includes(code.trim().toUpperCase());
+  if(hotel.amenities.some((amenity)=>matches(amenity.code)))return true;
+  return hotel.offers.some((offer)=>offer.roomAmenities.some((amenity)=>matches(amenity.code)));
+}
+
+function offerMatchesPropertyType(hotel:PublicHotel,offer:PublicOffer,type:string):boolean{
+  const unit=offer.unitType.toUpperCase();
+  if(type==="HOTEL")return ["ROOM","STUDIO","SUITE"].includes(unit);
+  if(type==="APARTMENT")return unit==="APARTMENT";
+  if(type==="VILLA")return unit==="VILLA";
+  if(type==="CHALET")return unit==="CHALET";
+  if(type==="BUNGALOW")return unit==="BUNGALOW";
+  if(type==="HOLIDAY_HOME")return unit==="HOLIDAY_HOME";
+  if(type==="HOSTEL")return ["DORMITORY_ROOM","BED_IN_DORMITORY"].includes(unit)||/\bhostel\b/i.test(hotel.name);
+  if(type==="RESORT")return /\bresort\b/i.test(hotel.name)||hotel.amenities.some((amenity)=>amenity.code.toUpperCase()==="RESORT");
+  return false;
+}
+
+function normalizeFilterText(value:string):string{return value.trim().replace(/\s+/g," ").toUpperCase();}
 
 function recommendedCandidateOrder(sort: DiscoverySearchInput["sort"]): Prisma.HotelOrderByWithRelationInput[] {
   if (sort === "STARS_DESC") return [{starRating: "desc"}, {updatedAt: "desc"}, {id: "asc"}];
