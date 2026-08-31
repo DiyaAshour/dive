@@ -15,7 +15,7 @@ export const publicStaySchema = z.object({
   }
 });
 
-export const discoverySortSchema = z.enum(["RECOMMENDED", "PRICE_ASC", "PRICE_DESC", "STARS_DESC"]);
+export const discoverySortSchema = z.enum(["RECOMMENDED", "PRICE_ASC", "PRICE_DESC", "STARS_DESC", "RATING_DESC"]);
 
 export const discoverySearchSchema = publicStaySchema.safeExtend({
   destination: z.string().trim().min(1).max(120),
