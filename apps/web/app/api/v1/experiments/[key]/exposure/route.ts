@@ -12,8 +12,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{key:str
     if(body.exposureId!==undefined&&(typeof body.exposureId!=="string"||body.exposureId.length>160))return bad("exposureId must be a string up to 160 characters");
     if(body.metadata!==undefined&&body.metadata!==null&&(typeof body.metadata!=="object"||Array.isArray(body.metadata)))return bad("metadata must be an object");
     const subject=await experimentRequestContext(request);
+    const exposureId=typeof body.exposureId==="string"?body.exposureId:undefined;
     const result=await exposeExperimentForContext({
-      exposureId:typeof body.exposureId==="string"?body.exposureId:undefined,
+      ...(exposureId===undefined?{}:{exposureId}),
       experimentKey:decodeURIComponent(key),
       context:subject.context,
       sessionId:subject.sessionId,
