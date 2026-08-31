@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type {Locale} from "@/lib/i18n";
 
+type Translation = {locale:string;name:string|null;description:string|null};
 type Content = {
   area: string | null;
   description: string | null;
@@ -14,7 +15,16 @@ type Content = {
   checkInTime: string | null;
   checkOutTime: string | null;
   amenities: Array<{code: string; name: string; category: string | null}>;
+  translations: Translation[];
 };
+
+type TranslationDraft={name:string;description:string};
+
+const CONTENT_LOCALES=[
+  {code:"en",label:"English"},{code:"ar",label:"العربية"},{code:"zh",label:"中文"},{code:"fr",label:"Français"},{code:"de",label:"Deutsch"},
+  {code:"es",label:"Español"},{code:"it",label:"Italiano"},{code:"tr",label:"Türkçe"},{code:"ru",label:"Русский"},{code:"ja",label:"日本語"},
+  {code:"ko",label:"한국어"},{code:"hi",label:"हिन्दी"},{code:"pt",label:"Português"},{code:"id",label:"Bahasa Indonesia"},{code:"th",label:"ไทย"},
+] as const;
 
 export default function PublicContentManager({hotelId, content, locale}: {hotelId: string; content: Content; locale: Locale}) {
   const ar=locale==="ar";
@@ -22,6 +32,16 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [descriptionLength,setDescriptionLength]=useState(content.description?.length??0);
+  const [translationLocale,setTranslationLocale]=useState(ar?"ar":"en");
+  const [translations,setTranslations]=useState<Record<string,TranslationDraft>>(()=>Object.fromEntries(CONTENT_LOCALES.map(({code})=>{
+    const existing=content.translations.find((item)=>item.locale===code);
+    return [code,{name:existing?.name??"",description:existing?.description??""}];
+  })));
+  const activeTranslation=translations[translationLocale]??{name:"",description:""};
+
+  function updateTranslation(field:keyof TranslationDraft,value:string){
+    setTranslations((current)=>({...current,[translationLocale]:{...(current[translationLocale]??{name:"",description:""}),[field]:value}}));
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,11 +61,12 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
           checkInTime: nullable(form.get("checkInTime")),
           checkOutTime: nullable(form.get("checkOutTime")),
           amenities: parseAmenities(String(form.get("amenities") ?? ""),content.amenities),
+          translations: CONTENT_LOCALES.map(({code})=>({locale:code,name:nullableText(translations[code]?.name),description:nullableText(translations[code]?.description)})),
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message ?? (ar?"تعذر حفظ المعلومات":"Unable to save property details"));
-      setMessage(ar?"تم الحفظ بنجاح. أي متطلب اكتمل سيختفي تلقائيًا من قائمة النواقص في خطوة النشر.":"Saved successfully. Any completed requirement will automatically disappear from the publishing checklist.");
+      setMessage(ar?"تم الحفظ بنجاح. ستظهر الترجمة للضيف حسب لغة الموقع، وأي لغة فارغة ستستخدم الوصف الأساسي تلقائيًا.":"Saved successfully. Guests will see the matching language, while empty translations automatically fall back to the default description.");
       router.refresh();
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : (ar?"تعذر حفظ المعلومات":"Unable to save property details"));
@@ -64,7 +85,17 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
         <label>{ar?"تصنيف الفندق بالنجوم":"Hotel star rating"}<span className="fieldHelp">{ar?"اختر التصنيف الرسمي للفندق":"Choose the property's official rating"}</span><select name="starRating" defaultValue={content.starRating?.toString()??""}><option value="">{ar?"اختر عدد النجوم":"Choose rating"}</option>{[1,2,3,4,5].map((stars)=><option value={stars} key={stars}>{stars} {ar?(stars===1?"نجمة":"نجوم"):(stars===1?"star":"stars")}</option>)}</select></label>
       </div>
 
-      <label className="partnerTextareaField partnerDescriptionField">{ar?"وصف الفندق":"Property description"}<span className="fieldHelp">{ar?"اكتب للضيف باختصار: أين يقع الفندق، ما الذي يميّزه، ولمن يناسب. مطلوب 80 حرفًا على الأقل للنشر.":"Tell guests where the property is, what makes it useful, and who it suits. At least 80 characters are required to publish."}</span><textarea name="description" rows={5} defaultValue={content.description ?? ""} onChange={(event)=>setDescriptionLength(event.currentTarget.value.length)} placeholder={ar?"مثال: يقع الفندق في قلب العبدلي بالقرب من المطاعم ومراكز التسوق، ويوفر غرفًا مريحة ومناسبة لرحلات العمل والعائلات.":"Example: Located in central Abdali near restaurants and shopping, with comfortable rooms for business and family stays."}/><span className="descriptionCounter"><span className={descriptionLength>=80?"ok":""}>{descriptionLength>=80?(ar?"✓ طول الوصف مناسب للنشر":"✓ Description length is ready"):(ar?`باقي ${Math.max(0,80-descriptionLength)} حرفًا للوصول للحد المطلوب`:`${Math.max(0,80-descriptionLength)} characters remaining`)}</span><b>{descriptionLength}/80+</b></span></label>
+      <label className="partnerTextareaField partnerDescriptionField">{ar?"الوصف الأساسي للفندق":"Default property description"}<span className="fieldHelp">{ar?"هذا هو النص الاحتياطي إذا لم تضف ترجمة للغة الضيف. اكتب أين يقع الفندق وما الذي يميّزه. مطلوب 80 حرفًا على الأقل للنشر.":"This is the fallback text when a guest-language translation is not available. Explain where the property is and what makes it useful. At least 80 characters are required to publish."}</span><textarea name="description" rows={5} defaultValue={content.description ?? ""} onChange={(event)=>setDescriptionLength(event.currentTarget.value.length)} placeholder={ar?"مثال: يقع الفندق في قلب العبدلي بالقرب من المطاعم ومراكز التسوق، ويوفر غرفًا مريحة ومناسبة لرحلات العمل والعائلات.":"Example: Located in central Abdali near restaurants and shopping, with comfortable rooms for business and family stays."}/><span className="descriptionCounter"><span className={descriptionLength>=80?"ok":""}>{descriptionLength>=80?(ar?"✓ طول الوصف مناسب للنشر":"✓ Description length is ready"):(ar?`باقي ${Math.max(0,80-descriptionLength)} حرفًا للوصول للحد المطلوب`:`${Math.max(0,80-descriptionLength)} characters remaining`)}</span><b>{descriptionLength}/80+</b></span></label>
+
+      <details className="advancedLocation" open>
+        <summary>{ar?"ترجمات اسم ووصف الفندق":"Property name & description translations"}</summary>
+        <p>{ar?"اختر لغة واكتب الترجمة التي ستظهر للضيف عندما يستخدم HandMeKey بهذه اللغة. إذا تركتها فارغة سيظهر الوصف الأساسي أعلاه تلقائيًا.":"Choose a language and enter what guests should see when HandMeKey is displayed in that language. Leave a translation empty to use the default content above."}</p>
+        <div className="formGrid">
+          <label>{ar?"لغة الترجمة":"Translation language"}<select value={translationLocale} onChange={(event)=>setTranslationLocale(event.target.value)}>{CONTENT_LOCALES.map((item)=><option value={item.code} key={item.code}>{item.label}</option>)}</select></label>
+          <label>{ar?"اسم الفندق المترجم (اختياري)":"Translated property name (optional)"}<input value={activeTranslation.name} onChange={(event)=>updateTranslation("name",event.currentTarget.value)} placeholder={ar?"اتركه فارغًا إذا كان اسم البراند لا يحتاج ترجمة":"Leave blank if the brand name should stay unchanged"}/></label>
+        </div>
+        <label className="partnerTextareaField"><span>{ar?"الوصف المترجم":"Translated description"}</span><span className="fieldHelp">{ar?`تعديل نسخة ${CONTENT_LOCALES.find((item)=>item.code===translationLocale)?.label??translationLocale}. يتم حفظ كل اللغات معًا عند الضغط على زر الحفظ.`:`Editing the ${CONTENT_LOCALES.find((item)=>item.code===translationLocale)?.label??translationLocale} version. All languages are saved together.`}</span><textarea rows={5} value={activeTranslation.description} onChange={(event)=>updateTranslation("description",event.currentTarget.value)} placeholder={ar?"اكتب وصف الفندق بهذه اللغة…":"Write the property description in this language…"}/></label>
+      </details>
 
       <div className="formGrid">
         <label>{ar?"وقت تسجيل الدخول":"Guest check-in time"}<span className="fieldHelp">{ar?"من أي ساعة يستطيع الضيف استلام الغرفة؟":"From what time can guests receive their room?"}</span><input name="checkInTime" type="time" defaultValue={content.checkInTime ?? ""}/></label>
@@ -88,6 +119,11 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
 function nullable(value: FormDataEntryValue | null): string | null {
   const text = typeof value === "string" ? value.trim() : "";
   return text || null;
+}
+
+function nullableText(value:string|undefined):string|null{
+  const text=value?.trim()??"";
+  return text||null;
 }
 
 function nullableNumber(value: FormDataEntryValue | null): number | null {
