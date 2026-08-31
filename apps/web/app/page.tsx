@@ -12,6 +12,29 @@ import destinationStyles from "./city-discovery.module.css";
 
 export const dynamic = "force-dynamic";
 
+const CURATED_DESTINATION_PHOTOS = {
+  amman: {
+    url: "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1800&q=88",
+    altEn: "Amman cityscape and the Jordanian flag at sunset",
+    altAr: "إطلالة حقيقية على مدينة عمّان والعلم الأردني وقت الغروب",
+  },
+  aqaba: {
+    url: "https://images.unsplash.com/photo-1643884713348-f8cf6f435cd5?auto=format&fit=crop&w=1800&q=88",
+    altEn: "Aqaba and the Red Sea in Jordan",
+    altAr: "إطلالة حقيقية على العقبة والبحر الأحمر في الأردن",
+  },
+  petra: {
+    url: "https://images.unsplash.com/photo-1551171128-c5b124a4174c?auto=format&fit=crop&w=1800&q=88",
+    altEn: "The Treasury in Petra, Jordan",
+    altAr: "الخزنة في مدينة البتراء الأثرية في الأردن",
+  },
+  "dead-sea": {
+    url: "https://images.unsplash.com/photo-1726001739725-cfd1902b2a2b?auto=format&fit=crop&w=1800&q=88",
+    altEn: "The Dead Sea shoreline in Jordan",
+    altAr: "شاطئ البحر الميت ومياهه في الأردن",
+  },
+} as const;
+
 function flagEmoji(countryCode: string) {
   return countryCode.toUpperCase().replace(/[A-Z]/g, (letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)));
 }
@@ -19,11 +42,11 @@ function flagEmoji(countryCode: string) {
 export default async function HomePage() {
   const [liveHotels,liveDestinations,market] = await Promise.all([
     listFeaturedHotels(6).catch(() => []),
-    listFeaturedDestinations({countryCode: "JO", limit: 5}).catch(() => []),
+    listFeaturedDestinations({countryCode: "JO", limit: 4}).catch(() => []),
     requestGuestMarket(),
   ]);
   const hotels = liveHotels.length ? liveHotels : demoFeaturedHotelsFallback(6);
-  const destinations = liveDestinations.length ? liveDestinations : demoDestinationsFallback(5);
+  const destinations = liveDestinations.length ? liveDestinations : demoDestinationsFallback(4);
   const locale=market.locale;
   const copy = guestDictionary(locale);
   const ui = guestUiCopy(locale);
@@ -54,8 +77,10 @@ export default async function HomePage() {
       <div className={destinationStyles.destinationGrid}>{destinations.map((destination,index) => {
         const cityName = locale === "ar" ? destination.nameAr ?? destination.nameEn : destination.nameEn;
         const countryName = regionNames.of(destination.countryCode) ?? destination.countryCode;
+        const curatedPhoto = CURATED_DESTINATION_PHOTOS[destination.slug as keyof typeof CURATED_DESTINATION_PHOTOS];
+        const destinationPhoto = curatedPhoto ? {url: curatedPhoto.url, alt: locale === "ar" ? curatedPhoto.altAr : curatedPhoto.altEn} : destination.coverPhoto;
         return <Link prefetch={false} key={destination.id} className={`${destinationStyles.destinationCard} ${index < 2 ? destinationStyles.destinationCardFeatured : ""}`} href={destination.landingPath}>
-          {destination.coverPhoto ? <div className={destinationStyles.destinationMedia}><img src={destination.coverPhoto.url} alt={destination.coverPhoto.alt ?? cityName} loading="lazy" decoding="async"/></div> : <div className={destinationStyles.destinationFallback}><MapPin size={30}/><strong>{cityName}</strong></div>}
+          {destinationPhoto ? <div className={destinationStyles.destinationMedia}><img src={destinationPhoto.url} alt={destinationPhoto.alt ?? cityName} loading="lazy" decoding="async"/></div> : <div className={destinationStyles.destinationFallback}><MapPin size={30}/><strong>{cityName}</strong></div>}
           <div className={destinationStyles.destinationShade}/>
           <div className={destinationStyles.destinationTopline}><span className={destinationStyles.destinationFlag}>{flagEmoji(destination.countryCode)}</span><span>{countryName}</span></div>
           <div className={destinationStyles.destinationContent}><h3>{cityName}</h3><p>{destination.propertyCount} {destinationCopy.stays}</p><span className={destinationStyles.destinationCta}>{destinationCopy.explore}<ArrowRight size={15}/></span></div>
