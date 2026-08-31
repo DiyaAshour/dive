@@ -17,21 +17,25 @@ const CURATED_DESTINATION_PHOTOS = {
     url: "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1800&q=88",
     altEn: "Amman cityscape and the Jordanian flag at sunset",
     altAr: "إطلالة حقيقية على مدينة عمّان والعلم الأردني وقت الغروب",
+    objectPosition: "50% 50%",
   },
   aqaba: {
-    url: "https://images.unsplash.com/photo-1643884713348-f8cf6f435cd5?auto=format&fit=crop&w=1800&q=88",
-    altEn: "Aqaba and the Red Sea in Jordan",
-    altAr: "إطلالة حقيقية على العقبة والبحر الأحمر في الأردن",
+    url: "https://images.pexels.com/photos/17646516/pexels-photo-17646516.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    altEn: "Aqaba waterfront, Red Sea and the red mountains in Jordan",
+    altAr: "واجهة العقبة البحرية والبحر الأحمر والجبال الحمراء في الأردن",
+    objectPosition: "50% 52%",
   },
   petra: {
-    url: "https://images.unsplash.com/photo-1551171128-c5b124a4174c?auto=format&fit=crop&w=1800&q=88",
+    url: "https://visitpetra.jo/uploads/LocationImages/9efd2b9f-2df6-4a29-88c8-533e5a6f51ca.jpg",
     altEn: "The Treasury in Petra, Jordan",
     altAr: "الخزنة في مدينة البتراء الأثرية في الأردن",
+    objectPosition: "50% 52%",
   },
   "dead-sea": {
-    url: "https://images.unsplash.com/photo-1726001739725-cfd1902b2a2b?auto=format&fit=crop&w=1800&q=88",
-    altEn: "The Dead Sea shoreline in Jordan",
-    altAr: "شاطئ البحر الميت ومياهه في الأردن",
+    url: "https://images.pexels.com/photos/3370311/pexels-photo-3370311.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    altEn: "Dead Sea salt formations and shoreline in Jordan",
+    altAr: "تشكّلات الملح البيضاء على شاطئ البحر الميت في الأردن",
+    objectPosition: "50% 60%",
   },
 } as const;
 
@@ -80,7 +84,7 @@ export default async function HomePage() {
         const curatedPhoto = CURATED_DESTINATION_PHOTOS[destination.slug as keyof typeof CURATED_DESTINATION_PHOTOS];
         const destinationPhoto = curatedPhoto ? {url: curatedPhoto.url, alt: locale === "ar" ? curatedPhoto.altAr : curatedPhoto.altEn} : destination.coverPhoto;
         return <Link prefetch={false} key={destination.id} className={`${destinationStyles.destinationCard} ${index < 2 ? destinationStyles.destinationCardFeatured : ""}`} href={destination.landingPath}>
-          {destinationPhoto ? <div className={destinationStyles.destinationMedia}><img src={destinationPhoto.url} alt={destinationPhoto.alt ?? cityName} loading="lazy" decoding="async"/></div> : <div className={destinationStyles.destinationFallback}><MapPin size={30}/><strong>{cityName}</strong></div>}
+          {destinationPhoto ? <div className={destinationStyles.destinationMedia}><img src={destinationPhoto.url} alt={destinationPhoto.alt ?? cityName} loading="lazy" decoding="async" style={curatedPhoto ? {objectPosition: curatedPhoto.objectPosition} : undefined}/></div> : <div className={destinationStyles.destinationFallback}><MapPin size={30}/><strong>{cityName}</strong></div>}
           <div className={destinationStyles.destinationShade}/>
           <div className={destinationStyles.destinationTopline}><span className={destinationStyles.destinationFlag}>{flagEmoji(destination.countryCode)}</span><span>{countryName}</span></div>
           <div className={destinationStyles.destinationContent}><h3>{cityName}</h3><p>{destination.propertyCount} {destinationCopy.stays}</p><span className={destinationStyles.destinationCta}>{destinationCopy.explore}<ArrowRight size={15}/></span></div>
