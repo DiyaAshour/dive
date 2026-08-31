@@ -42,6 +42,11 @@ export async function recordExperimentMetricForContext(input:Readonly<{
 }>){
   const subjectKey=await experimentSubjectKey(input.experimentKey,input.context);
   if(!subjectKey)return {recorded:false as const,metricEventId:input.metricEventId??"",variantKey:null,reason:"SUBJECT_UNAVAILABLE" as const};
+  const db=database();
+  const experiment=await db.experiment.findUnique({where:{key:normalizeKey(input.experimentKey)},select:{id:true}});
+  if(!experiment)return {recorded:false as const,metricEventId:input.metricEventId??"",variantKey:null,reason:"EXPERIMENT_NOT_FOUND" as const};
+  const exposure=await db.experimentExposure.findFirst({where:{experimentId:experiment.id,subjectKey},select:{variant:{select:{key:true}}},orderBy:{exposedAt:"asc"}});
+  if(!exposure)return {recorded:false as const,metricEventId:input.metricEventId??"",variantKey:null,reason:"NOT_EXPOSED" as const};
   const result=await recordExperimentMetric({
     metricEventId:input.metricEventId,
     experimentKey:input.experimentKey,
