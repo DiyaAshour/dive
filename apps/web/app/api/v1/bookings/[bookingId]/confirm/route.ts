@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { idempotencyKeySchema } from "@platform/contracts";
-import { ApplicationError, confirmBooking, queueBookingLifecycleEmails } from "@platform/server";
+import { ApplicationError, confirmBooking, queueBookingLifecycleEmails, withBookingConcurrencyRetry } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
 import { demoBookingView } from "@/lib/demo-booking";
 import { bookingAccessContext, bookingToken, idempotencyKey } from "@/lib/request-auth";
@@ -17,7 +17,8 @@ export async function POST(request: NextRequest, {params}: {params: Promise<{boo
       return ok(booking);
     }
 
-    const booking = await confirmBooking(bookingId, parsedKey.data, await bookingAccessContext(request));
+    const access = await bookingAccessContext(request);
+    const booking = await withBookingConcurrencyRetry(() => confirmBooking(bookingId, parsedKey.data, access));
     await queueBookingLifecycleEmails(bookingId, "CONFIRMED").catch((error) => console.error("[booking-email] confirm queue failed", error));
     return ok(booking);
   } catch (error) {

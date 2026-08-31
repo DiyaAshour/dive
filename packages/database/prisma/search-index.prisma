@@ -1,0 +1,19 @@
+model HotelSearchDocument {
+  hotelId        String   @id
+  slug           String   @unique
+  name           String
+  city           String
+  area           String?
+  countryCode    String   @db.Char(2)
+  starRating     Int?
+  normalizedText String   @db.Text
+  amenities      Json
+  latitude       Decimal? @db.Decimal(9, 6)
+  longitude      Decimal? @db.Decimal(9, 6)
+  revision       Int
+  indexedAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([countryCode, starRating])
+  @@index([indexedAt])
+}

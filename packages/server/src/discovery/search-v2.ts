@@ -244,7 +244,7 @@ function offerMatchesRoomFeature(offer:PublicOffer,feature:string):boolean{
 }
 
 function offerIsAccessible(hotel:PublicHotel,offer:PublicOffer):boolean{
-  const aliases=AMENITY_ALIASES.WHEELCHAIR_ACCESS;
+  const aliases=AMENITY_ALIASES.WHEELCHAIR_ACCESS ?? ["WHEELCHAIR_ACCESS"];
   const matches=(code:string)=>aliases.includes(code.trim().toUpperCase());
   return hotel.amenities.some((amenity)=>matches(amenity.code))||offer.roomAmenities.some((amenity)=>matches(amenity.code));
 }

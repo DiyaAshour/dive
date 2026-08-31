@@ -1,0 +1,1 @@
+Production-grade claims require environment validation. Architecture can be prepared in code; high availability and disaster recovery are only certified after real failover and restore drills.

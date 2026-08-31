@@ -1,0 +1,7 @@
+model PlatformProjectionCursor {
+  key       String   @id
+  cursorAt  DateTime?
+  cursorId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

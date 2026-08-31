@@ -9,6 +9,7 @@ import {
   queueBookingLifecycleEmails,
   requireBookingAccess,
   walletAppliedToBooking,
+  withBookingConcurrencyRetry,
 } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
 import { demoBookingView } from "@/lib/demo-booking";
@@ -72,7 +73,8 @@ export async function PATCH(request: NextRequest, {params}: {params: Promise<{bo
     if (!parsed.success) return validationError(parsed.error);
     const parsedKey = idempotencyKeySchema.safeParse(idempotencyKey(request));
     if (!parsedKey.success) return validationError(parsedKey.error);
-    const booking = await modifyBooking(bookingId, parsed.data, parsedKey.data, await bookingAccessContext(request));
+    const access = await bookingAccessContext(request);
+    const booking = await withBookingConcurrencyRetry(() => modifyBooking(bookingId, parsed.data, parsedKey.data, access));
     if (booking.status === "MODIFIED") await queueBookingLifecycleEmails(bookingId, "MODIFIED").catch((error) => console.error("[booking-email] modification queue failed", error));
     return ok(booking);
   } catch (error) {

@@ -64,6 +64,15 @@ export * from "./payments/provider";
 export * from "./payments/registry";
 export * from "./payments/paytabs";
 export * from "./payments/service";
+export * from "./reliability/retry";
+export * from "./reliability/outbox";
+export * from "./reliability/jobs";
+export * from "./analytics/platform";
+export * from "./analytics/booking-sync";
+export * from "./experiments/service";
+export * from "./experiments/runtime";
+export * from "./experiments/admin";
+export * from "./search/platform";
 
 // Public hotel pages use resilient readers: real database data when available,
 // and the built-in demo catalog for demo-* slugs when production DB is absent.
