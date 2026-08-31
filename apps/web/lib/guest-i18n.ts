@@ -1,58 +1,48 @@
-import {dictionary, type Locale} from "./i18n";
+import {dictionary} from "./i18n";
 import type {GuestLocale} from "./guest-market";
+import {zh} from "./locales/zh";
+import {fr} from "./locales/fr";
+import {de} from "./locales/de";
+import {es} from "./locales/es";
+import {it} from "./locales/it";
+import {tr} from "./locales/tr";
+import {ru} from "./locales/ru";
+import {ja} from "./locales/ja";
+import {ko} from "./locales/ko";
+import {hi} from "./locales/hi";
+import {pt} from "./locales/pt";
+import {id} from "./locales/id";
+import {th} from "./locales/th";
 
 type Dictionary = ReturnType<typeof dictionary>;
-type DeepPartial<T> = {[K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K]};
+type TranslatedLocale = Exclude<GuestLocale,"en"|"ar">;
 
-const overlays: Partial<Record<GuestLocale, DeepPartial<Dictionary>>> = {
-  zh: {
-    language:{label:"语言",english:"English",arabic:"العربية"},
-    nav:{stays:"住宿",trips:"我的行程",alerts:"价格提醒",partner:"发布您的住宿",account:"账户",signIn:"登录",signOut:"退出登录",signingOut:"正在退出…"},
-    home:{
-      kicker:"酒店价格清晰透明",title:"找到想住的酒店，先看清最终要付多少钱。",intro:"实时房量、已验证酒店、真实住客评价和取消条款，在确认预订前全部清楚显示。",verified:"已验证住宿",cancellation:"已保存的取消条款",total:"住宿最终总价",livePlaceholder:"可预订住宿将在这里显示",livePlaceholderSub:"仅展示已启用、已验证且已发布图片的住宿。",where:"目的地",whereHint:"城市、地区或酒店",checkIn:"入住",checkOut:"退房",guests:"住客",adults:"成人",search:"搜索住宿",liveEyebrow:"HandMeKey 实时房源",liveTitle:"值得查看的已验证住宿。",liveIntro:"住宿通过平台审核并发布实时内容后才会出现在这里。",explore:"查看全部住宿",noHotels:"暂时没有已发布的验证住宿",noHotelsSub:"未完成或未验证的住宿在通过发布审核前不会公开。",photoPending:"图片待上传",verifiedLabel:"已验证",demoProperty:"演示住宿",review:"条验证评价",reviews:"条验证评价",checkPrice:"查看实时价格",valueEyebrow:"围绕预订而设计",valueTitle:"从搜索到确认，少一点猜测。",finalTitle:"先看最终总价",finalBody:"服务费和必须费用会包含在预订前显示的服务器计算总价中。",policyTitle:"条款随预订保存",policyBody:"预订时会保存取消政策快照，之后的修改不会改变您原本接受的条款。",watchTitle:"关注真实住宿价格",watchBody:"跟踪同一酒店和日期，HandMeKey 会按实时价格、房量和促销重新计算。",partnerEyebrow:"酒店合作伙伴",partnerTitle:"管理房源、价格和转化。",partnerBody:"Partner Hub 集成住宿设置、预订、促销、住客消息和第一方经营数据。",partnerCta:"了解 Partner Hub"
-    },
-    search:{destination:"目的地",checkIn:"入住",checkOut:"退房",adults:"成人",children:"儿童",again:"重新搜索",filter:"筛选住宿",nightly:"每晚总价",min:"最低",max:"最高",stars:"星级",anyStars:"不限星级",payment:"付款",anyPayment:"不限付款方式",payHotel:"到店付款",payNow:"立即付款",sort:"排序",recommended:"推荐",lowPrice:"价格从低到高",highPrice:"价格从高到低",highStars:"星级从高到低",freeCancel:"当前可免费取消",facilities:"设施",apply:"应用筛选",live:"实时可订",verifiedProperty:"家已验证住宿",verifiedProperties:"家已验证住宿",for:"日期",save:"保存搜索",badTitle:"请检查搜索条件",invalid:"搜索条件无效",noneTitle:"没有符合条件的实时报价",noneBody:"请尝试其他日期、人数或减少筛选。缺失价格或无房的选项不会显示。",photoPending:"图片待上传",verified:"已验证",demoProperty:"演示住宿",demoProperties:"演示住宿",review:"条验证评价",reviews:"条验证评价",off:"优惠",freeNow:"当前可免费取消",penalty:"可能产生取消费用",only:"仅剩",roomLeft:"间房",roomsLeft:"间房",finalTotal:"住宿最终总价",average:"每晚平均",seeRooms:"查看房型"},
-    hotel:{back:"返回 {city} 住宿",verified:"已验证住宿",demoProperty:"演示住宿",star:"星",guestSignal:"住客评价优秀",stayReview:"条验证入住评价",stayReviews:"条验证入住评价",checkIn:"入住",checkOut:"退房",propertyPolicy:"住宿政策",noPhotos:"住宿尚未发布图片。",finalPrice:"预订前显示最终价格",liveInventory:"实时房量",verifiedReviews:"仅限真实入住评价",property:"住宿信息",about:"关于 {hotel}",noDescription:"住宿尚未发布介绍。",facilities:"设施",noFacilities:"住宿尚未发布设施信息。",yourStay:"您的住宿",chooseDates:"选择日期并查看实时总价。",adults:"成人",children:"儿童",availability:"查看房量",invalidStay:"所选日期无效，HandMeKey 已加载默认日期。",available:"所选日期可订",liveRate:"个实时价格方案",liveRates:"个实时价格方案",night:"晚",nights:"晚",totalsNote:"最终总价包含已配置的服务费和必须费用。",from:"起价",stayTotal:"住宿总价",noRooms:"所选日期暂无可售房型",noRoomsBody:"只有每晚价格、限制条件和剩余房量都有效时才会显示报价。",room:"房型",upTo:"最多",adult:"成人",adultsPlural:"成人",package:"套餐",cancellation:"取消",freeNow:"当前可免费取消",currentPenalty:"当前取消费用",finalTotal:"最终总价",average:"每晚平均",base:"房费",service:"服务费",tax:"税费",choose:"选择此房型",only:"仅剩",left:"间",breakfast:"含早餐",halfBoard:"半膳",fullBoard:"全膳",roomOnly:"仅住宿",payHotel:"到店付款",payNow:"立即付款",verifiedStays:"真实入住",reviewsTitle:"真实住客评分。",noReviews:"暂无验证评价",noReviewsBody:"只有已完成入住的住客才能发布评价。",outOf10:"满分 10 分",verifiedStaysCount:"次验证入住",cleanliness:"清洁度",staff:"员工",location:"位置",comfort:"舒适度",value:"性价比",verifiedStay:"已验证入住",propertyResponse:"住宿回复"},
-    checkout:{secure:"安全预订",title:"确认前再次核对实时价格。",intro:"总价、付款方式和取消政策都来自创建预订的同一实时预订引擎。",session:"安全账户会话",terms:"已保存预订条款",selectionTitle:"需要选择实时房型",selectionBody:"请先选择酒店、房型和价格方案再进入结账。HandMeKey 不会使用隐藏的演示价格。",back:"返回搜索",checking:"正在检查实时价格和房量…",loadFail:"无法加载此住宿",guestInfo:"住客信息",fullName:"姓名",email:"电子邮箱",payment:"付款方式",payHotel:"到店付款",payNow:"立即付款",gatewayMissing:"在线支付网关未配置",noPayment:"此价格要求在线付款，但当前环境未配置支付服务。",reserve:"预留并继续",securing:"正在锁定房间…",holdNote:"房间会通过服务器临时锁定。减少库存前会再次验证最终价格。",yourStay:"您的住宿",roomBase:"房费",service:"服务费",tax:"税费 / 必须费用",final:"最终总价",cancellation:"取消政策",noShow:"未入住",inventory:"实时可售房量",offIncluded:"房费优惠已包含在下方价格中。",paymentAction:"付款已开始，但需要完成支付服务商步骤后才能确认预订。"}
-  },
-  fr:{language:{label:"Langue"},nav:{stays:"Hébergements",trips:"Mes voyages",alerts:"Alertes de prix",partner:"Ajouter votre établissement",account:"Compte",signIn:"Se connecter",signOut:"Se déconnecter"},home:{kicker:"Hôtels, prix transparents",title:"Trouvez le séjour qui vous convient. Voyez le prix que vous paierez vraiment.",where:"Destination",whereHint:"Ville, quartier ou hôtel",checkIn:"Arrivée",checkOut:"Départ",guests:"Voyageurs",adults:"Adultes",search:"Rechercher",finalTitle:"Prix final d'abord"},search:{destination:"Destination",checkIn:"Arrivée",checkOut:"Départ",adults:"Adultes",children:"Enfants",again:"Rechercher",filter:"Filtres",payHotel:"Payer à l'hôtel",payNow:"Payer maintenant",finalTotal:"Prix total du séjour",seeRooms:"Voir les chambres"},checkout:{secure:"Réservation sécurisée",guestInfo:"Informations du voyageur",payHotel:"Payer à l'hôtel",payNow:"Payer maintenant",final:"Total final"}},
-  de:{language:{label:"Sprache"},nav:{stays:"Unterkünfte",trips:"Meine Reisen",alerts:"Preisalarme",partner:"Unterkunft eintragen",account:"Konto",signIn:"Anmelden",signOut:"Abmelden"},home:{kicker:"Hotels mit klaren Preisen",title:"Finden Sie Ihren Aufenthalt. Sehen Sie den Preis, den Sie wirklich zahlen.",where:"Reiseziel",whereHint:"Stadt, Gebiet oder Hotel",checkIn:"Anreise",checkOut:"Abreise",guests:"Gäste",adults:"Erwachsene",search:"Unterkünfte suchen"},search:{destination:"Reiseziel",checkIn:"Anreise",checkOut:"Abreise",adults:"Erwachsene",children:"Kinder",again:"Erneut suchen",filter:"Filter",payHotel:"Im Hotel zahlen",payNow:"Jetzt zahlen",finalTotal:"Gesamtpreis",seeRooms:"Zimmer ansehen"},checkout:{secure:"Sichere Buchung",guestInfo:"Gastdaten",payHotel:"Im Hotel zahlen",payNow:"Jetzt zahlen",final:"Gesamtpreis"}},
-  es:{language:{label:"Idioma"},nav:{stays:"Alojamientos",trips:"Mis viajes",alerts:"Alertas de precio",partner:"Publica tu alojamiento",account:"Cuenta",signIn:"Iniciar sesión",signOut:"Cerrar sesión"},home:{kicker:"Hoteles con precios claros",title:"Encuentra tu estancia. Mira el precio que realmente pagarás.",where:"Destino",whereHint:"Ciudad, zona u hotel",checkIn:"Entrada",checkOut:"Salida",guests:"Huéspedes",adults:"Adultos",search:"Buscar alojamientos"},search:{destination:"Destino",checkIn:"Entrada",checkOut:"Salida",adults:"Adultos",children:"Niños",again:"Buscar de nuevo",filter:"Filtros",payHotel:"Pagar en el hotel",payNow:"Pagar ahora",finalTotal:"Total de la estancia",seeRooms:"Ver habitaciones"},checkout:{secure:"Reserva segura",guestInfo:"Datos del huésped",payHotel:"Pagar en el hotel",payNow:"Pagar ahora",final:"Total final"}},
-  it:{language:{label:"Lingua"},nav:{stays:"Soggiorni",trips:"I miei viaggi",alerts:"Avvisi prezzo",partner:"Inserisci la struttura",account:"Account",signIn:"Accedi",signOut:"Esci"},home:{title:"Trova il soggiorno che vuoi. Guarda il prezzo che pagherai davvero.",where:"Destinazione",checkIn:"Check-in",checkOut:"Check-out",guests:"Ospiti",search:"Cerca soggiorni"},search:{destination:"Destinazione",adults:"Adulti",children:"Bambini",payHotel:"Paga in hotel",payNow:"Paga ora",finalTotal:"Totale soggiorno",seeRooms:"Vedi camere"},checkout:{secure:"Prenotazione sicura",guestInfo:"Dati dell'ospite",final:"Totale finale"}},
-  tr:{language:{label:"Dil"},nav:{stays:"Konaklamalar",trips:"Seyahatlerim",alerts:"Fiyat uyarıları",partner:"Tesisinizi ekleyin",account:"Hesap",signIn:"Giriş yap",signOut:"Çıkış yap"},home:{title:"İstediğiniz konaklamayı bulun. Gerçekte ödeyeceğiniz fiyatı görün.",where:"Nereye",checkIn:"Giriş",checkOut:"Çıkış",guests:"Misafirler",search:"Konaklama ara"},search:{destination:"Destinasyon",adults:"Yetişkin",children:"Çocuk",payHotel:"Otelde öde",payNow:"Şimdi öde",finalTotal:"Toplam konaklama",seeRooms:"Odaları gör"},checkout:{secure:"Güvenli rezervasyon",guestInfo:"Misafir bilgileri",final:"Toplam"}},
-  ru:{language:{label:"Язык"},nav:{stays:"Отели",trips:"Мои поездки",alerts:"Уведомления о цене",partner:"Добавить объект",account:"Аккаунт",signIn:"Войти",signOut:"Выйти"},home:{title:"Найдите нужное проживание. Сразу увидьте реальную сумму к оплате.",where:"Куда",checkIn:"Заезд",checkOut:"Выезд",guests:"Гости",search:"Найти"},search:{destination:"Направление",adults:"Взрослые",children:"Дети",payHotel:"Оплата в отеле",payNow:"Оплатить сейчас",finalTotal:"Итоговая стоимость",seeRooms:"Смотреть номера"},checkout:{secure:"Безопасное бронирование",guestInfo:"Данные гостя",final:"Итого"}},
-  ja:{language:{label:"言語"},nav:{stays:"宿泊施設",trips:"予約",alerts:"料金アラート",partner:"施設を掲載",account:"アカウント",signIn:"ログイン",signOut:"ログアウト"},home:{title:"泊まりたい宿を見つけ、実際に支払う料金を確認。",where:"目的地",checkIn:"チェックイン",checkOut:"チェックアウト",guests:"宿泊者",search:"宿泊施設を検索"},search:{destination:"目的地",adults:"大人",children:"子ども",payHotel:"現地払い",payNow:"今すぐ支払う",finalTotal:"宿泊合計",seeRooms:"客室を見る"},checkout:{secure:"安全な予約",guestInfo:"宿泊者情報",final:"最終合計"}},
-  ko:{language:{label:"언어"},nav:{stays:"숙소",trips:"내 여행",alerts:"가격 알림",partner:"숙소 등록",account:"계정",signIn:"로그인",signOut:"로그아웃"},home:{title:"원하는 숙소를 찾고 실제 결제 금액을 확인하세요.",where:"목적지",checkIn:"체크인",checkOut:"체크아웃",guests:"투숙객",search:"숙소 검색"},search:{destination:"목적지",adults:"성인",children:"어린이",payHotel:"호텔 결제",payNow:"지금 결제",finalTotal:"총 숙박 요금",seeRooms:"객실 보기"},checkout:{secure:"안전한 예약",guestInfo:"투숙객 정보",final:"최종 합계"}},
-  hi:{language:{label:"भाषा"},nav:{stays:"होटल",trips:"मेरी यात्राएँ",alerts:"मूल्य अलर्ट",partner:"अपनी प्रॉपर्टी जोड़ें",account:"खाता",signIn:"साइन इन",signOut:"साइन आउट"},home:{title:"अपनी पसंद की ठहरने की जगह खोजें और वास्तविक भुगतान कीमत देखें।",where:"कहाँ",checkIn:"चेक-इन",checkOut:"चेक-आउट",guests:"मेहमान",search:"होटल खोजें"},search:{destination:"गंतव्य",adults:"वयस्क",children:"बच्चे",payHotel:"होटल में भुगतान",payNow:"अभी भुगतान",finalTotal:"कुल ठहराव",seeRooms:"कमरे देखें"},checkout:{secure:"सुरक्षित बुकिंग",guestInfo:"मेहमान की जानकारी",final:"अंतिम कुल"}},
-  pt:{language:{label:"Idioma"},nav:{stays:"Hospedagens",trips:"Minhas viagens",alerts:"Alertas de preço",partner:"Anuncie sua propriedade",account:"Conta",signIn:"Entrar",signOut:"Sair"},home:{title:"Encontre a estadia que deseja. Veja o preço que realmente vai pagar.",where:"Destino",checkIn:"Check-in",checkOut:"Check-out",guests:"Hóspedes",search:"Buscar estadias"},search:{destination:"Destino",adults:"Adultos",children:"Crianças",payHotel:"Pagar no hotel",payNow:"Pagar agora",finalTotal:"Total da estadia",seeRooms:"Ver quartos"},checkout:{secure:"Reserva segura",guestInfo:"Dados do hóspede",final:"Total final"}},
-  id:{language:{label:"Bahasa"},nav:{stays:"Akomodasi",trips:"Perjalanan saya",alerts:"Peringatan harga",partner:"Daftarkan properti",account:"Akun",signIn:"Masuk",signOut:"Keluar"},home:{title:"Temukan penginapan yang Anda inginkan. Lihat harga yang benar-benar Anda bayar.",where:"Tujuan",checkIn:"Check-in",checkOut:"Check-out",guests:"Tamu",search:"Cari penginapan"},search:{destination:"Tujuan",adults:"Dewasa",children:"Anak",payHotel:"Bayar di hotel",payNow:"Bayar sekarang",finalTotal:"Total menginap",seeRooms:"Lihat kamar"},checkout:{secure:"Pemesanan aman",guestInfo:"Informasi tamu",final:"Total akhir"}},
-  th:{language:{label:"ภาษา"},nav:{stays:"ที่พัก",trips:"ทริปของฉัน",alerts:"แจ้งเตือนราคา",partner:"ลงประกาศที่พัก",account:"บัญชี",signIn:"เข้าสู่ระบบ",signOut:"ออกจากระบบ"},home:{title:"ค้นหาที่พักที่ต้องการ และดูราคาที่จะจ่ายจริง",where:"จุดหมาย",checkIn:"เช็กอิน",checkOut:"เช็กเอาต์",guests:"ผู้เข้าพัก",search:"ค้นหาที่พัก"},search:{destination:"จุดหมาย",adults:"ผู้ใหญ่",children:"เด็ก",payHotel:"จ่ายที่โรงแรม",payNow:"จ่ายตอนนี้",finalTotal:"ยอดรวมการเข้าพัก",seeRooms:"ดูห้อง"},checkout:{secure:"การจองที่ปลอดภัย",guestInfo:"ข้อมูลผู้เข้าพัก",final:"ยอดรวมสุดท้าย"}},
-};
+const translatedDictionaries = {
+  zh,fr,de,es,it,tr,ru,ja,ko,hi,pt,id,th,
+} satisfies Record<TranslatedLocale,Dictionary>;
 
-export function guestDictionary(locale: GuestLocale): Dictionary {
-  const base = dictionary((locale === "ar" ? "ar" : "en") as Locale);
-  const overlay = overlays[locale];
-  return overlay ? mergeDeep(base,overlay) : base;
+export function guestDictionary(locale:GuestLocale):Dictionary {
+  if(locale==="en"||locale==="ar") return dictionary(locale);
+  return translatedDictionaries[locale];
 }
 
-export function guestMarketCopy(locale: GuestLocale) {
-  const copies: Partial<Record<GuestLocale,{approx:string;charged:string;currency:string;auto:string}>> = {
+export function guestMarketCopy(locale:GuestLocale) {
+  const copies: Record<GuestLocale,{approx:string;charged:string;currency:string;auto:string}> = {
+    en:{approx:"approx.",charged:"The booking is charged in the hotel's original currency",currency:"Currency",auto:"Automatically selected for your region"},
     ar:{approx:"تقريبًا",charged:"سيتم احتساب الحجز بعملة الفندق",currency:"العملة",auto:"اختيار تلقائي حسب موقعك"},
     zh:{approx:"约",charged:"预订将按酒店原始币种计费",currency:"货币",auto:"已根据您的地区自动选择"},
     fr:{approx:"env.",charged:"La réservation sera facturée dans la devise de l'hôtel",currency:"Devise",auto:"Sélection automatique selon votre région"},
     de:{approx:"ca.",charged:"Die Buchung wird in der Hotelwährung berechnet",currency:"Währung",auto:"Automatisch nach Region gewählt"},
-    es:{approx:"aprox.",charged:"La reserva se cobrará en la moneda del hotel",currency:"Moneda",auto:"Selección automática según tu región"},
+    es:{approx:"aprox.",charged:"La reserva se cobrará en la moneda original del hotel",currency:"Moneda",auto:"Selección automática según tu región"},
+    it:{approx:"circa",charged:"La prenotazione sarà addebitata nella valuta originale dell'hotel",currency:"Valuta",auto:"Selezione automatica in base alla tua regione"},
+    tr:{approx:"yakl.",charged:"Rezervasyon otelin kendi para biriminde tahsil edilir",currency:"Para birimi",auto:"Bölgenize göre otomatik seçildi"},
+    ru:{approx:"примерно",charged:"Бронирование оплачивается в исходной валюте отеля",currency:"Валюта",auto:"Автоматически выбрано для вашего региона"},
     ja:{approx:"約",charged:"予約はホテルの元の通貨で請求されます",currency:"通貨",auto:"地域に応じて自動選択"},
     ko:{approx:"약",charged:"예약은 호텔의 원래 통화로 청구됩니다",currency:"통화",auto:"지역에 따라 자동 선택"},
+    hi:{approx:"लगभग",charged:"बुकिंग का शुल्क होटल की मूल मुद्रा में लिया जाएगा",currency:"मुद्रा",auto:"आपके क्षेत्र के अनुसार स्वतः चुना गया"},
+    pt:{approx:"aprox.",charged:"A reserva será cobrada na moeda original do hotel",currency:"Moeda",auto:"Selecionado automaticamente para sua região"},
+    id:{approx:"sekitar",charged:"Pemesanan ditagihkan dalam mata uang asli hotel",currency:"Mata uang",auto:"Dipilih otomatis sesuai wilayah Anda"},
+    th:{approx:"ประมาณ",charged:"การจองจะเรียกเก็บเป็นสกุลเงินเดิมของโรงแรม",currency:"สกุลเงิน",auto:"เลือกอัตโนมัติตามภูมิภาคของคุณ"},
   };
-  return copies[locale] ?? {approx:"approx.",charged:"The booking is charged in the hotel's original currency",currency:"Currency",auto:"Automatically selected for your region"};
-}
-
-function mergeDeep<T extends Record<string, any>>(base:T,overlay:DeepPartial<T>):T {
-  const result:{[key:string]:unknown}={...base};
-  for(const [key,value] of Object.entries(overlay)) {
-    if(value && typeof value === "object" && !Array.isArray(value) && base[key] && typeof base[key] === "object") result[key]=mergeDeep(base[key] as Record<string,any>,value as Record<string,any>);
-    else if(value !== undefined) result[key]=value;
-  }
-  return result as T;
+  return copies[locale];
 }
