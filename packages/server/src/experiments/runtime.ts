@@ -23,7 +23,7 @@ export async function exposeExperimentForContext(input:Readonly<{
   const subjectKey=await experimentSubjectKey(input.experimentKey,input.context);
   if(!subjectKey)return {recorded:false as const,exposureId:input.exposureId??"",variantKey:null,reason:"SUBJECT_UNAVAILABLE" as const};
   const result=await recordExperimentExposure({
-    exposureId:input.exposureId,
+    ...(input.exposureId===undefined?{}:{exposureId:input.exposureId}),
     experimentKey:input.experimentKey,
     subjectKey,
     sessionId:input.sessionId??input.context.sessionId??null,
@@ -48,11 +48,11 @@ export async function recordExperimentMetricForContext(input:Readonly<{
   const exposure=await db.experimentExposure.findFirst({where:{experimentId:experiment.id,subjectKey},select:{variant:{select:{key:true}}},orderBy:{exposedAt:"asc"}});
   if(!exposure)return {recorded:false as const,metricEventId:input.metricEventId??"",variantKey:null,reason:"NOT_EXPOSED" as const};
   const result=await recordExperimentMetric({
-    metricEventId:input.metricEventId,
+    ...(input.metricEventId===undefined?{}:{metricEventId:input.metricEventId}),
     experimentKey:input.experimentKey,
     subjectKey,
     metric:input.metric,
-    value:input.value,
+    ...(input.value===undefined?{}:{value:input.value}),
     properties:input.properties??null,
   });
   return {...result,reason:null};
