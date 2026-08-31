@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { GuestLocale } from "@/lib/guest-market";
+import { localeFromLanguageTag, type GuestLocale } from "@/lib/guest-market";
 import { priceWatchUiCopy } from "@/lib/price-watch-ui-copy";
 
 type RoomOption={roomTypeId:string;roomName:string;currentTotal:number};
 type Props={locale:GuestLocale;hotelId:string;arrival:string;departure:string;adults:number;children:number;currentTotal:number;currency:string};
 
 export function PriceWatch({locale,hotelId,arrival,departure,adults,children,currentTotal,currency}:Props){
+  const [effectiveLocale,setEffectiveLocale]=useState<GuestLocale>(locale);
   const [rooms,setRooms]=useState<RoomOption[]>([]);
   const [selectedRoomTypeId,setSelectedRoomTypeId]=useState("");
   const [loadingRooms,setLoadingRooms]=useState(true);
@@ -16,9 +17,14 @@ export function PriceWatch({locale,hotelId,arrival,departure,adults,children,cur
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState<string|null>(null);
   const [success,setSuccess]=useState(false);
-  const copy=priceWatchUiCopy(locale);
+  const copy=priceWatchUiCopy(effectiveLocale);
   const selectedRoom=rooms.find((room)=>room.roomTypeId===selectedRoomTypeId)??null;
   const selectedTotal=selectedRoom?.currentTotal??currentTotal;
+
+  useEffect(()=>{
+    const pageLocale=localeFromLanguageTag(document.querySelector<HTMLElement>(".hotelExperience")?.getAttribute("lang")||document.documentElement.lang);
+    setEffectiveLocale(pageLocale??locale);
+  },[locale]);
 
   useEffect(()=>{
     let cancelled=false;
