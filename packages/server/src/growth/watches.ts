@@ -32,7 +32,14 @@ export async function removeSavedSearch(userId: string, searchId: string) {
 }
 
 export async function createPriceWatch(userId: string, input: CreatePriceWatchInput) {
-  const snapshot = await currentHotelPrice(input.hotelId, input);
+  const priceInput = {
+    arrival: input.arrival,
+    departure: input.departure,
+    adults: input.adults,
+    children: input.children,
+    ...(input.roomTypeId ? {roomTypeId: input.roomTypeId} : {}),
+  };
+  const snapshot = await currentHotelPrice(input.hotelId, priceInput);
   const db = database();
   const unique = {
     ownerUserId_hotelId_arrival_departure_adults_children: {
@@ -117,12 +124,11 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
   for (const watch of watches) {
     checked += 1;
     const input = {
-      hotelId: watch.hotelId,
-      roomTypeId: watch.roomTypeId ?? undefined,
       arrival: key(watch.arrival),
       departure: key(watch.departure),
       adults: watch.adults,
       children: watch.children,
+      ...(watch.roomTypeId ? {roomTypeId: watch.roomTypeId} : {}),
     };
     try {
       const snapshot = await currentHotelPrice(watch.hotelId, input);
