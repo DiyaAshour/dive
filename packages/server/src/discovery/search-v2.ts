@@ -9,8 +9,34 @@ import { destinationScope, normalizeDestinationQuery, resolveDestinationQuery } 
 type CursorPayload = Readonly<{v: 1; offset: number; fingerprint: string}>;
 type SearchCandidate = Readonly<{id: string; slug: string; name: string; city: string; area: string | null; countryCode: string; starRating: number | null; updatedAt: Date}>;
 type SearchResult = Awaited<ReturnType<typeof buildSearchResult>>;
+type PublicHotel = Awaited<ReturnType<typeof getPublicHotelDetails>>;
+type PublicOffer = PublicHotel["offers"][number];
+type AdvancedAmenityFilters = Readonly<{
+  amenities:string[];
+  guestRatingMin:number|null;
+  propertyTypes:string[];
+  areas:string[];
+  mealPlans:string[];
+  roomFeatures:string[];
+  dealsOnly:boolean;
+  accessible:boolean;
+}>;
 
 const MAX_SCAN_PER_PAGE = 160;
+const FILTER_PREFIX="FILTER:";
+const AMENITY_ALIASES:Readonly<Record<string,readonly string[]>>={
+  SPA:["SPA","WELLNESS","SPA_WELLNESS"],
+  RESTAURANT:["RESTAURANT","DINING"],
+  AIRPORT_SHUTTLE:["AIRPORT_SHUTTLE","AIRPORT_TRANSFER","SHUTTLE"],
+  BEACH_ACCESS:["BEACH_ACCESS","BEACH","PRIVATE_BEACH"],
+  FAMILY_ROOMS:["FAMILY_ROOMS","FAMILY_ROOM"],
+  BUSINESS_CENTER:["BUSINESS_CENTER","BUSINESS"],
+  AIR_CONDITIONING:["AIR_CONDITIONING","AC","AIR_CONDITIONER"],
+  ROOM_SERVICE:["ROOM_SERVICE"],
+  BAR:["BAR","LOUNGE"],
+  EV_CHARGING:["EV_CHARGING","ELECTRIC_VEHICLE_CHARGING","EV_CHARGER"],
+  WHEELCHAIR_ACCESS:["WHEELCHAIR_ACCESS","ACCESSIBLE","ACCESSIBILITY","WHEELCHAIR"],
+};
 
 export async function searchHotelsV2(input: DiscoverySearchInput) {
   const db = database();
@@ -21,9 +47,13 @@ export async function searchHotelsV2(input: DiscoverySearchInput) {
   const pageSize = input.pageSize;
   const where = candidateWhere(input, destination, scope?.ids ?? []);
   const candidateCount = await db.hotel.count({where});
-  const scanGoal = input.sort === "PRICE_ASC" || input.sort === "PRICE_DESC"
-    ? Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 5, 60))
-    : Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 2, 30));
+  const advanced=parseAdvancedAmenityFilters(input.amenities);
+  const hasAdvanced=advanced.guestRatingMin!==null||advanced.propertyTypes.length>0||advanced.areas.length>0||advanced.mealPlans.length>0||advanced.roomFeatures.length>0||advanced.dealsOnly||advanced.accessible||input.sort==="RATING_DESC";
+  const scanGoal = hasAdvanced
+    ? MAX_SCAN_PER_PAGE
+    : input.sort === "PRICE_ASC" || input.sort === "PRICE_DESC"
+      ? Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 5, 60))
+      : Math.min(MAX_SCAN_PER_PAGE, Math.max(pageSize * 2, 30));
 
   const candidates = await db.hotel.findMany({
     where,
@@ -38,7 +68,7 @@ export async function searchHotelsV2(input: DiscoverySearchInput) {
     const batch = candidates.slice(index, index + 8);
     const rows = await Promise.all(batch.map((candidate) => evaluateCandidate(candidate, input)));
     for (const row of rows) if (row) evaluated.push(row);
-    if (input.sort !== "PRICE_ASC" && input.sort !== "PRICE_DESC" && evaluated.length >= pageSize) break;
+    if (input.sort !== "PRICE_ASC" && input.sort !== "PRICE_DESC" && input.sort !== "RATING_DESC" && evaluated.length >= pageSize) break;
   }
 
   evaluated.sort((left, right) => compareLiveResults(left, right, input.sort));
@@ -110,8 +140,16 @@ async function evaluateCandidate(candidate: SearchCandidate, input: DiscoverySea
     adults: input.adults,
     children: input.children,
   }, {trackView: false});
-  if (input.amenities.length && !input.amenities.every((code) => hotel.amenities.some((amenity) => amenity.code === code))) return null;
+  const advanced=parseAdvancedAmenityFilters(input.amenities);
+  if(advanced.guestRatingMin!==null&&(hotel.reviewSummary.overall===null||hotel.reviewSummary.overall<advanced.guestRatingMin))return null;
+  if(advanced.areas.length&&(!hotel.area||!advanced.areas.includes(normalizeFilterText(hotel.area))))return null;
+  if(advanced.amenities.length&&!advanced.amenities.every((code)=>hotelHasAmenity(hotel,code)))return null;
   const offers = hotel.offers.filter((offer) => {
+    if(advanced.propertyTypes.length&&!advanced.propertyTypes.some((type)=>offerMatchesPropertyType(hotel,offer,type)))return false;
+    if(advanced.mealPlans.length&&!advanced.mealPlans.includes(offer.mealPlan.toUpperCase()))return false;
+    if(advanced.roomFeatures.length&&!advanced.roomFeatures.every((feature)=>offerMatchesRoomFeature(offer,feature)))return false;
+    if(advanced.dealsOnly&&!offer.promotion)return false;
+    if(advanced.accessible&&!offerIsAccessible(hotel,offer))return false;
     if (input.freeCancellation && !offer.freeCancellationNow) return false;
     if (input.paymentMode && !offer.paymentModes.includes(input.paymentMode)) return false;
     if (input.minPrice !== undefined && offer.averageNightlyTotal < input.minPrice) return false;
@@ -141,6 +179,78 @@ function buildSearchResult(hotel: Awaited<ReturnType<typeof getPublicHotelDetail
   };
 }
 
+function parseAdvancedAmenityFilters(values:readonly string[]):AdvancedAmenityFilters{
+  const amenities:string[]=[];const propertyTypes:string[]=[];const areas:string[]=[];const mealPlans:string[]=[];const roomFeatures:string[]=[];let guestRatingMin:number|null=null;let dealsOnly=false;let accessible=false;
+  for(const raw of values){
+    const value=raw.trim().toUpperCase();
+    if(!value)continue;
+    if(value.startsWith("FILTER:RATING:")){
+      const rating=Number(value.slice("FILTER:RATING:".length));
+      if(Number.isFinite(rating)&&rating>=1&&rating<=10)guestRatingMin=Math.max(guestRatingMin??0,rating);
+      continue;
+    }
+    if(value.startsWith("FILTER:PROPERTY:")){
+      const type=value.slice("FILTER:PROPERTY:".length).trim();if(type)propertyTypes.push(type);continue;
+    }
+    if(value.startsWith("FILTER:AREA:")){
+      const area=value.slice("FILTER:AREA:".length).trim();if(area)areas.push(normalizeFilterText(area));continue;
+    }
+    if(value.startsWith("FILTER:MEAL:")){
+      const meal=value.slice("FILTER:MEAL:".length).trim();if(meal)mealPlans.push(meal);continue;
+    }
+    if(value.startsWith("FILTER:ROOM:")){
+      const feature=value.slice("FILTER:ROOM:".length).trim();if(feature)roomFeatures.push(feature);continue;
+    }
+    if(value==="FILTER:DEAL:ONLY"){dealsOnly=true;continue;}
+    if(value==="FILTER:ACCESSIBLE"){accessible=true;continue;}
+    if(value.startsWith(FILTER_PREFIX))continue;
+    amenities.push(value);
+  }
+  return {amenities:[...new Set(amenities)],guestRatingMin,propertyTypes:[...new Set(propertyTypes)],areas:[...new Set(areas)],mealPlans:[...new Set(mealPlans)],roomFeatures:[...new Set(roomFeatures)],dealsOnly,accessible};
+}
+
+function hotelHasAmenity(hotel:PublicHotel,requested:string):boolean{
+  const aliases=AMENITY_ALIASES[requested]??[requested];
+  const matches=(code:string)=>aliases.includes(code.trim().toUpperCase());
+  if(hotel.amenities.some((amenity)=>matches(amenity.code)))return true;
+  return hotel.offers.some((offer)=>offer.roomAmenities.some((amenity)=>matches(amenity.code)));
+}
+
+function offerMatchesPropertyType(hotel:PublicHotel,offer:PublicOffer,type:string):boolean{
+  const unit=offer.unitType.toUpperCase();
+  if(type==="HOTEL")return ["ROOM","STUDIO","SUITE"].includes(unit);
+  if(type==="APARTMENT")return unit==="APARTMENT";
+  if(type==="VILLA")return unit==="VILLA";
+  if(type==="CHALET")return unit==="CHALET";
+  if(type==="BUNGALOW")return unit==="BUNGALOW";
+  if(type==="HOLIDAY_HOME")return unit==="HOLIDAY_HOME";
+  if(type==="HOSTEL")return ["DORMITORY_ROOM","BED_IN_DORMITORY"].includes(unit)||/\bhostel\b/i.test(hotel.name);
+  if(type==="RESORT")return /\bresort\b/i.test(hotel.name)||hotel.amenities.some((amenity)=>amenity.code.toUpperCase()==="RESORT");
+  return false;
+}
+
+function offerMatchesRoomFeature(offer:PublicOffer,feature:string):boolean{
+  const smoking=offer.smokingPolicy.toUpperCase();
+  const roomAmenityCodes=offer.roomAmenities.map((amenity)=>amenity.code.trim().toUpperCase());
+  if(feature==="KING_BED")return offer.beds.some((bed)=>["KING","EXTRA_LARGE_DOUBLE"].includes(bed.type.toUpperCase())&&bed.quantity>0);
+  if(feature==="TWIN_BEDS")return offer.beds.filter((bed)=>bed.type.toUpperCase()==="SINGLE").reduce((sum,bed)=>sum+bed.quantity,0)>=2;
+  if(feature==="FAMILY_ROOM")return offer.maxGuests>=3||roomAmenityCodes.some((code)=>["FAMILY_ROOM","FAMILY_ROOMS"].includes(code));
+  if(feature==="SMOKING")return smoking==="SMOKING"||smoking==="BOTH";
+  if(feature==="NON_SMOKING")return smoking==="NON_SMOKING"||smoking==="BOTH";
+  if(feature==="BALCONY")return roomAmenityCodes.some((code)=>["BALCONY","PRIVATE_BALCONY"].includes(code));
+  if(feature==="SEA_VIEW")return roomAmenityCodes.some((code)=>["SEA_VIEW","OCEAN_VIEW","BEACH_VIEW"].includes(code));
+  if(feature==="CONNECTING_ROOMS")return roomAmenityCodes.some((code)=>["CONNECTING_ROOMS","CONNECTING_ROOM","INTERCONNECTING_ROOMS"].includes(code));
+  return false;
+}
+
+function offerIsAccessible(hotel:PublicHotel,offer:PublicOffer):boolean{
+  const aliases=AMENITY_ALIASES.WHEELCHAIR_ACCESS??["WHEELCHAIR_ACCESS"];
+  const matches=(code:string)=>aliases.includes(code.trim().toUpperCase());
+  return hotel.amenities.some((amenity)=>matches(amenity.code))||offer.roomAmenities.some((amenity)=>matches(amenity.code));
+}
+
+function normalizeFilterText(value:string):string{return value.trim().replace(/\s+/g," ").toUpperCase();}
+
 function recommendedCandidateOrder(sort: DiscoverySearchInput["sort"]): Prisma.HotelOrderByWithRelationInput[] {
   if (sort === "STARS_DESC") return [{starRating: "desc"}, {updatedAt: "desc"}, {id: "asc"}];
   return [{verified: "desc"}, {starRating: "desc"}, {updatedAt: "desc"}, {id: "asc"}];
@@ -150,6 +260,7 @@ function compareLiveResults(left: NonNullable<SearchResult>, right: NonNullable<
   if (sort === "PRICE_ASC") return left.from.total - right.from.total || (right.starRating ?? 0) - (left.starRating ?? 0);
   if (sort === "PRICE_DESC") return right.from.total - left.from.total || (right.starRating ?? 0) - (left.starRating ?? 0);
   if (sort === "STARS_DESC") return (right.starRating ?? 0) - (left.starRating ?? 0) || right.reviewSummary.count - left.reviewSummary.count;
+  if (sort === "RATING_DESC") return (right.reviewSummary.overall ?? -1) - (left.reviewSummary.overall ?? -1) || right.reviewSummary.count - left.reviewSummary.count || (right.starRating ?? 0) - (left.starRating ?? 0) || left.from.total - right.from.total;
   return right.reviewSummary.count - left.reviewSummary.count || (right.reviewSummary.overall ?? 0) - (left.reviewSummary.overall ?? 0) || (right.starRating ?? 0) - (left.starRating ?? 0) || left.from.total - right.from.total;
 }
 
