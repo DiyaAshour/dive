@@ -26,16 +26,16 @@ export async function createExperiment(input: Readonly<{
       allocationBasis: input.allocationBasis ?? "USER",
       trafficPercent: input.trafficPercent ?? 10000,
       salt: randomBytes(24).toString("hex"),
-      eligibility: input.eligibility ?? undefined,
+      ...(input.eligibility == null ? {} : {eligibility: input.eligibility}),
       primaryMetric: input.primaryMetric.trim(),
-      guardrailMetrics: input.guardrailMetrics ?? undefined,
+      ...(input.guardrailMetrics == null ? {} : {guardrailMetrics: input.guardrailMetrics}),
       startsAt: input.startsAt ?? null,
       endsAt: input.endsAt ?? null,
       variants: {create: input.variants.map((variant) => ({
         key: normalizeKey(variant.key),
         name: variant.name.trim(),
         weight: Math.trunc(variant.weight),
-        configuration: variant.configuration ?? undefined,
+        ...(variant.configuration == null ? {} : {configuration: variant.configuration}),
       }))},
     },
     include: {variants: true},
@@ -124,7 +124,7 @@ export async function recordExperimentExposure(input: Readonly<{
       variantId: assignment.variantId,
       subjectKey: input.subjectKey.trim(),
       sessionId: input.sessionId ?? null,
-      context: input.context ?? undefined,
+      ...(input.context == null ? {} : {context: input.context}),
     }});
     await enqueueOutboxEvent(tx, {
       topic: "analytics",
@@ -171,7 +171,7 @@ export async function recordExperimentMetric(input: Readonly<{
       subjectKey: input.subjectKey.trim(),
       metric: input.metric.trim(),
       value: input.value ?? 1,
-      properties: input.properties ?? undefined,
+      ...(input.properties == null ? {} : {properties: input.properties}),
     }});
     await enqueueOutboxEvent(tx, {
       topic: "analytics",
