@@ -1,14 +1,20 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { useState } from "react";
-import { dictionary, type Locale } from "@/lib/i18n";
+import { useEffect, useState } from "react";
+import { guestDictionary } from "@/lib/guest-i18n";
+import { localeFromLanguageTag, type GuestLocale } from "@/lib/guest-market";
 
-type Props = Readonly<{locale: Locale}>;
+type Props = Readonly<{locale: GuestLocale}>;
 
 export function SignOutButton({locale}: Props) {
+  const [effectiveLocale,setEffectiveLocale]=useState<GuestLocale>(locale);
   const [submitting, setSubmitting] = useState(false);
-  const copy = dictionary(locale);
+  const copy = guestDictionary(effectiveLocale);
+
+  useEffect(()=>{
+    setEffectiveLocale(localeFromLanguageTag(document.documentElement.lang)??locale);
+  },[locale]);
 
   async function signOut() {
     if (submitting) return;
