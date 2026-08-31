@@ -4,6 +4,7 @@ import { getPublicHotelGallery, getPublicHotelSeoDetails } from "@platform/serve
 import { requestLocale } from "@/lib/request-locale";
 import { siteUrl } from "@/lib/site-url";
 import { HotelGalleryController } from "./hotel-gallery-controller";
+import "./stay-times.css";
 
 type Params = Promise<{id:string}>;
 
