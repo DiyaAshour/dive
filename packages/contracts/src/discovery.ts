@@ -22,7 +22,7 @@ export const discoverySearchSchema = publicStaySchema.safeExtend({
   minPrice: z.coerce.number().finite().nonnegative().max(1_000_000).optional(),
   maxPrice: z.coerce.number().finite().nonnegative().max(1_000_000).optional(),
   stars: z.array(z.coerce.number().int().min(1).max(5)).max(5).default([]),
-  amenities: z.array(z.string().trim().min(1).max(50).transform((value) => value.toUpperCase())).max(20).default([]),
+  amenities: z.array(z.string().trim().min(1).max(80).transform((value) => value.toUpperCase())).max(60).default([]),
   freeCancellation: z.boolean().default(false),
   paymentMode: z.enum(["PAY_NOW", "PAY_AT_HOTEL"]).optional(),
   sort: discoverySortSchema.default("RECOMMENDED"),
