@@ -1,12 +1,86 @@
 import Link from "next/link";
 import { BarChart3, CalendarCheck2, CircleDollarSign, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { direction } from "@/lib/i18n";
+import { partnerMarketingDictionary } from "@/lib/partner-marketing-i18n";
+import { requestLocale } from "@/lib/request-locale";
 
-export default function PartnerLandingPage() {
-  return <main className="partnerMarketingPage">
-    <header className="partnerMarketingHeader"><div className="shell partnerMarketingHeaderInner"><Brand inverse/><nav><Link href="/">For travelers</Link><Link href="/partner/login">Partner sign in</Link><Link className="partnerCtaSmall" href="/partner/login">List your property</Link></nav></div></header>
-    <section className="partnerHero"><div className="shell partnerHeroGrid"><div><span className="partnerEyebrow">HandMeKey Partner Hub</span><h1>Turn hotel demand into direct, measurable bookings.</h1><p>Publish your property, control live rates and inventory, manage reservations and see exactly where guests convert—or drop out.</p><div className="partnerHeroActions"><Link className="partnerHeroPrimary" href="/partner/login">Start listing your property</Link><Link className="partnerHeroSecondary" href="/partner/login">Partner sign in</Link></div><div className="partnerProof"><span><ShieldCheck size={18}/>Verified-property marketplace</span><span><Sparkles size={18}/>No synthetic demand metrics</span></div></div><div className="partnerHeroMock"><div className="partnerMockTop"><span>Today at your property</span><strong>LIVE</strong></div><div className="partnerMockGrid"><div><small>Bookings</small><strong>31</strong><em>+18% vs. last week</em></div><div><small>Booked value</small><strong>4,920 JOD</strong><em>30-day view</em></div><div><small>Conversion</small><strong>6.8%</strong><em>from search impressions</em></div><div><small>High-demand date</small><strong>29 Aug</strong><em>42 destination searches</em></div></div><div className="partnerMockSignal"><BarChart3 size={20}/><div><strong>Opportunity detected</strong><p>Guests view your property but choose a rate less often than your 30-day average.</p></div></div></div></div></section>
-    <section className="shell partnerFeatureSection"><div className="partnerSectionIntro"><span className="eyebrow">Built for hotel teams</span><h2>One extranet for selling, servicing and growing the property.</h2><p>HandMeKey keeps commercial controls, guest communication and measurable demand in one operational surface.</p></div><div className="partnerFeatureGrid"><article><CalendarCheck2/><h3>Reservations that stay actionable</h3><p>See arrivals, departures, guest requests, payment state and booking context without losing the commercial history.</p></article><article><CircleDollarSign/><h3>Rates and promotions in one pricing engine</h3><p>Control inventory, restrictions, policies and deals while the same server pricing logic powers search and checkout.</p></article><article><MessageSquareText/><h3>Guest messages tied to bookings</h3><p>Keep property communication contextual and separate from internal front-desk notes.</p></article><article><BarChart3/><h3>Performance you can act on</h3><p>Track impression-to-booking conversion, booked value, demand dates and deterministic opportunity signals.</p></article></div></section>
-    <section className="partnerHow"><div className="shell"><div className="partnerSectionIntro"><span className="eyebrow">Go live with control</span><h2>From account to published hotel.</h2></div><div className="partnerSteps"><div><span>01</span><strong>Create partner account</strong><p>Use the secure shared identity layer, then create your property workspace.</p></div><div><span>02</span><strong>Build your listing</strong><p>Add rooms, rates, inventory, photos, facilities, policies and verification documents.</p></div><div><span>03</span><strong>Submit for review</strong><p>HandMeKey checks the exact property revision and approved business documents.</p></div><div><span>04</span><strong>Start selling</strong><p>Approved properties become discoverable with live prices and availability.</p></div></div><div className="partnerFinalCta"><div><span className="eyebrow">Ready when you are</span><h2>Put your property in front of guests who can actually book it.</h2></div><Link className="partnerHeroPrimary" href="/partner/login">Join HandMeKey</Link></div></div></section>
+export default async function PartnerLandingPage() {
+  const locale = await requestLocale();
+  const copy = partnerMarketingDictionary(locale);
+
+  return <main className="partnerMarketingPage" dir={direction(locale)}>
+    <header className="partnerMarketingHeader">
+      <div className="shell partnerMarketingHeaderInner">
+        <Brand inverse/>
+        <nav>
+          <Link href="/">{copy.forTravelers}</Link>
+          <Link href="/partner/login">{copy.partnerSignIn}</Link>
+          <Link className="partnerCtaSmall" href="/partner/login">{copy.listProperty}</Link>
+        </nav>
+      </div>
+    </header>
+
+    <section className="partnerHero">
+      <div className="shell partnerHeroGrid">
+        <div>
+          <span className="partnerEyebrow">{copy.eyebrow}</span>
+          <h1>{copy.heroTitle}</h1>
+          <p>{copy.heroBody}</p>
+          <div className="partnerHeroActions">
+            <Link className="partnerHeroPrimary" href="/partner/login">{copy.startListing}</Link>
+            <Link className="partnerHeroSecondary" href="/partner/login">{copy.partnerSignIn}</Link>
+          </div>
+          <div className="partnerProof">
+            <span><ShieldCheck size={18}/>{copy.verifiedMarketplace}</span>
+            <span><Sparkles size={18}/>{copy.noSyntheticMetrics}</span>
+          </div>
+        </div>
+
+        <div className="partnerHeroMock">
+          <div className="partnerMockTop"><span>{copy.todayAtProperty}</span><strong>{copy.live}</strong></div>
+          <div className="partnerMockGrid">
+            <div><small>{copy.bookings}</small><strong>31</strong><em>{copy.bookingsTrend}</em></div>
+            <div><small>{copy.bookedValue}</small><strong>4,920 JOD</strong><em>{copy.thirtyDayView}</em></div>
+            <div><small>{copy.conversion}</small><strong>6.8%</strong><em>{copy.fromSearchImpressions}</em></div>
+            <div><small>{copy.highDemandDate}</small><strong>29 Aug</strong><em>{copy.destinationSearches}</em></div>
+          </div>
+          <div className="partnerMockSignal">
+            <BarChart3 size={20}/>
+            <div><strong>{copy.opportunityDetected}</strong><p>{copy.opportunityBody}</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className="shell partnerFeatureSection">
+      <div className="partnerSectionIntro">
+        <span className="eyebrow">{copy.builtForTeams}</span>
+        <h2>{copy.featureTitle}</h2>
+        <p>{copy.featureBody}</p>
+      </div>
+      <div className="partnerFeatureGrid">
+        <article><CalendarCheck2/><h3>{copy.reservationsTitle}</h3><p>{copy.reservationsBody}</p></article>
+        <article><CircleDollarSign/><h3>{copy.ratesTitle}</h3><p>{copy.ratesBody}</p></article>
+        <article><MessageSquareText/><h3>{copy.messagesTitle}</h3><p>{copy.messagesBody}</p></article>
+        <article><BarChart3/><h3>{copy.performanceTitle}</h3><p>{copy.performanceBody}</p></article>
+      </div>
+    </section>
+
+    <section className="partnerHow">
+      <div className="shell">
+        <div className="partnerSectionIntro"><span className="eyebrow">{copy.goLive}</span><h2>{copy.stepsTitle}</h2></div>
+        <div className="partnerSteps">
+          <div><span>01</span><strong>{copy.createAccount}</strong><p>{copy.createAccountBody}</p></div>
+          <div><span>02</span><strong>{copy.buildListing}</strong><p>{copy.buildListingBody}</p></div>
+          <div><span>03</span><strong>{copy.submitReview}</strong><p>{copy.submitReviewBody}</p></div>
+          <div><span>04</span><strong>{copy.startSelling}</strong><p>{copy.startSellingBody}</p></div>
+        </div>
+        <div className="partnerFinalCta">
+          <div><span className="eyebrow">{copy.ready}</span><h2>{copy.finalTitle}</h2></div>
+          <Link className="partnerHeroPrimary" href="/partner/login">{copy.join}</Link>
+        </div>
+      </div>
+    </section>
   </main>;
 }
