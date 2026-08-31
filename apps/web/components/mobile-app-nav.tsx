@@ -3,18 +3,14 @@
 import Link from "next/link";
 import {CalendarDays, Home, Search, Sparkles, UserRound} from "lucide-react";
 import {usePathname} from "next/navigation";
+import {guestUiCopy} from "@/lib/guest-ui-copy";
+import type {GuestLocale} from "@/lib/guest-market";
 
-type Props=Readonly<{locale:string;rewardsHref:string}>;
-
-function labels(locale:string){
-  if(locale==="ar")return {home:"الرئيسية",search:"البحث",trips:"رحلاتي",rewards:"المكافآت",account:"حسابي"};
-  if(locale==="zh")return {home:"首页",search:"搜索",trips:"行程",rewards:"奖励",account:"账户"};
-  return {home:"Home",search:"Search",trips:"Trips",rewards:"Rewards",account:"Account"};
-}
+type Props=Readonly<{locale:GuestLocale;rewardsHref:string}>;
 
 export function MobileAppNav({locale,rewardsHref}:Props){
   const pathname=usePathname();
-  const copy=labels(locale);
+  const copy=guestUiCopy(locale).mobileNav;
   if(pathname.startsWith("/hotel/")||pathname.startsWith("/checkout")||pathname.startsWith("/booking/")||pathname.startsWith("/partner")||pathname.startsWith("/admin"))return null;
 
   const items=[
