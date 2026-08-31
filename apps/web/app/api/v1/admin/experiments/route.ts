@@ -3,6 +3,9 @@ import {createPlatformExperiment, listPlatformExperiments} from "@platform/serve
 import {handleApiError, ok} from "@/lib/api";
 import {requestAdminUser} from "@/lib/request-auth";
 
+type ExperimentCreateInput = Parameters<typeof createPlatformExperiment>[1];
+type ExperimentVariantInput = ExperimentCreateInput["variants"][number];
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requestAdminUser(request);
@@ -26,19 +29,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function parseExperimentPayload(raw: unknown): {ok:true;value:Parameters<typeof createPlatformExperiment>[1]} | {ok:false;message:string} {
+function parseExperimentPayload(raw: unknown): {ok:true;value:ExperimentCreateInput} | {ok:false;message:string} {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {ok:false,message:"An experiment payload is required"};
   const value = raw as Record<string, unknown>;
   const variantsRaw = value.variants;
   if (typeof value.key !== "string" || typeof value.name !== "string" || typeof value.primaryMetric !== "string") return {ok:false,message:"key, name and primaryMetric are required"};
   if (!Array.isArray(variantsRaw) || variantsRaw.length < 2) return {ok:false,message:"At least two variants are required"};
-  const variants = [] as Array<{key:string;name:string;weight:number;configuration?:Record<string, unknown>|null}>;
+  const variants: ExperimentVariantInput[] = [];
   for (const rawVariant of variantsRaw) {
     if (!rawVariant || typeof rawVariant !== "object" || Array.isArray(rawVariant)) return {ok:false,message:"Each variant must be an object"};
     const variant = rawVariant as Record<string, unknown>;
     if (typeof variant.key !== "string" || typeof variant.name !== "string" || !Number.isInteger(variant.weight) || Number(variant.weight) <= 0) return {ok:false,message:"Each variant requires key, name and a positive integer weight"};
     if (variant.configuration !== undefined && variant.configuration !== null && (typeof variant.configuration !== "object" || Array.isArray(variant.configuration))) return {ok:false,message:"Variant configuration must be an object"};
-    variants.push({key:variant.key,name:variant.name,weight:Number(variant.weight),configuration:(variant.configuration as Record<string, unknown> | null | undefined)});
+    const configuration = variant.configuration as ExperimentVariantInput["configuration"];
+    variants.push({
+      key:variant.key,
+      name:variant.name,
+      weight:Number(variant.weight),
+      ...(variant.configuration === undefined ? {} : {configuration}),
+    });
   }
   const allocationBasis = value.allocationBasis;
   if (allocationBasis !== undefined && allocationBasis !== "USER" && allocationBasis !== "SESSION" && allocationBasis !== "DEVICE") return {ok:false,message:"allocationBasis must be USER, SESSION or DEVICE"};
@@ -52,19 +61,20 @@ function parseExperimentPayload(raw: unknown): {ok:true;value:Parameters<typeof 
   const endsAt = parseOptionalDate(value.endsAt);
   if (value.startsAt !== undefined && value.startsAt !== null && startsAt === undefined) return {ok:false,message:"startsAt must be an ISO date"};
   if (value.endsAt !== undefined && value.endsAt !== null && endsAt === undefined) return {ok:false,message:"endsAt must be an ISO date"};
-  return {ok:true,value:{
+  const payload: ExperimentCreateInput = {
     key:value.key,
     name:value.name,
     description:typeof value.description === "string" ? value.description : null,
-    allocationBasis:allocationBasis as "USER"|"SESSION"|"DEVICE"|undefined,
-    trafficPercent:trafficPercent === undefined ? undefined : Number(trafficPercent),
-    eligibility:eligibility ?? null,
+    ...(allocationBasis === undefined ? {} : {allocationBasis: allocationBasis as "USER"|"SESSION"|"DEVICE"}),
+    ...(trafficPercent === undefined ? {} : {trafficPercent:Number(trafficPercent)}),
+    eligibility:(eligibility ?? null) as ExperimentCreateInput["eligibility"],
     primaryMetric:value.primaryMetric,
-    guardrailMetrics:Array.isArray(guardrailMetrics) ? guardrailMetrics : null,
+    guardrailMetrics:(Array.isArray(guardrailMetrics) ? guardrailMetrics : null) as ExperimentCreateInput["guardrailMetrics"],
     startsAt:startsAt ?? null,
     endsAt:endsAt ?? null,
     variants,
-  }};
+  };
+  return {ok:true,value:payload};
 }
 
 function objectOrNull(value: unknown): Record<string, unknown> | null | undefined {
