@@ -6,6 +6,7 @@ import {
   processEmailOutbox,
   processOutboxBatch,
   processSearchIndexBatch,
+  syncBookingAnalyticsEvents,
   syncBookingLifecycleEmails,
   syncPriceWatchNotificationEmails,
 } from "@platform/server";
@@ -19,12 +20,15 @@ const emailBatchSize = boundedInteger(process.env.EMAIL_DELIVERY_BATCH_SIZE, 50,
 const emailSyncIntervalMs = boundedInteger(process.env.EMAIL_SYNC_INTERVAL_MS, 60_000, 15_000, 3_600_000);
 const searchIndexBatchSize = boundedInteger(process.env.SEARCH_INDEX_BATCH_SIZE, 50, 1, 200);
 const searchIndexIntervalMs = boundedInteger(process.env.SEARCH_INDEX_INTERVAL_MS, 15_000, 5_000, 300_000);
+const bookingAnalyticsBatchSize = boundedInteger(process.env.BOOKING_ANALYTICS_BATCH_SIZE, 500, 1, 2000);
+const bookingAnalyticsIntervalMs = boundedInteger(process.env.BOOKING_ANALYTICS_INTERVAL_MS, 10_000, 5_000, 300_000);
 const analyticsOutboxBatchSize = boundedInteger(process.env.ANALYTICS_OUTBOX_BATCH_SIZE, 100, 1, 500);
 const analyticsOutboxIntervalMs = boundedInteger(process.env.ANALYTICS_OUTBOX_INTERVAL_MS, 10_000, 5_000, 300_000);
 const analyticsStdoutExport = (process.env.ANALYTICS_STDOUT_EXPORT ?? "false").trim().toLowerCase() === "true";
 let nextPriceWatchAt = 0;
 let nextEmailSyncAt = 0;
 let nextSearchIndexAt = 0;
+let nextBookingAnalyticsAt = 0;
 let nextAnalyticsOutboxAt = 0;
 let running = false;
 let stopping = false;
@@ -48,6 +52,10 @@ async function tick(): Promise<void> {
     if (Date.now() >= nextSearchIndexAt) {
       nextSearchIndexAt = Date.now() + searchIndexIntervalMs;
       await run("search_index_processed", () => processSearchIndexBatch({batchSize: searchIndexBatchSize}));
+    }
+    if (Date.now() >= nextBookingAnalyticsAt) {
+      nextBookingAnalyticsAt = Date.now() + bookingAnalyticsIntervalMs;
+      await run("booking_analytics_projected", () => syncBookingAnalyticsEvents(bookingAnalyticsBatchSize));
     }
     if (analyticsStdoutExport && Date.now() >= nextAnalyticsOutboxAt) {
       nextAnalyticsOutboxAt = Date.now() + analyticsOutboxIntervalMs;
