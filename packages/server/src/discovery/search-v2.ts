@@ -11,7 +11,16 @@ type SearchCandidate = Readonly<{id: string; slug: string; name: string; city: s
 type SearchResult = Awaited<ReturnType<typeof buildSearchResult>>;
 type PublicHotel = Awaited<ReturnType<typeof getPublicHotelDetails>>;
 type PublicOffer = PublicHotel["offers"][number];
-type AdvancedAmenityFilters = Readonly<{amenities:string[]; guestRatingMin:number|null; propertyTypes:string[]; areas:string[]}>;
+type AdvancedAmenityFilters = Readonly<{
+  amenities:string[];
+  guestRatingMin:number|null;
+  propertyTypes:string[];
+  areas:string[];
+  mealPlans:string[];
+  roomFeatures:string[];
+  dealsOnly:boolean;
+  accessible:boolean;
+}>;
 
 const MAX_SCAN_PER_PAGE = 160;
 const FILTER_PREFIX="FILTER:";
@@ -39,7 +48,7 @@ export async function searchHotelsV2(input: DiscoverySearchInput) {
   const where = candidateWhere(input, destination, scope?.ids ?? []);
   const candidateCount = await db.hotel.count({where});
   const advanced=parseAdvancedAmenityFilters(input.amenities);
-  const hasAdvanced=advanced.guestRatingMin!==null||advanced.propertyTypes.length>0||advanced.areas.length>0;
+  const hasAdvanced=advanced.guestRatingMin!==null||advanced.propertyTypes.length>0||advanced.areas.length>0||advanced.mealPlans.length>0||advanced.roomFeatures.length>0||advanced.dealsOnly||advanced.accessible||input.sort==="RATING_DESC";
   const scanGoal = hasAdvanced
     ? MAX_SCAN_PER_PAGE
     : input.sort === "PRICE_ASC" || input.sort === "PRICE_DESC"
@@ -59,7 +68,7 @@ export async function searchHotelsV2(input: DiscoverySearchInput) {
     const batch = candidates.slice(index, index + 8);
     const rows = await Promise.all(batch.map((candidate) => evaluateCandidate(candidate, input)));
     for (const row of rows) if (row) evaluated.push(row);
-    if (input.sort !== "PRICE_ASC" && input.sort !== "PRICE_DESC" && evaluated.length >= pageSize) break;
+    if (input.sort !== "PRICE_ASC" && input.sort !== "PRICE_DESC" && input.sort !== "RATING_DESC" && evaluated.length >= pageSize) break;
   }
 
   evaluated.sort((left, right) => compareLiveResults(left, right, input.sort));
@@ -137,6 +146,10 @@ async function evaluateCandidate(candidate: SearchCandidate, input: DiscoverySea
   if(advanced.amenities.length&&!advanced.amenities.every((code)=>hotelHasAmenity(hotel,code)))return null;
   const offers = hotel.offers.filter((offer) => {
     if(advanced.propertyTypes.length&&!advanced.propertyTypes.some((type)=>offerMatchesPropertyType(hotel,offer,type)))return false;
+    if(advanced.mealPlans.length&&!advanced.mealPlans.includes(offer.mealPlan.toUpperCase()))return false;
+    if(advanced.roomFeatures.length&&!advanced.roomFeatures.every((feature)=>offerMatchesRoomFeature(offer,feature)))return false;
+    if(advanced.dealsOnly&&!offer.promotion)return false;
+    if(advanced.accessible&&!offerIsAccessible(hotel,offer))return false;
     if (input.freeCancellation && !offer.freeCancellationNow) return false;
     if (input.paymentMode && !offer.paymentModes.includes(input.paymentMode)) return false;
     if (input.minPrice !== undefined && offer.averageNightlyTotal < input.minPrice) return false;
@@ -167,7 +180,7 @@ function buildSearchResult(hotel: Awaited<ReturnType<typeof getPublicHotelDetail
 }
 
 function parseAdvancedAmenityFilters(values:readonly string[]):AdvancedAmenityFilters{
-  const amenities:string[]=[];const propertyTypes:string[]=[];const areas:string[]=[];let guestRatingMin:number|null=null;
+  const amenities:string[]=[];const propertyTypes:string[]=[];const areas:string[]=[];const mealPlans:string[]=[];const roomFeatures:string[]=[];let guestRatingMin:number|null=null;let dealsOnly=false;let accessible=false;
   for(const raw of values){
     const value=raw.trim().toUpperCase();
     if(!value)continue;
@@ -182,10 +195,18 @@ function parseAdvancedAmenityFilters(values:readonly string[]):AdvancedAmenityFi
     if(value.startsWith("FILTER:AREA:")){
       const area=value.slice("FILTER:AREA:".length).trim();if(area)areas.push(normalizeFilterText(area));continue;
     }
+    if(value.startsWith("FILTER:MEAL:")){
+      const meal=value.slice("FILTER:MEAL:".length).trim();if(meal)mealPlans.push(meal);continue;
+    }
+    if(value.startsWith("FILTER:ROOM:")){
+      const feature=value.slice("FILTER:ROOM:".length).trim();if(feature)roomFeatures.push(feature);continue;
+    }
+    if(value==="FILTER:DEAL:ONLY"){dealsOnly=true;continue;}
+    if(value==="FILTER:ACCESSIBLE"){accessible=true;continue;}
     if(value.startsWith(FILTER_PREFIX))continue;
     amenities.push(value);
   }
-  return {amenities:[...new Set(amenities)],guestRatingMin,propertyTypes:[...new Set(propertyTypes)],areas:[...new Set(areas)]};
+  return {amenities:[...new Set(amenities)],guestRatingMin,propertyTypes:[...new Set(propertyTypes)],areas:[...new Set(areas)],mealPlans:[...new Set(mealPlans)],roomFeatures:[...new Set(roomFeatures)],dealsOnly,accessible};
 }
 
 function hotelHasAmenity(hotel:PublicHotel,requested:string):boolean{
@@ -208,6 +229,26 @@ function offerMatchesPropertyType(hotel:PublicHotel,offer:PublicOffer,type:strin
   return false;
 }
 
+function offerMatchesRoomFeature(offer:PublicOffer,feature:string):boolean{
+  const smoking=offer.smokingPolicy.toUpperCase();
+  const roomAmenityCodes=offer.roomAmenities.map((amenity)=>amenity.code.trim().toUpperCase());
+  if(feature==="KING_BED")return offer.beds.some((bed)=>["KING","EXTRA_LARGE_DOUBLE"].includes(bed.type.toUpperCase())&&bed.quantity>0);
+  if(feature==="TWIN_BEDS")return offer.beds.filter((bed)=>bed.type.toUpperCase()==="SINGLE").reduce((sum,bed)=>sum+bed.quantity,0)>=2;
+  if(feature==="FAMILY_ROOM")return offer.maxGuests>=3||roomAmenityCodes.some((code)=>["FAMILY_ROOM","FAMILY_ROOMS"].includes(code));
+  if(feature==="SMOKING")return smoking==="SMOKING"||smoking==="BOTH";
+  if(feature==="NON_SMOKING")return smoking==="NON_SMOKING"||smoking==="BOTH";
+  if(feature==="BALCONY")return roomAmenityCodes.some((code)=>["BALCONY","PRIVATE_BALCONY"].includes(code));
+  if(feature==="SEA_VIEW")return roomAmenityCodes.some((code)=>["SEA_VIEW","OCEAN_VIEW","BEACH_VIEW"].includes(code));
+  if(feature==="CONNECTING_ROOMS")return roomAmenityCodes.some((code)=>["CONNECTING_ROOMS","CONNECTING_ROOM","INTERCONNECTING_ROOMS"].includes(code));
+  return false;
+}
+
+function offerIsAccessible(hotel:PublicHotel,offer:PublicOffer):boolean{
+  const aliases=AMENITY_ALIASES.WHEELCHAIR_ACCESS;
+  const matches=(code:string)=>aliases.includes(code.trim().toUpperCase());
+  return hotel.amenities.some((amenity)=>matches(amenity.code))||offer.roomAmenities.some((amenity)=>matches(amenity.code));
+}
+
 function normalizeFilterText(value:string):string{return value.trim().replace(/\s+/g," ").toUpperCase();}
 
 function recommendedCandidateOrder(sort: DiscoverySearchInput["sort"]): Prisma.HotelOrderByWithRelationInput[] {
@@ -219,6 +260,7 @@ function compareLiveResults(left: NonNullable<SearchResult>, right: NonNullable<
   if (sort === "PRICE_ASC") return left.from.total - right.from.total || (right.starRating ?? 0) - (left.starRating ?? 0);
   if (sort === "PRICE_DESC") return right.from.total - left.from.total || (right.starRating ?? 0) - (left.starRating ?? 0);
   if (sort === "STARS_DESC") return (right.starRating ?? 0) - (left.starRating ?? 0) || right.reviewSummary.count - left.reviewSummary.count;
+  if (sort === "RATING_DESC") return (right.reviewSummary.overall ?? -1) - (left.reviewSummary.overall ?? -1) || right.reviewSummary.count - left.reviewSummary.count || (right.starRating ?? 0) - (left.starRating ?? 0) || left.from.total - right.from.total;
   return right.reviewSummary.count - left.reviewSummary.count || (right.reviewSummary.overall ?? 0) - (left.reviewSummary.overall ?? 0) || (right.starRating ?? 0) - (left.starRating ?? 0) || left.from.total - right.from.total;
 }
 
