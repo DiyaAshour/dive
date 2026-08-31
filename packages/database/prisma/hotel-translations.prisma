@@ -1,0 +1,13 @@
+model HotelTranslation {
+  id          String   @id @default(cuid())
+  hotelId     String
+  locale      String   @db.VarChar(10)
+  name        String?
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([hotelId, locale])
+  @@index([hotelId])
+  @@index([locale])
+}
