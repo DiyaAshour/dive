@@ -6,6 +6,7 @@ import {
   processEmailOutbox,
   processOutboxBatch,
   processSearchIndexBatch,
+  reconcileHotelSearchIndex,
   syncBookingAnalyticsEvents,
   syncBookingLifecycleEmails,
   syncPriceWatchNotificationEmails,
@@ -20,6 +21,8 @@ const emailBatchSize = boundedInteger(process.env.EMAIL_DELIVERY_BATCH_SIZE, 50,
 const emailSyncIntervalMs = boundedInteger(process.env.EMAIL_SYNC_INTERVAL_MS, 60_000, 15_000, 3_600_000);
 const searchIndexBatchSize = boundedInteger(process.env.SEARCH_INDEX_BATCH_SIZE, 50, 1, 200);
 const searchIndexIntervalMs = boundedInteger(process.env.SEARCH_INDEX_INTERVAL_MS, 15_000, 5_000, 300_000);
+const searchReconcileBatchSize = boundedInteger(process.env.SEARCH_RECONCILE_BATCH_SIZE, 500, 1, 2000);
+const searchReconcileIntervalMs = boundedInteger(process.env.SEARCH_RECONCILE_INTERVAL_MS, 60_000, 15_000, 3_600_000);
 const bookingAnalyticsBatchSize = boundedInteger(process.env.BOOKING_ANALYTICS_BATCH_SIZE, 500, 1, 2000);
 const bookingAnalyticsIntervalMs = boundedInteger(process.env.BOOKING_ANALYTICS_INTERVAL_MS, 10_000, 5_000, 300_000);
 const analyticsOutboxBatchSize = boundedInteger(process.env.ANALYTICS_OUTBOX_BATCH_SIZE, 100, 1, 500);
@@ -28,6 +31,7 @@ const analyticsStdoutExport = (process.env.ANALYTICS_STDOUT_EXPORT ?? "false").t
 let nextPriceWatchAt = 0;
 let nextEmailSyncAt = 0;
 let nextSearchIndexAt = 0;
+let nextSearchReconcileAt = 0;
 let nextBookingAnalyticsAt = 0;
 let nextAnalyticsOutboxAt = 0;
 let running = false;
@@ -48,6 +52,10 @@ async function tick(): Promise<void> {
       nextEmailSyncAt = Date.now() + emailSyncIntervalMs;
       await run("booking_email_events_synced", () => syncBookingLifecycleEmails(750));
       await run("price_watch_emails_synced", () => syncPriceWatchNotificationEmails(750));
+    }
+    if (Date.now() >= nextSearchReconcileAt) {
+      nextSearchReconcileAt = Date.now() + searchReconcileIntervalMs;
+      await run("search_index_reconciled", () => reconcileHotelSearchIndex(searchReconcileBatchSize));
     }
     if (Date.now() >= nextSearchIndexAt) {
       nextSearchIndexAt = Date.now() + searchIndexIntervalMs;
