@@ -3,13 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { dictionary, type Locale } from "@/lib/i18n";
+import { authUiCopy } from "@/lib/auth-ui-copy";
+import { guestDictionary } from "@/lib/guest-i18n";
+import type { GuestLocale } from "@/lib/guest-market";
 
-type Props = Readonly<{displayName:string;email:string;locale:Locale}>;
+type Props = Readonly<{displayName:string;email:string;locale:GuestLocale}>;
 
 export function ProfileForm({displayName:initialName,email,locale}: Props) {
   const router = useRouter();
-  const copy = dictionary(locale);
+  const copy = guestDictionary(locale);
+  const fallbackError = authUiCopy(locale).unable;
   const [displayName,setDisplayName] = useState(initialName);
   const [saving,setSaving] = useState(false);
   const [message,setMessage] = useState<string|null>(null);
@@ -21,11 +24,11 @@ export function ProfileForm({displayName:initialName,email,locale}: Props) {
     try {
       const response = await fetch("/api/v1/me/profile",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({displayName})});
       const payload = await response.json().catch(()=>null);
-      if(!response.ok) throw new Error(payload?.error?.message ?? (locale === "ar" ? "تعذر حفظ الملف الشخصي" : "Unable to save profile"));
+      if(!response.ok) throw new Error(payload?.error?.message ?? fallbackError);
       setMessage(copy.profile.saved);
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : (locale === "ar" ? "تعذر حفظ الملف الشخصي" : "Unable to save profile"));
+      setError(cause instanceof Error ? cause.message : fallbackError);
     } finally { setSaving(false); }
   }
 
