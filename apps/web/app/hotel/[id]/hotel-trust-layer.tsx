@@ -1,6 +1,10 @@
 import { Activity, BadgeCheck, BedDouble, Car, ChevronDown, Coffee, Dumbbell, HeartPulse, MapPin, Plane, ShieldCheck, Sparkles, Utensils, Waves, Wifi } from "lucide-react";
 import type { getPublicHotelDetails, getPublicHotelReviews } from "@platform/server";
-import type { Locale } from "@/lib/i18n";
+import { guestDictionary } from "@/lib/guest-i18n";
+import { guestIntlLocale, type GuestLocale } from "@/lib/guest-market";
+import { hotelAmenityLabel } from "@/lib/hotel-amenity-copy";
+import { hotelTrustUiCopy } from "@/lib/hotel-trust-ui-copy";
+import { requestGuestMarket } from "@/lib/request-guest-market";
 import { HotelReviewsHub } from "./hotel-reviews-hub";
 
 type HotelDetails = Awaited<ReturnType<typeof getPublicHotelDetails>>;
@@ -11,8 +15,10 @@ type Highlight = Readonly<{kind: HighlightKind; title: string; body: string}>;
 type BenefitGroup = Readonly<{kind: "food" | "wellness" | "activity" | "convenience"; title: string; items: string[]}>;
 type Landmark = Readonly<{name: string; lat: number; lng: number}>;
 
-export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;reviews:ReviewData;locale:Locale}) {
-  const copy=trustCopy(locale);
+export async function HotelTrustLayer({hotel,reviews}:{hotel:HotelDetails;reviews:ReviewData;locale?:GuestLocale}) {
+  const market=await requestGuestMarket();
+  const locale=market.locale;
+  const copy=hotelTrustUiCopy(locale);
   const highlights=buildHighlights(hotel,reviews,locale).slice(0,6);
   const benefitGroups=buildBenefitGroups(hotel,locale);
   const priorityAmenities=["WIFI","BREAKFAST","POOL","BEACH_ACCESS","PARKING","SPA","FAMILY_ROOMS","AIRPORT_SHUTTLE","RESTAURANT","GYM"];
@@ -49,7 +55,7 @@ export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;revie
         </div>
         <div className="stayEssentialsQuick" aria-label={copy.quickLook}>
           <span className="stayEssentialsQuickLabel">{copy.quickLook}</span>
-          <div>{quickAmenities.map((amenity)=><span className="quickAmenity" key={amenity.code}><i>{facilityIcon(amenity.code)}</i><strong>{amenityLabel(amenity.code,amenity.name,locale)}</strong></span>)}</div>
+          <div>{quickAmenities.map((amenity)=><span className="quickAmenity" key={amenity.code}><i>{facilityIcon(amenity.code)}</i><strong>{hotelAmenityLabel(locale,amenity.code,amenity.name)}</strong></span>)}</div>
         </div>
       </div>
 
@@ -61,14 +67,14 @@ export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;revie
 
       <details className="allFacilitiesDisclosure">
         <summary><span><strong>{copy.viewAllFacilities}</strong><small>{hotel.amenities.length} {copy.facilitiesCount}</small></span><ChevronDown size={18}/></summary>
-        <div className="allFacilitiesGrid">{hotel.amenities.map((amenity)=><div key={amenity.code}><span>{facilityIcon(amenity.code)}</span><strong>{amenityLabel(amenity.code,amenity.name,locale)}</strong></div>)}</div>
+        <div className="allFacilitiesGrid">{hotel.amenities.map((amenity)=><div key={amenity.code}><span>{facilityIcon(amenity.code)}</span><strong>{hotelAmenityLabel(locale,amenity.code,amenity.name)}</strong></div>)}</div>
       </details>
       <div className="stayEssentialsSource"><ShieldCheck size={14}/><span>{copy.facilitySource}</span></div>
     </section>}
 
     <div className="locationReviewGrid">
       <section className="locationDiscovery">
-        <div className="sectionHeading"><span className="sectionKicker">{copy.location}</span><h2>{copy.discoverLocation}</h2><p>{hotel.area?`${hotel.area}, ${hotel.city}`:hotel.city}</p></div>
+        <div className="sectionHeading"><span className="sectionKicker">{guestDictionary(locale).hotel.location}</span><h2>{copy.discoverLocation}</h2><p>{hotel.area?`${hotel.area}, ${hotel.city}`:hotel.city}</p></div>
         <div className="locationBody">
           <div className="locationMapCard"><MapPin size={28}/><strong>{hotel.name}</strong><span>{hotel.address}</span>{hotel.location&&<a href={`https://www.google.com/maps/search/?api=1&query=${hotel.location.latitude},${hotel.location.longitude}`} target="_blank" rel="noreferrer">{copy.openMap}</a>}</div>
           <div className="nearbyList"><div className="nearbyListHead"><strong>{copy.nearby}</strong><small>{copy.approxDistance}</small></div>{landmarks.length?landmarks.map((place)=><div key={place.name}><span><MapPin size={14}/>{place.name}</span><strong>{formatDistance(place.distanceKm,locale)}</strong></div>):<p className="nearbyEmpty">{copy.noNearbyData}</p>}</div>
@@ -78,15 +84,16 @@ export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;revie
   </section>;
 }
 
-function buildHighlights(hotel:HotelDetails,reviews:ReviewData,locale:Locale):Highlight[] {
-  const copy=trustCopy(locale);
+function buildHighlights(hotel:HotelDetails,reviews:ReviewData,locale:GuestLocale):Highlight[] {
+  const copy=hotelTrustUiCopy(locale);
+  const hotelCopy=guestDictionary(locale).hotel;
   const codes=new Set(hotel.amenities.map((amenity)=>amenity.code));
   const output:Highlight[]=[];
   const push=(kind:HighlightKind,title:string,body:string)=>{if(!output.some((item)=>item.kind===kind))output.push({kind,title,body});};
-  if((reviews.summary.cleanliness??0)>=8.5) push("clean",copy.spotless,copy.scoreSupport(copy.cleanliness,reviews.summary.cleanliness!));
-  if((reviews.summary.comfort??0)>=8.5) push("comfort",copy.roomComfort,copy.scoreSupport(copy.comfort,reviews.summary.comfort!));
-  if((reviews.summary.location??0)>=8.5) push("location",copy.greatLocation,copy.scoreSupport(copy.location,reviews.summary.location!));
-  if((reviews.summary.staff??0)>=8.5) push("service",copy.greatService,copy.scoreSupport(copy.service,reviews.summary.staff!));
+  if((reviews.summary.cleanliness??0)>=8.5) push("clean",copy.spotless,copy.scoreSupport(hotelCopy.cleanliness,reviews.summary.cleanliness!));
+  if((reviews.summary.comfort??0)>=8.5) push("comfort",copy.roomComfort,copy.scoreSupport(hotelCopy.comfort,reviews.summary.comfort!));
+  if((reviews.summary.location??0)>=8.5) push("location",copy.greatLocation,copy.scoreSupport(hotelCopy.location,reviews.summary.location!));
+  if((reviews.summary.staff??0)>=8.5) push("service",copy.greatService,copy.scoreSupport(hotelCopy.staff,reviews.summary.staff!));
   if(codes.has("BREAKFAST")) push("breakfast",copy.breakfast,copy.breakfastBody);
   if(codes.has("AIRPORT_SHUTTLE")) push("transfer",copy.airportTransfer,copy.airportTransferBody);
   if(codes.has("SPA")||codes.has("GYM")) push("wellness",copy.wellness,copy.wellnessBody);
@@ -96,8 +103,8 @@ function buildHighlights(hotel:HotelDetails,reviews:ReviewData,locale:Locale):Hi
   return output;
 }
 
-function buildBenefitGroups(hotel:HotelDetails,locale:Locale):BenefitGroup[] {
-  const copy=trustCopy(locale);
+function buildBenefitGroups(hotel:HotelDetails,locale:GuestLocale):BenefitGroup[] {
+  const copy=hotelTrustUiCopy(locale);
   const groups:[BenefitGroup["kind"],string,string[]][]=[
     ["food",copy.food,["BREAKFAST","RESTAURANT","ROOM_SERVICE","ROOFTOP"]],
     ["wellness",copy.health,["SPA","GYM","POOL"]],
@@ -105,7 +112,7 @@ function buildBenefitGroups(hotel:HotelDetails,locale:Locale):BenefitGroup[] {
     ["convenience",copy.convenience,["WIFI","PARKING","AIRPORT_SHUTTLE","BUSINESS_CENTER","FAMILY_ROOMS"]],
   ];
   return groups.flatMap(([kind,title,codes])=>{
-    const items=codes.flatMap((code)=>hotel.amenities.filter((amenity)=>amenity.code===code).map((amenity)=>amenityLabel(code,amenity.name,locale)));
+    const items=codes.flatMap((code)=>hotel.amenities.filter((amenity)=>amenity.code===code).map((amenity)=>hotelAmenityLabel(locale,code,amenity.name)));
     return items.length?[{kind,title,items}]:[];
   });
 }
@@ -139,12 +146,6 @@ function facilityIcon(code:string) {
   if(code==="AIRPORT_SHUTTLE") return <Plane size={22}/>;
   if(code==="PARKING") return <Car size={22}/>;
   return <BadgeCheck size={22}/>;
-}
-
-function amenityLabel(code:string,fallback:string,locale:Locale) {
-  if(locale!=="ar") return fallback;
-  const ar:Record<string,string>={WIFI:"واي فاي مجاني",BREAKFAST:"إفطار",PARKING:"موقف سيارات",GYM:"مركز لياقة بدنية",POOL:"مسبح",SPA:"سبا",AIRPORT_SHUTTLE:"تنقلات المطار",FAMILY_ROOMS:"غرف عائلية",BUSINESS_CENTER:"مركز أعمال",RESTAURANT:"مطعم",ROOM_SERVICE:"خدمة الغرف",ROOFTOP:"تراس على السطح",PLAY_AREA:"منطقة ألعاب للأطفال",BEACH_SHUTTLE:"نقل إلى الشاطئ",BEACH_ACCESS:"وصول إلى الشاطئ",MARINA:"وصول إلى المارينا",WATER_SPORTS:"رياضات مائية",TERRACE:"تراس"};
-  return ar[code]??fallback;
 }
 
 function nearbyLandmarks(city:string,location:HotelDetails["location"]) {
@@ -187,16 +188,10 @@ function haversine(lat1:number,lon1:number,lat2:number,lon2:number) {
   return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-function formatDistance(value:number,locale:Locale) {
-  if(value<1) return `${Math.max(50,Math.round(value*1000/50)*50)} ${locale==="ar"?"م":"m"}`;
-  return `${value.toFixed(value<10?1:0)} ${locale==="ar"?"كم":"km"}`;
-}
-
-function trustCopy(locale:Locale) {
-  if(locale==="ar") return {
-    overview:"نظرة عامة على الفندق",liveDates:"تواريخك متاحة للحجز الآن",liveRates:"خيار سعر مباشر",roomChoices:"أنواع إقامة",noLiveRates:"لا توجد أسعار مباشرة لهذه التواريخ",limitedChoices:"خيارات بمخزون محدود",verifiedGuestRatings:"تقييمات إقامة موثقة",guestRatings:"ماذا يقول الضيوف؟",verifiedReviews:"تقييم موثق",waitingReviews:"بانتظار أول تقييمات من إقامات مكتملة",excellent:"ممتاز",pending:"قيد التقييم",outOf10:"من 10",cleanliness:"النظافة",service:"الخدمة والاستقبال",location:"الموقع",facilities:"المرافق",comfort:"راحة الغرفة",value:"القيمة مقابل السعر",noSyntheticScores:"لن نعرض أي درجة قبل وصول تقييم موثق من إقامة مكتملة.",highlights:"الأبرز",propertyHighlights:"أبرز ما يقدمه هذا الفندق",spotless:"نظافة بتقييم مرتفع",roomComfort:"راحة غرفة ممتازة",greatLocation:"موقع بتقييم مرتفع",greatService:"خدمة مميزة",scoreSupport:(label:string,score:number)=>`قيّم الضيوف الموثقون ${label} ${score.toFixed(1)}/10.`,breakfast:"إفطار متوفر",breakfastBody:"الفندق يدرج الإفطار ضمن مرافقه وخيارات الإقامة المتاحة.",airportTransfer:"تنقلات المطار",airportTransferBody:"خدمة تنقل المطار مدرجة ضمن مرافق الفندق؛ راجع الشروط قبل الحجز.",wellness:"سبا وعناية بالصحة",wellnessBody:"مرافق عناية أو لياقة متوفرة ضمن الفندق.",activities:"أنشطة داخل أو حول الفندق",activitiesBody:"تتوفر مرافق ترفيهية أو مائية أو شاطئية بحسب بيانات الفندق.",familyFriendly:"مناسب للعائلات",familyBody:"الفندق يوفر مرافق أو غرفًا مصممة لإقامات العائلات.",freeWifi:"واي فاي مجاني",freeWifiBody:"الاتصال اللاسلكي مدرج ضمن مرافق الفندق.",food:"المأكولات والمشروبات",health:"العناية بالصحة",activityGroup:"أنشطة وترفيه",convenience:"الراحة والخدمات",stayEssentials:"أساسيات الإقامة",stayEssentialsTitle:"كل ما يهمك في مكان واحد",stayEssentialsBody:"جمعنا أهم المرافق هنا حتى تصل للغرف والأسعار أسرع، بدون تكرار أو تمرير طويل.",publishedAmenities:"مرفق منشور",quickLook:"نظرة سريعة",viewAllFacilities:"عرض كل المرافق",facilitiesCount:"مرفق",more:"إضافية",facilitySource:"كل ما يظهر هنا مأخوذ من مرافق الفندق المنشورة، وليس اقتراحات آلية.",discoverLocation:"اكتشف الموقع",openMap:"فتح الموقع على الخريطة",nearby:"معالم قريبة",approxDistance:"مسافة تقريبية بخط مستقيم",noNearbyData:"لا تتوفر بيانات معالم قريبة لهذه الوجهة بعد.",guestVoice:"صوت الضيف",verifiedGuestVoice:"من إقامة موثقة",verifiedStay:"إقامة موثقة",noQuoteYet:"لا يوجد تعليق موثق بعد",onlyVerifiedQuotes:"عند وصول أول مراجعة من إقامة مكتملة ستظهر هنا تلقائيًا.",
-  };
-  return {
-    overview:"Hotel overview",liveDates:"Your dates are available to book now",liveRates:"live rate options",roomChoices:"room products",noLiveRates:"No live rates for these dates",limitedChoices:"choices have limited inventory",verifiedGuestRatings:"Verified-stay ratings",guestRatings:"What guests say",verifiedReviews:"verified reviews",waitingReviews:"Waiting for the first completed-stay reviews",excellent:"Excellent",pending:"Pending",outOf10:"out of 10",cleanliness:"Cleanliness",service:"Service & staff",location:"Location",facilities:"Facilities",comfort:"Room comfort",value:"Value for money",noSyntheticScores:"No category score is shown until it is backed by a verified completed stay.",highlights:"Highlights",propertyHighlights:"Property highlights",spotless:"Highly rated cleanliness",roomComfort:"Excellent room comfort",greatLocation:"Highly rated location",greatService:"Excellent service",scoreSupport:(label:string,score:number)=>`Verified guests rated ${label.toLowerCase()} ${score.toFixed(1)}/10.`,breakfast:"Breakfast available",breakfastBody:"Breakfast is listed among the property's published amenities and stay options.",airportTransfer:"Airport transfers",airportTransferBody:"Airport transfer service is listed by the property; review conditions before booking.",wellness:"Spa & wellness",wellnessBody:"Wellness or fitness facilities are available at the property.",activities:"Activities on site",activitiesBody:"Leisure, water, beach or family activity facilities are listed by the property.",familyFriendly:"Family friendly",familyBody:"Family rooms or family-oriented facilities are available.",freeWifi:"Free Wi-Fi",freeWifiBody:"Wireless internet is listed among the property's facilities.",food:"Food & drink",health:"Wellness",activityGroup:"Activities & leisure",convenience:"Convenience",stayEssentials:"Stay essentials",stayEssentialsTitle:"Everything that matters, in one glance",stayEssentialsBody:"The useful facilities are grouped here so you can reach rooms and rates faster, without repeated sections.",publishedAmenities:"published amenities",quickLook:"Quick look",viewAllFacilities:"View all facilities",facilitiesCount:"facilities",more:"more",facilitySource:"Everything shown here comes from the property's published amenities, not generated suggestions.",discoverLocation:"Discover the location",openMap:"Open in maps",nearby:"Nearby landmarks",approxDistance:"Approx. straight-line distance",noNearbyData:"Nearby landmark data is not available for this destination yet.",guestVoice:"Guest voice",verifiedGuestVoice:"From a verified stay",verifiedStay:"Verified stay",noQuoteYet:"No verified guest quote yet",onlyVerifiedQuotes:"The first completed-stay review will appear here automatically.",
-  };
+function formatDistance(value:number,locale:GuestLocale) {
+  if(value<1){
+    const meters=Math.max(50,Math.round(value*1000/50)*50);
+    return new Intl.NumberFormat(guestIntlLocale(locale),{style:"unit",unit:"meter",unitDisplay:"short",maximumFractionDigits:0}).format(meters);
+  }
+  return new Intl.NumberFormat(guestIntlLocale(locale),{style:"unit",unit:"kilometer",unitDisplay:"short",maximumFractionDigits:value<10?1:0}).format(value);
 }
