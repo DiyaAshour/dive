@@ -1,3 +1,4 @@
+import type {CSSProperties} from "react";
 import type {Metadata} from "next";
 import {redirect} from "next/navigation";
 import {ShieldCheck, Users} from "lucide-react";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {title: "Platform Administrators Control Panel
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+const directoryThemeStyle = {"--surface":"var(--paper)"} as CSSProperties;
 
 export default async function AdminAccessPage({searchParams}: Readonly<{searchParams:SearchParams}>) {
   const principal = await currentAdminPrincipal();
@@ -68,7 +70,9 @@ export default async function AdminAccessPage({searchParams}: Readonly<{searchPa
       <div className="adminSectionTitle">
         <div><span className="eyebrow">{ar ? "سيطرة المنصة" : "Platform authority"}</span><h2><Users size={21}/> {ar ? "دليل الهوية" : "Identity directory"}</h2></div>
       </div>
-      <PlatformAccessDirectory locale={locale} initialData={data}/>
+      <div style={directoryThemeStyle}>
+        <PlatformAccessDirectory locale={locale} initialData={data}/>
+      </div>
       <PlatformSessionControl
         locale={locale}
         isOwner={data.actor.isOwner}
