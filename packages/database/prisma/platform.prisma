@@ -1,0 +1,212 @@
+enum PlatformOutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+  DEAD
+}
+
+enum PlatformJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  DEAD
+}
+
+enum ExperimentStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum ExperimentAllocationBasis {
+  USER
+  SESSION
+  DEVICE
+}
+
+model PlatformOutboxEvent {
+  id               String               @id @default(cuid())
+  topic            String
+  aggregateType    String
+  aggregateId      String
+  eventType        String
+  schemaVersion    Int                  @default(1)
+  payload          Json
+  deduplicationKey String               @unique
+  status           PlatformOutboxStatus @default(PENDING)
+  attempts         Int                  @default(0)
+  availableAt      DateTime             @default(now())
+  lockedAt         DateTime?
+  lockedBy         String?
+  publishedAt      DateTime?
+  lastError        String?              @db.Text
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status, availableAt, createdAt])
+  @@index([topic, status, availableAt])
+  @@index([aggregateType, aggregateId, createdAt])
+}
+
+model PlatformDurableJob {
+  id             String            @id @default(cuid())
+  queue          String
+  type           String
+  dedupeKey      String?           @unique
+  payload        Json
+  status         PlatformJobStatus @default(PENDING)
+  priority       Int               @default(100)
+  attempts       Int               @default(0)
+  maxAttempts    Int               @default(8)
+  availableAt    DateTime          @default(now())
+  lockedAt       DateTime?
+  lockedBy       String?
+  leaseExpiresAt DateTime?
+  completedAt    DateTime?
+  lastError      String?           @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([queue, status, availableAt, priority])
+  @@index([status, leaseExpiresAt])
+}
+
+model AnalyticsEnvelope {
+  id            String   @id @default(cuid())
+  eventId       String   @unique
+  name          String
+  schemaVersion Int      @default(1)
+  subjectKey    String?
+  sessionId     String?
+  hotelId       String?
+  bookingId     String?
+  requestId     String?
+  source        String
+  properties    Json
+  occurredAt    DateTime
+  receivedAt    DateTime @default(now())
+
+  @@index([name, occurredAt])
+  @@index([hotelId, name, occurredAt])
+  @@index([bookingId, occurredAt])
+  @@index([subjectKey, occurredAt])
+}
+
+model Experiment {
+  id               String                    @id @default(cuid())
+  key              String                    @unique
+  name             String
+  description      String?                   @db.Text
+  status           ExperimentStatus          @default(DRAFT)
+  allocationBasis  ExperimentAllocationBasis @default(USER)
+  trafficPercent   Int                       @default(10000)
+  salt             String
+  eligibility      Json?
+  primaryMetric    String
+  guardrailMetrics Json?
+  startsAt         DateTime?
+  endsAt           DateTime?
+  killSwitch       Boolean                   @default(false)
+  variants         ExperimentVariant[]
+  assignments      ExperimentAssignment[]
+  exposures        ExperimentExposure[]
+  metrics          ExperimentMetricEvent[]
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  @@index([status, startsAt, endsAt])
+}
+
+model ExperimentVariant {
+  id           String                 @id @default(cuid())
+  experimentId String
+  experiment   Experiment             @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  key          String
+  name         String
+  weight       Int
+  configuration Json?
+  assignments  ExperimentAssignment[]
+  exposures    ExperimentExposure[]
+  metrics      ExperimentMetricEvent[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@unique([experimentId, key])
+  @@index([experimentId, weight])
+}
+
+model ExperimentAssignment {
+  id           String            @id @default(cuid())
+  experimentId String
+  experiment   Experiment        @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  variantId    String
+  variant      ExperimentVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  subjectKey   String
+  assignedAt   DateTime          @default(now())
+
+  @@unique([experimentId, subjectKey])
+  @@index([variantId, assignedAt])
+}
+
+model ExperimentExposure {
+  id           String            @id @default(cuid())
+  exposureId   String            @unique
+  experimentId String
+  experiment   Experiment        @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  variantId    String
+  variant      ExperimentVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  subjectKey   String
+  sessionId    String?
+  context      Json?
+  exposedAt    DateTime          @default(now())
+
+  @@index([experimentId, exposedAt])
+  @@index([variantId, exposedAt])
+  @@index([subjectKey, exposedAt])
+}
+
+model ExperimentMetricEvent {
+  id           String            @id @default(cuid())
+  metricEventId String           @unique
+  experimentId String
+  experiment   Experiment        @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  variantId    String
+  variant      ExperimentVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  subjectKey   String
+  metric       String
+  value        Decimal           @default(1) @db.Decimal(18, 6)
+  properties   Json?
+  occurredAt   DateTime          @default(now())
+
+  @@index([experimentId, metric, occurredAt])
+  @@index([variantId, metric, occurredAt])
+  @@index([subjectKey, occurredAt])
+}
+
+model SearchIndexTask {
+  id             String            @id @default(cuid())
+  entityType     String
+  entityId       String
+  operation      String
+  revision       Int               @default(1)
+  payload        Json?
+  status         PlatformJobStatus @default(PENDING)
+  attempts       Int               @default(0)
+  maxAttempts    Int               @default(8)
+  availableAt    DateTime          @default(now())
+  lockedAt       DateTime?
+  lockedBy       String?
+  leaseExpiresAt DateTime?
+  completedAt    DateTime?
+  lastError      String?           @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([entityType, entityId, revision])
+  @@index([status, availableAt, createdAt])
+  @@index([entityType, status, availableAt])
+}
