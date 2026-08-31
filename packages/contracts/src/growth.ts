@@ -14,6 +14,7 @@ export const saveSearchSchema = z.object({
 
 export const createPriceWatchSchema = z.object({
   hotelId: z.string().min(1),
+  roomTypeId: z.string().min(1).optional(),
   arrival: dateOnly,
   departure: dateOnly,
   adults: z.coerce.number().int().min(1).max(20),
