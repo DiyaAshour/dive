@@ -1,22 +1,42 @@
+import type {CSSProperties} from "react";
 import type {Metadata} from "next";
 import {redirect} from "next/navigation";
 import {ShieldCheck, Users} from "lucide-react";
-import {getAdminNavigationCounts, getPlatformAccessControl} from "@platform/server";
+import {getAdminNavigationCounts, getIdentityDirectory} from "@platform/server";
+import type {IdentityDirectoryRole, IdentityDirectorySort, IdentityDirectoryStatus} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
-import PlatformAccessControl from "./platform-access-control";
+import PlatformAccessDirectory from "./platform-access-directory";
 import PlatformSessionControl from "./platform-session-control";
 
 export const metadata: Metadata = {title: "Platform Administrators Control Panel"};
 export const dynamic = "force-dynamic";
 
-export default async function AdminAccessPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+const directoryThemeStyle = {"--surface":"var(--paper)"} as CSSProperties;
+
+export default async function AdminAccessPage({searchParams}: Readonly<{searchParams:SearchParams}>) {
   const principal = await currentAdminPrincipal();
   if (!principal) redirect("/admin/login?next=%2Fadmin%2Faccess");
   const locale = await requestLocale();
+  const params = await searchParams;
+  const role = enumParam(params.role, ["ALL","GUEST","HOTEL_USER","PLATFORM_ADMIN"] as const, "ALL");
+  const status = enumParam(params.status, ["ALL","ACTIVE","LOCKED"] as const, "ALL");
+  const sort = enumParam(params.sort, ["NEWEST","OLDEST","NAME"] as const, "NEWEST");
+  const page = positiveInt(params.page, 1);
+  const pageSize = [25,50,100].includes(positiveInt(params.pageSize,50)) ? positiveInt(params.pageSize,50) : 50;
+
   const [access, counts] = await Promise.all([
-    getPlatformAccessControl(principal.user.id),
+    getIdentityDirectory(principal.user.id, {
+      query: scalar(params.q),
+      role: role as IdentityDirectoryRole,
+      status: status as IdentityDirectoryStatus,
+      hotelId: scalar(params.hotel),
+      sort: sort as IdentityDirectorySort,
+      page,
+      pageSize,
+    }),
     getAdminNavigationCounts(principal.user.id),
   ]);
 
@@ -36,28 +56,22 @@ export default async function AdminAccessPage() {
   };
 
   const ar = locale === "ar";
-  const ownerPinned = data.ownerMode === "CONFIGURED";
   return <AdminShell locale={locale} principal={principal} active="access" counts={counts}>
     <header className="adminTopbar adminAccessTopbar">
       <div>
         <span className="eyebrow">{ar ? "الهوية والصلاحيات" : "Identity & access"}</span>
-        <h1>Platform administrators control panel</h1>
-        <p>{ar ? "إدارة الحسابات، مسؤولي المنصة، عضويات الفنادق، كلمات المرور والجلسات من مكان واحد." : "Create accounts, control platform administrators, assign hotel memberships, reset passwords and revoke sessions from one place."}</p>
+        <h1>{ar ? "إدارة المستخدمين والصلاحيات" : "Users & permissions"}</h1>
+        <p>{ar ? "دليل هوية قابل للتوسع مع بحث وفلاتر وتقسيم صفحات، وتفاصيل الحساب تظهر فقط عند فتح المستخدم." : "A scalable identity directory with server-side search, filters and pagination. Full controls open only when you select a user."}</p>
       </div>
       <div className="adminSessionBadge"><ShieldCheck size={18}/><span><strong>{data.actor.isOwner ? "Platform Owner" : "Platform Administrator"}</strong><small>{principal.user.email}</small></span></div>
     </header>
 
     <section className="adminSection adminAccessIntro">
       <div className="adminSectionTitle">
-        <div><span className="eyebrow">{ar ? "سيطرة المنصة" : "Platform authority"}</span><h2><Users size={21}/> {ar ? "الحسابات والأدوار" : "Accounts & roles"}</h2></div>
+        <div><span className="eyebrow">{ar ? "سيطرة المنصة" : "Platform authority"}</span><h2><Users size={21}/> {ar ? "دليل الهوية" : "Identity directory"}</h2></div>
       </div>
-      <PlatformAccessControl locale={locale} initialData={data}/>
-      <div className={`ownerRootStatus ${ownerPinned ? "pinned" : "legacy"}`}>
-        <ShieldCheck size={19}/>
-        <div>
-          <strong>{ownerPinned ? (ar ? "هوية Platform Owner مثبتة" : "Platform Owner identity is pinned") : (ar ? "وضع المالك القديم ما زال فعالًا" : "Legacy owner fallback is still active")}</strong>
-          <span>{ownerPinned ? (ar ? "صلاحية المالك مرتبطة بحساب واحد ثابت ولا تعتمد على ترتيب إنشاء مسؤولي المنصة." : "Root authority is bound to one configured account and no longer depends on administrator creation order.") : (ar ? "عرّف PLATFORM_OWNER_USER_ID أو PLATFORM_OWNER_EMAIL في بيئة الإنتاج لتثبيت حساب المالك نهائيًا." : "Set PLATFORM_OWNER_USER_ID or PLATFORM_OWNER_EMAIL in production to pin the owner account permanently.")}</span>
-        </div>
+      <div style={directoryThemeStyle}>
+        <PlatformAccessDirectory locale={locale} initialData={data}/>
       </div>
       <PlatformSessionControl
         locale={locale}
@@ -66,4 +80,18 @@ export default async function AdminAccessPage() {
       />
     </section>
   </AdminShell>;
+}
+
+function scalar(value:string|string[]|undefined):string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function positiveInt(value:string|string[]|undefined, fallback:number):number {
+  const parsed = Number.parseInt(scalar(value),10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function enumParam<const T extends readonly string[]>(value:string|string[]|undefined, allowed:T, fallback:T[number]):T[number] {
+  const resolved = scalar(value);
+  return (allowed as readonly string[]).includes(resolved) ? resolved as T[number] : fallback;
 }
