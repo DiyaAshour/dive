@@ -4,8 +4,10 @@ import { BedDouble, ChevronDown, Info, MessageSquareText, Sparkles } from "lucid
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import type { GuestLocale } from "@/lib/guest-market";
 
-type Locale = "en" | "ar" | "zh";
+type Locale = GuestLocale;
+type QuickNavTab = "overview" | "rooms" | "reviews" | "details";
 
 type RoomTarget = Readonly<{
   key: string;
@@ -15,6 +17,31 @@ type RoomTarget = Readonly<{
   rateCount: number;
   price: string;
 }>;
+
+const QUICK_NAV_COPY: Readonly<Record<Locale, Readonly<Record<QuickNavTab, string>>>> = {
+  en: {overview:"Overview", rooms:"Rooms", reviews:"Reviews", details:"Details"},
+  ar: {overview:"نظرة عامة", rooms:"الغرف", reviews:"التقييمات", details:"التفاصيل"},
+  zh: {overview:"概览", rooms:"房型", reviews:"评价", details:"详情"},
+  fr: {overview:"Vue d’ensemble", rooms:"Chambres", reviews:"Avis", details:"Détails"},
+  de: {overview:"Übersicht", rooms:"Zimmer", reviews:"Bewertungen", details:"Details"},
+  es: {overview:"Resumen", rooms:"Habitaciones", reviews:"Reseñas", details:"Detalles"},
+  it: {overview:"Panoramica", rooms:"Camere", reviews:"Recensioni", details:"Dettagli"},
+  tr: {overview:"Genel bakış", rooms:"Odalar", reviews:"Değerlendirmeler", details:"Detaylar"},
+  ru: {overview:"Обзор", rooms:"Номера", reviews:"Отзывы", details:"Подробности"},
+  ja: {overview:"概要", rooms:"客室", reviews:"口コミ", details:"詳細"},
+  ko: {overview:"개요", rooms:"객실", reviews:"후기", details:"상세 정보"},
+  hi: {overview:"अवलोकन", rooms:"कमरे", reviews:"समीक्षाएँ", details:"विवरण"},
+  pt: {overview:"Visão geral", rooms:"Quartos", reviews:"Avaliações", details:"Detalhes"},
+  id: {overview:"Ringkasan", rooms:"Kamar", reviews:"Ulasan", details:"Detail"},
+  th: {overview:"ภาพรวม", rooms:"ห้องพัก", reviews:"รีวิว", details:"รายละเอียด"},
+};
+
+const QUICK_NAV_HASHES: Readonly<Record<string, QuickNavTab>> = {
+  "#hotel-mobile-overview":"overview",
+  "#room-offers":"rooms",
+  "#hotel-mobile-reviews":"reviews",
+  "#hotel-mobile-details":"details",
+};
 
 export function HotelMobileCommerceEnhancer() {
   const pathname = usePathname();
@@ -31,8 +58,8 @@ export function HotelMobileCommerceEnhancer() {
     const page = document.querySelector<HTMLElement>(".hotelExperience");
     if (!page) return;
 
-    const language = (page.getAttribute("lang") || document.documentElement.lang || "en").toLowerCase();
-    setLocale(language.startsWith("ar") ? "ar" : language.startsWith("zh") ? "zh" : "en");
+    const language = page.getAttribute("lang") || document.documentElement.lang || "en";
+    setLocale(quickNavLocale(language));
 
     const hotelHead = page.querySelector<HTMLElement>(".premiumHotelHead");
     const trustBar = page.querySelector<HTMLElement>(".hotelTrustBar");
@@ -94,16 +121,25 @@ export function HotelMobileCommerceEnhancer() {
 }
 
 function MobileHotelQuickNav({locale}:{locale:Locale}) {
-  const copy = locale === "ar"
-    ? {overview:"نظرة عامة", rooms:"الغرف", details:"التفاصيل", reviews:"التقييمات"}
-    : locale === "zh"
-      ? {overview:"概览", rooms:"房型", details:"详情", reviews:"评价"}
-      : {overview:"Overview", rooms:"Rooms", details:"Details", reviews:"Reviews"};
+  const copy = QUICK_NAV_COPY[locale];
+  const [activeTab, setActiveTab] = useState<QuickNavTab>("overview");
+
+  useEffect(() => {
+    const syncFromHash = () => {
+      const tab = QUICK_NAV_HASHES[window.location.hash];
+      if (tab) setActiveTab(tab);
+    };
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
+
+  const current = (tab:QuickNavTab) => activeTab === tab ? "location" as const : undefined;
   return <nav className="hotelMobileQuickNav" aria-label={copy.overview}>
-    <a href="#hotel-mobile-overview"><Info size={15}/><span>{copy.overview}</span></a>
-    <a className="primary" href="#room-offers"><BedDouble size={15}/><span>{copy.rooms}</span></a>
-    <a href="#hotel-mobile-details"><Sparkles size={15}/><span>{copy.details}</span></a>
-    <a href="#hotel-mobile-reviews"><MessageSquareText size={15}/><span>{copy.reviews}</span></a>
+    <a className={activeTab === "overview" ? "primary" : undefined} aria-current={current("overview")} href="#hotel-mobile-overview" onClick={() => setActiveTab("overview")}><Info size={15}/><span>{copy.overview}</span></a>
+    <a className={activeTab === "rooms" ? "primary" : undefined} aria-current={current("rooms")} href="#room-offers" onClick={() => setActiveTab("rooms")}><BedDouble size={15}/><span>{copy.rooms}</span></a>
+    <a className={activeTab === "reviews" ? "primary" : undefined} aria-current={current("reviews")} href="#hotel-mobile-reviews" onClick={() => setActiveTab("reviews")}><MessageSquareText size={15}/><span>{copy.reviews}</span></a>
+    <a className={activeTab === "details" ? "primary" : undefined} aria-current={current("details")} href="#hotel-mobile-details" onClick={() => setActiveTab("details")}><Sparkles size={15}/><span>{copy.details}</span></a>
   </nav>;
 }
 
@@ -128,4 +164,9 @@ function RoomCommerceControl({room, locale}:{room:RoomTarget;locale:Locale}) {
       <span>{expanded ? copy.less : copy.show(room.rateCount)}</span><ChevronDown size={18}/>
     </button>, room.controlHost)}
   </>;
+}
+
+function quickNavLocale(language:string):Locale {
+  const locale = language.trim().toLowerCase().split(/[-_]/)[0] as Locale;
+  return locale in QUICK_NAV_COPY ? locale : "en";
 }
