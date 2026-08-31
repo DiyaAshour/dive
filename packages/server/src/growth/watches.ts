@@ -46,10 +46,15 @@ export async function createPriceWatch(userId: string, input: CreatePriceWatchIn
   } as const;
   const existing = await db.priceWatch.findUnique({where: unique});
   if (existing) {
-    const lowest = Math.min(Number(existing.lowestSeenTotal), snapshot.total);
+    const nextRoomTypeId = input.roomTypeId ?? null;
+    const roomChanged = existing.roomTypeId !== nextRoomTypeId;
+    const lowest = roomChanged ? snapshot.total : Math.min(Number(existing.lowestSeenTotal), snapshot.total);
     return db.priceWatch.update({where: {id: existing.id}, data: {
       hotelName: snapshot.hotelName,
+      roomTypeId: nextRoomTypeId,
+      roomTypeName: nextRoomTypeId ? snapshot.roomTypeName : null,
       currency: snapshot.currency,
+      baselineTotal: roomChanged ? snapshot.total : existing.baselineTotal,
       lastSeenTotal: snapshot.total,
       lowestSeenTotal: lowest,
       lastNotifiedTotal: snapshot.total,
@@ -63,6 +68,8 @@ export async function createPriceWatch(userId: string, input: CreatePriceWatchIn
     ownerUserId: userId,
     hotelId: input.hotelId,
     hotelName: snapshot.hotelName,
+    roomTypeId: input.roomTypeId ?? null,
+    roomTypeName: input.roomTypeId ? snapshot.roomTypeName : null,
     arrival: dateOnly(input.arrival),
     departure: dateOnly(input.departure),
     adults: input.adults,
@@ -111,6 +118,7 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
     checked += 1;
     const input = {
       hotelId: watch.hotelId,
+      roomTypeId: watch.roomTypeId ?? undefined,
       arrival: key(watch.arrival),
       departure: key(watch.departure),
       adults: watch.adults,
@@ -129,6 +137,7 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
       await db.$transaction(async (tx) => {
         await tx.priceWatch.update({where: {id: watch.id}, data: {
           hotelName: snapshot.hotelName,
+          roomTypeName: watch.roomTypeId ? snapshot.roomTypeName : null,
           currency: snapshot.currency,
           lastSeenTotal: snapshot.total,
           lowestSeenTotal: nextLow,
@@ -138,17 +147,19 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
         }});
         if (shouldNotify) {
           const kind = targetCrossed ? "PRICE_TARGET_REACHED" : "PRICE_DROP";
-          const title = targetCrossed ? `Target price reached at ${snapshot.hotelName}` : `New lowest price at ${snapshot.hotelName}`;
+          const watchedName = watch.roomTypeName ? `${snapshot.hotelName} · ${watch.roomTypeName}` : snapshot.hotelName;
+          const title = targetCrossed ? `Target price reached at ${watchedName}` : `New lowest price at ${watchedName}`;
+          const stayLabel = watch.roomTypeName ? `${watch.roomTypeName} stay` : "watched stay";
           const body = targetCrossed
-            ? `Your stay is now ${snapshot.total.toFixed(2)} ${snapshot.currency}, at or below your target of ${target?.toFixed(2)} ${snapshot.currency}.`
-            : `Your watched stay dropped to ${snapshot.total.toFixed(2)} ${snapshot.currency}. Last alerted price: ${previousNotified.toFixed(2)} ${snapshot.currency}.`;
+            ? `Your ${stayLabel} is now ${snapshot.total.toFixed(2)} ${snapshot.currency}, at or below your target of ${target?.toFixed(2)} ${snapshot.currency}.`
+            : `Your ${stayLabel} dropped to ${snapshot.total.toFixed(2)} ${snapshot.currency}. Last alerted price: ${previousNotified.toFixed(2)} ${snapshot.currency}.`;
           await tx.userNotification.create({data: {
             userId: watch.ownerUserId,
             kind,
             title,
             body,
             link: hotelLink(watch.hotelId, watch.arrival, watch.departure, watch.adults, watch.children),
-            data: {watchId: watch.id, hotelId: watch.hotelId, total: snapshot.total, currency: snapshot.currency},
+            data: {watchId: watch.id, hotelId: watch.hotelId, roomTypeId: watch.roomTypeId, roomTypeName: watch.roomTypeName, total: snapshot.total, currency: snapshot.currency},
           }});
         }
       });
@@ -161,11 +172,15 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
   return {checked, notified};
 }
 
-async function currentHotelPrice(hotelId: string, input: Readonly<{arrival: string; departure: string; adults: number; children: number}>) {
+async function currentHotelPrice(hotelId: string, input: Readonly<{arrival: string; departure: string; adults: number; children: number; roomTypeId?: string}>) {
   const hotel = await getPublicHotelDetails(hotelId, input, {trackView: false});
-  const offer = hotel.offers[0];
-  if (!offer) badRequest("NO_WATCHABLE_RATE", "This hotel has no live sellable rate for the selected stay");
-  return {hotelName: hotel.name, currency: hotel.currency, total: offer.total};
+  const offers = input.roomTypeId ? hotel.offers.filter((offer) => offer.roomTypeId === input.roomTypeId) : hotel.offers;
+  const offer = offers.reduce<(typeof offers)[number] | undefined>((best, candidate) => !best || candidate.total < best.total ? candidate : best, undefined);
+  if (!offer) {
+    if (input.roomTypeId) badRequest("NO_WATCHABLE_ROOM_RATE", "The selected room type has no live sellable rate for this stay");
+    badRequest("NO_WATCHABLE_RATE", "This hotel has no live sellable rate for the selected stay");
+  }
+  return {hotelName: hotel.name, currency: hotel.currency, total: offer.total, roomTypeId: offer.roomTypeId, roomTypeName: offer.roomName};
 }
 
 function destinationKey(value: string): string {
