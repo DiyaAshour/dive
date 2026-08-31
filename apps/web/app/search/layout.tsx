@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { MobileSearchResultsControls } from "./mobile-search-results-controls";
+import { SearchStarRatingEnhancer } from "./star-rating-filter";
 import "./mobile-search-results.css";
 
 export const metadata: Metadata = {
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function SearchLayout({children}:{children:ReactNode}){
-  return <>{children}<Suspense fallback={null}><MobileSearchResultsControls/></Suspense></>;
+  return <>{children}<SearchStarRatingEnhancer/><Suspense fallback={null}><MobileSearchResultsControls/></Suspense></>;
 }
