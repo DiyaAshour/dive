@@ -7,23 +7,32 @@ import { recordPublishMutation } from "./publishing-revision";
 
 export async function getHotelPublicContentForManagement(actorUserId: string, hotelId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
-  const hotel = await database().hotel.findUnique({
-    where: {id: hotelId},
-    select: {
-      id: true,
-      area: true,
-      description: true,
-      starRating: true,
-      latitude: true,
-      longitude: true,
-      checkInTime: true,
-      checkOutTime: true,
-      amenities: {select: {id: true, code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
-    },
-  });
+  const db = database();
+  const [hotel, translations] = await Promise.all([
+    db.hotel.findUnique({
+      where: {id: hotelId},
+      select: {
+        id: true,
+        area: true,
+        description: true,
+        starRating: true,
+        latitude: true,
+        longitude: true,
+        checkInTime: true,
+        checkOutTime: true,
+        amenities: {select: {id: true, code: true, name: true, category: true}, orderBy: [{category: "asc"}, {name: "asc"}]},
+      },
+    }),
+    db.hotelTranslation.findMany({
+      where: {hotelId},
+      select: {locale: true, name: true, description: true},
+      orderBy: {locale: "asc"},
+    }),
+  ]);
   if (!hotel) notFound("Hotel");
   return {
     ...hotel,
+    translations,
     latitude: hotel.latitude === null ? null : Number(hotel.latitude),
     longitude: hotel.longitude === null ? null : Number(hotel.longitude),
   };
@@ -50,6 +59,17 @@ export async function updateHotelPublicContent(actorUserId: string, hotelId: str
     await tx.hotelAmenity.deleteMany({where: {hotelId}});
     if (input.amenities.length) {
       await tx.hotelAmenity.createMany({data: input.amenities.map((amenity) => ({hotelId, code: amenity.code, name: amenity.name, category: amenity.category}))});
+    }
+    for (const translation of input.translations) {
+      if (translation.name === null && translation.description === null) {
+        await tx.hotelTranslation.deleteMany({where: {hotelId, locale: translation.locale}});
+        continue;
+      }
+      await tx.hotelTranslation.upsert({
+        where: {hotelId_locale: {hotelId, locale: translation.locale}},
+        create: {hotelId, locale: translation.locale, name: translation.name, description: translation.description},
+        update: {name: translation.name, description: translation.description},
+      });
     }
     await recordPublishMutation(tx, hotelId, actorUserId, "public hotel content updated");
     await tx.auditLog.create({
@@ -78,6 +98,7 @@ function auditValue(value: {
   checkInTime?: string | null;
   checkOutTime?: string | null;
   amenities: Array<{code: string; name: string; category?: string | null}>;
+  translations?: Array<{locale: string; name?: string | null; description?: string | null}>;
 }) {
   return {
     area: value.area ?? null,
@@ -88,5 +109,6 @@ function auditValue(value: {
     checkInTime: value.checkInTime ?? null,
     checkOutTime: value.checkOutTime ?? null,
     amenities: value.amenities.map((amenity) => ({code: amenity.code, name: amenity.name, category: amenity.category ?? null})),
+    translations: (value.translations ?? []).map((translation) => ({locale: translation.locale, name: translation.name ?? null, description: translation.description ?? null})),
   };
 }
