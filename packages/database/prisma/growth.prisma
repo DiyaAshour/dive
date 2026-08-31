@@ -71,6 +71,8 @@ model PriceWatch {
   ownerUserId       String
   hotelId           String
   hotelName         String
+  roomTypeId        String?
+  roomTypeName      String?
   arrival           DateTime @db.Date
   departure         DateTime @db.Date
   adults            Int
