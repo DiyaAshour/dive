@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { database, type Prisma } from "@platform/database";
+import { database } from "@platform/database";
 
 export type SearchCandidate = Readonly<{
   id: string;
@@ -33,6 +33,7 @@ export interface SearchIndexProvider {
 }
 
 let provider: SearchIndexProvider | null = null;
+const RECONCILE_CURSOR_KEY = "hotel-search-index-reconcile-v1";
 
 export function registerSearchIndexProvider(value: SearchIndexProvider): void {
   provider = value;
@@ -49,8 +50,8 @@ export function normalizeSearchText(value: string): string {
     .replace(/\u0640/g, "")
     .replace(/[إأآٱ]/g, "ا")
     .replace(/ى/g, "ي")
-    .replace(/[ؤ]/g, "و")
-    .replace(/[ئ]/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
     .toLocaleLowerCase("en-US")
     .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
     .replace(/\s+/g, " ")
@@ -71,13 +72,51 @@ export async function queueHotelSearchIndex(hotelId: string, revision: number, o
   });
 }
 
-export async function queueFullHotelReindex(batchSize = 500): Promise<number> {
+export async function queueFullHotelReindex(batchSize = 5000): Promise<number> {
   const db = database();
   const hotels = await db.hotel.findMany({select: {id: true, publishRevision: true, status: true, verified: true}, take: clamp(batchSize, 1, 5000), orderBy: {updatedAt: "asc"}});
   for (const hotel of hotels) {
     await queueHotelSearchIndex(hotel.id, hotel.publishRevision, hotel.status === "ACTIVE" && hotel.verified ? "UPSERT" : "DELETE");
   }
   return hotels.length;
+}
+
+export async function reconcileHotelSearchIndex(batchSize = 500): Promise<{scanned:number;queued:number;cycled:boolean}> {
+  const db = database();
+  const take = clamp(batchSize,1,2000);
+  const cursor = await db.platformProjectionCursor.findUnique({where:{key:RECONCILE_CURSOR_KEY}});
+  const where = cursor?.cursorAt ? {
+    OR:[
+      {updatedAt:{gt:cursor.cursorAt}},
+      {updatedAt:cursor.cursorAt,id:{gt:cursor.cursorId ?? ""}},
+    ],
+  } : undefined;
+  const hotels = await db.hotel.findMany({
+    where,
+    select:{id:true,publishRevision:true,status:true,verified:true,updatedAt:true},
+    orderBy:[{updatedAt:"asc"},{id:"asc"}],
+    take,
+  });
+  const documents = hotels.length ? await db.hotelSearchDocument.findMany({where:{hotelId:{in:hotels.map((hotel)=>hotel.id)}},select:{hotelId:true,revision:true}}) : [];
+  const revisions = new Map(documents.map((document)=>[document.hotelId,document.revision]));
+  let queued=0;
+  for(const hotel of hotels){
+    const shouldExist=hotel.status==="ACTIVE"&&hotel.verified;
+    const indexedRevision=revisions.get(hotel.id);
+    if(shouldExist&&indexedRevision!==hotel.publishRevision){
+      await queueHotelSearchIndex(hotel.id,hotel.publishRevision,"UPSERT");queued+=1;
+    }else if(!shouldExist&&indexedRevision!==undefined){
+      await queueHotelSearchIndex(hotel.id,hotel.publishRevision,"DELETE");queued+=1;
+    }
+  }
+  const last=hotels[hotels.length-1];
+  const cycled=hotels.length<take;
+  await db.platformProjectionCursor.upsert({
+    where:{key:RECONCILE_CURSOR_KEY},
+    create:{key:RECONCILE_CURSOR_KEY,cursorAt:cycled?null:last?.updatedAt??null,cursorId:cycled?null:last?.id??null},
+    update:{cursorAt:cycled?null:last?.updatedAt??null,cursorId:cycled?null:last?.id??null},
+  });
+  return {scanned:hotels.length,queued,cycled};
 }
 
 export async function processSearchIndexBatch(options: Readonly<{batchSize?: number; workerId?: string; leaseMs?: number}> = {}) {
@@ -143,17 +182,19 @@ export async function processSearchIndexBatch(options: Readonly<{batchSize?: num
 
 export async function searchPlatformHealth() {
   const db = database();
-  const [providerHealth, pending, failed, dead, oldest] = await Promise.all([
+  const [providerHealth, pending, failed, dead, oldest, documents] = await Promise.all([
     searchIndexProvider().health(),
     db.searchIndexTask.count({where: {status: "PENDING"}}),
     db.searchIndexTask.count({where: {status: "FAILED"}}),
     db.searchIndexTask.count({where: {status: "DEAD"}}),
     db.searchIndexTask.findFirst({where: {status: {in: ["PENDING", "FAILED"]}}, orderBy: {createdAt: "asc"}, select: {createdAt: true}}),
+    db.hotelSearchDocument.count(),
   ]);
   return {
     provider: searchIndexProvider().name,
     providerReady: providerHealth.ready,
     detail: providerHealth.detail ?? null,
+    documents,
     pending,
     failed,
     dead,
@@ -176,7 +217,7 @@ async function hotelSearchDocument(hotelId: string, revision: number): Promise<S
       longitude: true,
       status: true,
       verified: true,
-      amenities: {select: {code: true}},
+      amenities: {select: {code: true, name: true}},
     },
   });
   if (!hotel) throw new Error(`Hotel ${hotelId} no longer exists`);
@@ -190,47 +231,66 @@ async function hotelSearchDocument(hotelId: string, revision: number): Promise<S
     starRating: hotel.starRating,
     latitude: hotel.latitude === null ? null : Number(hotel.latitude),
     longitude: hotel.longitude === null ? null : Number(hotel.longitude),
-    amenities: hotel.amenities.map((item) => item.code),
+    amenities: hotel.amenities.flatMap((item) => [item.code,item.name]),
     active: hotel.status === "ACTIVE" && hotel.verified,
     revision,
   };
 }
 
 const postgresSearchProvider: SearchIndexProvider = {
-  name: "postgres-live",
+  name: "postgres-trigram-index",
   async search(query, limit) {
     const db = database();
     const normalized = normalizeSearchText(query);
-    const tokens = normalized.split(" ").filter(Boolean).slice(0, 8);
-    if (!tokens.length) return [];
-    const hotels = await db.hotel.findMany({
-      where: {
-        status: "ACTIVE",
-        verified: true,
-        AND: tokens.map((token) => ({OR: [
-          {name: {contains: token, mode: "insensitive"}},
-          {city: {contains: token, mode: "insensitive"}},
-          {area: {contains: token, mode: "insensitive"}},
-          {address: {contains: token, mode: "insensitive"}},
-        ]})),
+    if (!normalized) return [];
+    try {
+      const rows = await db.$queryRawUnsafe<Array<{id:string;score:number;name:string;city:string;countryCode:string}>>(
+        `SELECT "hotelId" AS id,
+                GREATEST(similarity("normalizedText", $1), CASE WHEN "normalizedText" LIKE $2 THEN 0.95 ELSE 0 END) AS score,
+                "name", "city", "countryCode"
+           FROM "HotelSearchDocument"
+          WHERE "normalizedText" % $1 OR "normalizedText" LIKE $2
+          ORDER BY score DESC, "starRating" DESC NULLS LAST, "name" ASC
+          LIMIT $3`,
+        normalized,
+        `%${normalized}%`,
+        limit,
+      );
+      return rows.map((row)=>({...row,score:Number(row.score)}));
+    } catch {
+      const rows = await db.hotelSearchDocument.findMany({
+        where:{normalizedText:{contains:normalized,mode:"insensitive"}},
+        select:{hotelId:true,name:true,city:true,countryCode:true},
+        take:limit,
+      });
+      return rows.map((row,index)=>({id:row.hotelId,name:row.name,city:row.city,countryCode:row.countryCode,score:Math.max(0,1-index/Math.max(1,rows.length))}));
+    }
+  },
+  async upsert(document) {
+    const db = database();
+    if(!document.active){await db.hotelSearchDocument.deleteMany({where:{hotelId:document.id}});return;}
+    const normalizedText=normalizeSearchText([document.name,document.city,document.area??"",document.countryCode,...document.amenities].join(" "));
+    await db.hotelSearchDocument.upsert({
+      where:{hotelId:document.id},
+      create:{
+        hotelId:document.id,slug:document.slug,name:document.name,city:document.city,area:document.area,countryCode:document.countryCode,
+        starRating:document.starRating,normalizedText,amenities:[...document.amenities],latitude:document.latitude,longitude:document.longitude,revision:document.revision,indexedAt:new Date(),
       },
-      select: {id: true, name: true, city: true, countryCode: true},
-      take: limit,
+      update:{
+        slug:document.slug,name:document.name,city:document.city,area:document.area,countryCode:document.countryCode,
+        starRating:document.starRating,normalizedText,amenities:[...document.amenities],latitude:document.latitude,longitude:document.longitude,revision:document.revision,indexedAt:new Date(),
+      },
     });
-    return hotels.map((hotel, index) => ({...hotel, score: Math.max(0, 1 - index / Math.max(1, hotels.length))}));
   },
-  async upsert() {
-    // PostgreSQL-backed live search reads the source tables directly. No secondary index write is required.
-  },
-  async remove() {
-    // PostgreSQL-backed live search reads publication state directly. No secondary index delete is required.
+  async remove(id) {
+    await database().hotelSearchDocument.deleteMany({where:{hotelId:id}});
   },
   async health() {
     try {
-      await database().$queryRaw`SELECT 1`;
-      return {ready: true};
+      await database().$queryRaw`SELECT similarity('handmekey', 'handmekey')`;
+      return {ready:true};
     } catch (error) {
-      return {ready: false, detail: error instanceof Error ? error.message.slice(0, 200) : "database unavailable"};
+      return {ready:false,detail:error instanceof Error?error.message.slice(0,200):"search index unavailable"};
     }
   },
 };
