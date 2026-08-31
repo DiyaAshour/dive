@@ -131,6 +131,14 @@ try {
   assert.equal(noShow.cancellation.penaltyAmount, noShow.amounts.total);
   assert.equal(noShow.cancellation.refundableAmount, 0);
 
+  const noShowSettlement = await server.runPartnerReconciliation(registered.user.id, hotel.id, {from: utcDay(1), to: utcDay(3)});
+  assert.equal(noShowSettlement.status, "CLEAN");
+  assert.equal(noShowSettlement.payAtHotelCommission, 0);
+  const noShowSnapshot = noShowSettlement.snapshot as {lines?: Array<{bookingId: string; status: string; commissionDue: number}>};
+  const noShowLine = noShowSnapshot.lines?.find((line) => line.bookingId === noShow.id);
+  assert.equal(noShowLine?.status, "NO_SHOW");
+  assert.equal(noShowLine?.commissionDue, 0);
+
   const noShowList = await server.listHotelReservationCenter(registered.user.id, hotel.id, {date: today, scope: "NO_SHOW", q: ""});
   assert.equal(noShowList.reservations.length, 1);
   assert.equal(noShowList.reservations[0]?.reference, noShow.reference);
@@ -155,7 +163,7 @@ try {
   assert.equal(modifiedInventory?.available, 3);
   assert.equal(audits.length, 3);
 
-  console.log("[reservation-management-smoke] modify, cancellation, no-show, inventory, search and audit checks passed");
+  console.log("[reservation-management-smoke] modify, cancellation, no-show, zero no-show commission, inventory, search and audit checks passed");
 } finally {
   if (hotelId) await cleanupHotel(hotelId);
   await database().user.deleteMany({where: {email}});
@@ -163,6 +171,7 @@ try {
 }
 
 async function cleanupHotel(id: string) {
+  await database().partnerReconciliation.deleteMany({where: {hotelId: id}});
   const bookings = await database().booking.findMany({where: {hotelId: id}, select: {id: true}});
   const bookingIds = bookings.map((booking) => booking.id);
   if (bookingIds.length) {
