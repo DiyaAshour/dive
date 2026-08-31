@@ -1,6 +1,7 @@
-import { Activity, BadgeCheck, BedDouble, Car, ChevronDown, Coffee, Dumbbell, HeartPulse, MapPin, Plane, ShieldCheck, Sparkles, Star, Utensils, Waves, Wifi } from "lucide-react";
+import { Activity, BadgeCheck, BedDouble, Car, ChevronDown, Coffee, Dumbbell, HeartPulse, MapPin, Plane, ShieldCheck, Sparkles, Utensils, Waves, Wifi } from "lucide-react";
 import type { getPublicHotelDetails, getPublicHotelReviews } from "@platform/server";
 import type { Locale } from "@/lib/i18n";
+import { HotelReviewsHub } from "./hotel-reviews-hub";
 
 type HotelDetails = Awaited<ReturnType<typeof getPublicHotelDetails>>;
 type ReviewData = Awaited<ReturnType<typeof getPublicHotelReviews>>;
@@ -12,15 +13,6 @@ type Landmark = Readonly<{name: string; lat: number; lng: number}>;
 
 export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;reviews:ReviewData;locale:Locale}) {
   const copy=trustCopy(locale);
-  const reviewCount=reviews.summary.count;
-  const categories=[
-    {label:copy.cleanliness,value:reviews.summary.cleanliness},
-    {label:copy.service,value:reviews.summary.staff},
-    {label:copy.location,value:reviews.summary.location},
-    {label:copy.facilities,value:reviews.summary.facilities},
-    {label:copy.comfort,value:reviews.summary.comfort},
-    {label:copy.value,value:reviews.summary.value},
-  ];
   const highlights=buildHighlights(hotel,reviews,locale).slice(0,6);
   const benefitGroups=buildBenefitGroups(hotel,locale);
   const priorityAmenities=["WIFI","BREAKFAST","POOL","BEACH_ACCESS","PARKING","SPA","FAMILY_ROOMS","AIRPORT_SHUTTLE","RESTAURANT","GYM"];
@@ -28,7 +20,6 @@ export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;revie
   const quickAmenities=[...hotel.amenities]
     .sort((left,right)=>(priorityRank.get(left.code)??100)-(priorityRank.get(right.code)??100))
     .slice(0,6);
-  const latestReview=reviews.reviews[0]??null;
   const limitedOffers=hotel.offers.filter((offer)=>offer.availableToSell<=3).length;
   const uniqueRooms=new Set(hotel.offers.map((offer)=>offer.roomTypeId)).size;
   const landmarks=nearbyLandmarks(hotel.city,hotel.location).slice(0,5);
@@ -40,14 +31,7 @@ export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;revie
     </div>
 
     <div className="trustOverviewGrid">
-      <article className={`ratingSnapshot ${reviewCount===0?"isEmpty":""}`}>
-        <div className="ratingSnapshotHead">
-          <div><span className="sectionKicker">{copy.verifiedGuestRatings}</span><h2>{copy.guestRatings}</h2><p>{reviewCount?`${reviewCount} ${copy.verifiedReviews}`:copy.waitingReviews}</p></div>
-          <div className="ratingHeroScore"><strong>{reviews.summary.overall?.toFixed(1)??"—"}</strong><span>{reviewCount?copy.excellent:copy.pending}</span><small>{copy.outOf10}</small></div>
-        </div>
-        <div className="ratingCategoryGrid">{categories.map((item)=><div className="ratingCategory" key={item.label}><div><span>{item.label}</span><strong>{item.value?.toFixed(1)??"—"}</strong></div><div className="ratingTrack"><span style={{width:item.value===null?"0%":`${Math.max(0,Math.min(100,item.value*10))}%`}}/></div></div>)}</div>
-        {reviewCount===0&&<div className="ratingIntegrityNote"><ShieldCheck size={15}/>{copy.noSyntheticScores}</div>}
-      </article>
+      <HotelReviewsHub reviews={reviews} locale={locale}/>
 
       <aside className="propertyHighlightsPanel">
         <div className="sectionHeading"><span className="sectionKicker">{copy.highlights}</span><h2>{copy.propertyHighlights}</h2></div>
@@ -89,11 +73,6 @@ export function HotelTrustLayer({hotel,reviews,locale}:{hotel:HotelDetails;revie
           <div className="locationMapCard"><MapPin size={28}/><strong>{hotel.name}</strong><span>{hotel.address}</span>{hotel.location&&<a href={`https://www.google.com/maps/search/?api=1&query=${hotel.location.latitude},${hotel.location.longitude}`} target="_blank" rel="noreferrer">{copy.openMap}</a>}</div>
           <div className="nearbyList"><div className="nearbyListHead"><strong>{copy.nearby}</strong><small>{copy.approxDistance}</small></div>{landmarks.length?landmarks.map((place)=><div key={place.name}><span><MapPin size={14}/>{place.name}</span><strong>{formatDistance(place.distanceKm,locale)}</strong></div>):<p className="nearbyEmpty">{copy.noNearbyData}</p>}</div>
         </div>
-      </section>
-
-      <section className="verifiedGuestVoice">
-        <div className="sectionHeading"><span className="sectionKicker">{copy.guestVoice}</span><h2>{copy.verifiedGuestVoice}</h2></div>
-        {latestReview?<article className="guestQuote"><div className="guestQuoteScore"><Star size={17} fill="currentColor"/><strong>{latestReview.overall}/10</strong></div>{latestReview.title&&<h3>{latestReview.title}</h3>}<blockquote>“{latestReview.comment}”</blockquote><div><strong>{latestReview.guestName}</strong><span>{copy.verifiedStay} · {latestReview.stayCompleted}</span></div></article>:<div className="guestQuoteEmpty"><ShieldCheck size={25}/><h3>{copy.noQuoteYet}</h3><p>{copy.onlyVerifiedQuotes}</p></div>}
       </section>
     </div>
   </section>;
