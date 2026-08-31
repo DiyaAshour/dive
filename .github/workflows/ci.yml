@@ -7,7 +7,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16-alpine
@@ -92,6 +92,9 @@ jobs:
 
       - name: Torture booking and payment concurrency
         run: npm run reliability-torture:smoke
+
+      - name: Certify platform 10x foundation
+        run: npm run platform-10x:smoke
 
       - name: Verify loyalty domain rules
         run: npm run loyalty-rule:smoke
