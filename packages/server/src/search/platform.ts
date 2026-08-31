@@ -90,7 +90,7 @@ export async function reconcileHotelSearchIndex(batchSize = 500): Promise<{scann
       {updatedAt:{gt:cursor.cursorAt}},
       {updatedAt:cursor.cursorAt,id:{gt:cursor.cursorId ?? ""}},
     ],
-  } : undefined;
+  } : {};
   const hotels = await db.hotel.findMany({
     where,
     select:{id:true,publishRevision:true,status:true,verified:true,updatedAt:true},
