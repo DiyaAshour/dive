@@ -4,6 +4,7 @@ import {ChevronDown, Coins, Languages, MapPin} from "lucide-react";
 import {useEffect, useMemo, useRef, useState} from "react";
 import {currencyDisplayName, hasReferenceRate} from "@/lib/guest-currency";
 import {GUEST_CURRENCIES, GUEST_LOCALE_OPTIONS, guestIntlLocale, type GuestCurrency, type GuestLocale} from "@/lib/guest-market";
+import {guestUiCopy} from "@/lib/guest-ui-copy";
 import styles from "./market-switcher.module.css";
 
 type Props = Readonly<{
@@ -31,12 +32,6 @@ function currencyFlag(code:GuestCurrency):string {
   return String.fromCodePoint(...countryCode.split("").map((char)=>127397+char.charCodeAt(0)));
 }
 
-function uiCopy(locale:GuestLocale) {
-  if(locale==="ar")return {title:"اللغة والعملة",subtitle:"خصّص طريقة عرض HandMeKey",language:"اللغة",currency:"العملة",detected:"السوق المكتشف",cancel:"إلغاء",apply:"تطبيق",saving:"جارٍ الحفظ…",error:"تعذر حفظ الإعدادات. حاول مرة أخرى."};
-  if(locale==="zh")return {title:"语言和货币",subtitle:"自定义 HandMeKey 的显示方式",language:"语言",currency:"货币",detected:"检测到的市场",cancel:"取消",apply:"应用",saving:"正在保存…",error:"无法保存设置，请重试。"};
-  return {title:"Language & currency",subtitle:"Choose how HandMeKey is shown to you",language:"Language",currency:"Currency",detected:"Detected market",cancel:"Cancel",apply:"Apply",saving:"Saving…",error:"Could not save your preferences. Try again."};
-}
-
 export function MarketSwitcher({locale,currency,countryCode=null,edge}:Props) {
   const rootRef=useRef<HTMLDivElement>(null);
   const [open,setOpen]=useState(false);
@@ -44,7 +39,7 @@ export function MarketSwitcher({locale,currency,countryCode=null,edge}:Props) {
   const [currencyValue,setCurrencyValue]=useState<GuestCurrency>(currency);
   const [saving,setSaving]=useState(false);
   const [error,setError]=useState(false);
-  const copy=uiCopy(locale);
+  const copy=guestUiCopy(locale).market;
 
   const currencies=useMemo(()=>{
     const rank=new Map(priority.map((code,index)=>[code,index]));
