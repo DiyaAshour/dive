@@ -29,8 +29,25 @@ export async function withRetry<T>(operation: (attempt: number) => Promise<T>, p
   throw lastError;
 }
 
+export async function withBookingConcurrencyRetry<T>(operation: (attempt: number) => Promise<T>): Promise<T> {
+  return withRetry(operation, {
+    attempts: 4,
+    baseDelayMs: 15,
+    maxDelayMs: 180,
+    jitterRatio: 0.4,
+    shouldRetry: isRetryableBookingConcurrency,
+  });
+}
+
 export function isSerializationConflict(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as {code?: unknown}).code === "P2034";
+}
+
+export function isRetryableBookingConcurrency(error: unknown): boolean {
+  if (isSerializationConflict(error)) return true;
+  if (typeof error !== "object" || error === null || !("code" in error)) return false;
+  const code = String((error as {code?: unknown}).code ?? "");
+  return code === "BOOKING_CONCURRENCY_RETRY" || code === "INVENTORY_CHANGED";
 }
 
 export function isTransientDatabaseFailure(error: unknown): boolean {
