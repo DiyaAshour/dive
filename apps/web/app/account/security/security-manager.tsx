@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, KeyRound, LogOut, ShieldCheck } from "lucide-react";
-import { dictionary, type Locale } from "@/lib/i18n";
+import { guestDictionary } from "@/lib/guest-i18n";
+import { guestIntlLocale, type GuestLocale } from "@/lib/guest-market";
+import { securityUiCopy } from "@/lib/security-ui-copy";
 
 type SessionView = {id:string;scope:"STANDARD"|"ADMIN";current:boolean;createdAt:string;lastUsedAt:string;expiresAt:string};
-type Props = Readonly<{locale: Locale}>;
+type Props = Readonly<{locale: GuestLocale}>;
 
 export function SecurityManager({locale}: Props) {
-  const copy = dictionary(locale);
+  const copy = guestDictionary(locale);
+  const ui = securityUiCopy(locale);
   const [sessions,setSessions] = useState<SessionView[]>([]);
   const [loadingSessions,setLoadingSessions] = useState(true);
   const [busySession,setBusySession] = useState<string|null>(null);
@@ -56,7 +59,7 @@ export function SecurityManager({locale}: Props) {
     try {
       const result = await requestJson<{revoked:number}>("/api/v1/me/sessions/revoke-others",{method:"POST"});
       setSessions((items)=>items.filter((item)=>item.current));
-      setMessage(result.revoked ? (locale === "ar" ? `تم إغلاق ${result.revoked} جلسة أخرى.` : `${result.revoked} other session${result.revoked===1?"":"s"} closed.`) : copy.security.noOthers);
+      setMessage(result.revoked ? ui.closedSessions(result.revoked) : copy.security.noOthers);
     } catch (cause) { setError(messageFrom(cause,locale)); }
     finally { setBusySession(null); }
   }
@@ -75,7 +78,7 @@ export function SecurityManager({locale}: Props) {
       <div className="securityHeading"><span><ShieldCheck size={19}/></span><div><h2>{copy.security.sessions}</h2><p>{copy.security.sessionsBody}</p></div></div>
       {loadingSessions?<p className="muted">{copy.security.checking}</p>:<div className="sessionList">
         {sessions.map((session)=><article className="sessionRow" key={session.id}>
-          <div><strong>{session.current?copy.security.thisBrowser:session.scope==="ADMIN"?(locale==="ar"?"جلسة بوابة الإدارة":"Admin portal session"):copy.security.other}</strong><span>{session.current&&<em><CheckCircle2 size={13}/> {copy.security.current}</em>}</span><small>{copy.security.lastActive} {formatTime(session.lastUsedAt,locale)} · {copy.security.created} {formatDate(session.createdAt,locale)} · {copy.security.expires} {formatDate(session.expiresAt,locale)}</small></div>
+          <div><strong>{session.current?copy.security.thisBrowser:session.scope==="ADMIN"?ui.adminSession:copy.security.other}</strong><span>{session.current&&<em><CheckCircle2 size={13}/> {copy.security.current}</em>}</span><small>{copy.security.lastActive} {formatTime(session.lastUsedAt,locale)} · {copy.security.created} {formatDate(session.createdAt,locale)} · {copy.security.expires} {formatDate(session.expiresAt,locale)}</small></div>
           {!session.current&&<button className="sessionRevoke" disabled={busySession===session.id} onClick={()=>void revokeSession(session.id)}><LogOut size={15}/>{busySession===session.id?copy.security.closing:copy.security.close}</button>}
         </article>)}
         {!sessions.length&&<p className="muted">{copy.security.none}</p>}
@@ -93,6 +96,6 @@ async function requestJson<T=unknown>(url:string,init?:RequestInit):Promise<T>{
   if(!response.ok||!payload||payload.error)throw new Error(payload?.error?.message||`Request failed (${response.status})`);
   return payload.data as T;
 }
-function messageFrom(value:unknown,locale:Locale){return value instanceof Error?value.message:(locale === "ar"?"حدث خطأ غير متوقع":"An unexpected error occurred");}
-function formatDate(value:string,locale:Locale){return new Date(value).toLocaleDateString(locale === "ar"?"ar-JO":"en",{year:"numeric",month:"short",day:"numeric"});}
-function formatTime(value:string,locale:Locale){return new Date(value).toLocaleString(locale === "ar"?"ar-JO":"en",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}
+function messageFrom(value:unknown,locale:GuestLocale){return value instanceof Error?value.message:securityUiCopy(locale).unexpected;}
+function formatDate(value:string,locale:GuestLocale){return new Date(value).toLocaleDateString(guestIntlLocale(locale),{year:"numeric",month:"short",day:"numeric"});}
+function formatTime(value:string,locale:GuestLocale){return new Date(value).toLocaleString(guestIntlLocale(locale),{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}
