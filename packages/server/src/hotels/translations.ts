@@ -4,8 +4,8 @@ import { database } from "@platform/database";
 const supportedLocales = new Set<string>(HOTEL_CONTENT_LOCALES);
 
 export function normalizeHotelContentLocale(value: string): HotelContentLocale | null {
-  const locale = value.trim().toLowerCase().split(/[-_]/)[0];
-  return supportedLocales.has(locale) ? locale as HotelContentLocale : null;
+  const locale = value.trim().toLowerCase().split(/[-_]/)[0] ?? "";
+  return locale && supportedLocales.has(locale) ? locale as HotelContentLocale : null;
 }
 
 export async function getPublicHotelTranslation(hotelIdentifier: string, requestedLocale: string) {
