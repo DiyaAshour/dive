@@ -48,6 +48,7 @@ import "./responsive-polish.css";
 import "./zoom-resilience.css";
 import "./home-commerce.css";
 import "./hotel-mobile-commerce.css";
+import "./hotel-reviews-hub.css";
 import "./hotel-essentials-compact.css";
 import "./hotel-mobile-head.css";
 
