@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {CalendarDays, CarFront, Home, Search, Sparkles, UserRound} from "lucide-react";
-import {usePathname, useSearchParams} from "next/navigation";
+import {usePathname} from "next/navigation";
 import {guestUiCopy} from "@/lib/guest-ui-copy";
 import type {GuestLocale} from "@/lib/guest-market";
 
@@ -10,11 +10,10 @@ type Props=Readonly<{locale:GuestLocale;rewardsHref:string}>;
 
 export function MobileAppNav({locale,rewardsHref}:Props){
   const pathname=usePathname();
-  const searchParams=useSearchParams();
   const copy=guestUiCopy(locale).mobileNav;
   if(pathname.startsWith("/hotel/")||pathname.startsWith("/checkout")||pathname.startsWith("/booking/")||pathname.startsWith("/partner")||pathname.startsWith("/admin"))return null;
 
-  const carMode=pathname.startsWith("/cars")||(pathname.startsWith("/trips")&&searchParams.get("service")==="cars");
+  const carMode=pathname.startsWith("/cars");
   const bookingsLabel=carMode?(locale==="ar"?"حجوزاتي":"Bookings"):copy.trips;
   const BookingsIcon=carMode?CarFront:CalendarDays;
   const tripsHref=carMode?"/trips?service=cars":"/trips";
