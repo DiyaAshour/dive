@@ -1,4 +1,5 @@
 :global(.premiumHero){overflow:visible}
+:global(.premiumHero):before{right:0}
 
 .root{
   position:relative;
