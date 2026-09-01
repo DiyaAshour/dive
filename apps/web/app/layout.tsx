@@ -51,6 +51,7 @@ import "./hotel-mobile-commerce.css";
 import "./hotel-reviews-hub.css";
 import "./hotel-essentials-compact.css";
 import "./hotel-mobile-head.css";
+import "./brand-identity.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const identity = await getSiteIdentityConfig();
