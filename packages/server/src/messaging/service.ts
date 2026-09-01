@@ -3,6 +3,8 @@ import { database } from "@platform/database";
 import { ApplicationError, notFound } from "../errors";
 import { requireBookingAccess } from "../bookings/authorization";
 import { requireHotelPermission } from "../hotels/authorization";
+import { queueEmail } from "../communications/email";
+import { manualEmailContent } from "../communications/templates";
 
 export type MessagingBookingAccess = Readonly<{userId?: string | null; accessToken?: string | null}>;
 
@@ -18,7 +20,7 @@ export async function listGuestBookingMessages(bookingId: string, context: Messa
 export async function sendGuestBookingMessage(bookingId: string, input: BookingMessageInput, context: MessagingBookingAccess) {
   await requireBookingAccess(bookingId, context);
   const db = database();
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const booking = await tx.booking.findUnique({where: {id: bookingId}, select: {id: true, hotelId: true, status: true}});
     if (!booking) notFound("Booking");
     if (booking.status !== "CONFIRMED" && booking.status !== "MODIFIED") throw new ApplicationError("MESSAGING_NOT_AVAILABLE", "Messaging is available only for confirmed reservations", 409);
@@ -27,6 +29,11 @@ export async function sendGuestBookingMessage(bookingId: string, input: BookingM
     await tx.bookingConversation.update({where: {id: conversation.id}, data: {updatedAt: message.createdAt}});
     return {id: message.id, senderKind: message.senderKind, body: message.body, createdAt: message.createdAt};
   });
+
+  await queueBookingMessageEmails(bookingId, result.id, "GUEST", result.body).catch((error) => {
+    console.error(JSON.stringify({event: "booking_message_email_failed", bookingId, messageId: result.id, message: error instanceof Error ? error.message : "unknown error"}));
+  });
+  return result;
 }
 
 export async function listHotelConversations(actorUserId: string, hotelId: string) {
@@ -66,7 +73,7 @@ export async function listHotelBookingMessages(actorUserId: string, hotelId: str
 
 export async function sendHotelBookingMessage(actorUserId: string, hotelId: string, bookingId: string, input: BookingMessageInput) {
   await requireHotelPermission(actorUserId, hotelId, "bookings:manage");
-  return database().$transaction(async (tx) => {
+  const result = await database().$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({where: {id: bookingId, hotelId}, select: {id: true, status: true}});
     if (!booking) notFound("Booking");
     if (booking.status !== "CONFIRMED" && booking.status !== "MODIFIED") throw new ApplicationError("MESSAGING_NOT_AVAILABLE", "Messaging is available only for confirmed reservations", 409);
@@ -75,5 +82,84 @@ export async function sendHotelBookingMessage(actorUserId: string, hotelId: stri
     await tx.bookingConversation.update({where: {id: conversation.id}, data: {updatedAt: message.createdAt}});
     await tx.auditLog.create({data: {hotelId, actorUserId, action: "BOOKING_MESSAGE_SENT", entityType: "Booking", entityId: bookingId, after: {messageId: message.id, bodyLength: input.body.length}}});
     return {id: message.id, senderKind: message.senderKind, body: message.body, createdAt: message.createdAt};
+  });
+
+  await queueBookingMessageEmails(bookingId, result.id, "HOTEL", result.body).catch((error) => {
+    console.error(JSON.stringify({event: "booking_message_email_failed", bookingId, messageId: result.id, message: error instanceof Error ? error.message : "unknown error"}));
+  });
+  return result;
+}
+
+async function queueBookingMessageEmails(bookingId: string, messageId: string, senderKind: "GUEST" | "HOTEL", body: string) {
+  const booking = await database().booking.findUnique({
+    where: {id: bookingId},
+    include: {
+      hotel: {
+        select: {
+          name: true,
+          memberships: {
+            where: {status: "ACTIVE", role: {in: ["OWNER", "MANAGER", "FRONT_DESK"]}},
+            select: {user: {select: {id: true, email: true, displayName: true}}},
+          },
+        },
+      },
+    },
+  });
+  if (!booking) return {queued: 0};
+
+  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").trim().replace(/\/$/, "");
+  if (senderKind === "HOTEL") {
+    const bookingUrl = `${site}/booking/${encodeURIComponent(booking.id)}`;
+    const subject = `New message from ${booking.hotel.name} · ${booking.reference}`;
+    const content = manualEmailContent({
+      subject,
+      textBody: `Hello ${booking.guestName},\n\n${booking.hotel.name} sent you a new message about booking ${booking.reference}:\n\n${body}\n\nOpen your booking and reply: ${bookingUrl}`,
+    });
+    await queueEmail({
+      kind: "BOOKING_MESSAGE",
+      toEmail: booking.guestEmail,
+      toName: booking.guestName,
+      subject: content.subject,
+      htmlBody: content.html,
+      textBody: content.text,
+      dedupeKey: `BOOKING_MESSAGE:guest:${messageId}`,
+      bookingId: booking.id,
+      hotelId: booking.hotelId,
+      userId: booking.userId,
+    });
+    return {queued: 1};
+  }
+
+  const dashboardUrl = `${site}/hotel-dashboard/reservations?hotelId=${encodeURIComponent(booking.hotelId)}`;
+  const subject = `New guest message · ${booking.reference} · ${booking.guestName}`;
+  const content = manualEmailContent({
+    subject,
+    textBody: `${booking.guestName} sent a new message about booking ${booking.reference}:\n\n${body}\n\nOpen the reservation in Partner Hub: ${dashboardUrl}`,
+  });
+  const recipients = uniqueRecipients(booking.hotel.memberships.map((membership) => membership.user));
+  for (const recipient of recipients) {
+    await queueEmail({
+      kind: "BOOKING_MESSAGE",
+      toEmail: recipient.email,
+      toName: recipient.displayName,
+      subject: content.subject,
+      htmlBody: content.html,
+      textBody: content.text,
+      dedupeKey: `BOOKING_MESSAGE:partner:${messageId}:${recipient.id}`,
+      bookingId: booking.id,
+      hotelId: booking.hotelId,
+      userId: recipient.id,
+    });
+  }
+  return {queued: recipients.length};
+}
+
+function uniqueRecipients<T extends {id: string; email: string; displayName: string}>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const email = item.email.trim().toLowerCase();
+    if (!email || seen.has(email)) return false;
+    seen.add(email);
+    return true;
   });
 }
