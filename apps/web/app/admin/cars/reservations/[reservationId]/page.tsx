@@ -25,7 +25,7 @@ export default async function AdminCarReservationPage({params}: {params: Promise
   return <AdminShell locale={locale} principal={principal} active="cars" counts={counts}>
     <div className="adminBreadcrumb"><Link href="/admin/cars/reservations"><ArrowLeft size={15}/>{ar ? "كل حجوزات السيارات" : "All car reservations"}</Link><span>/</span><strong>{reservation.reference}</strong></div>
 
-    <div className={styles.detailHeader}><div><span className="eyebrow">HandMeKey Cars · Booking Detail</span><h1>{reservation.reference}</h1><p>{ar ? "عرض تشغيلي ومالي كامل للحجز من منظور المنصة." : "Complete operational and financial booking view from the platform side."}</p></div><div className={styles.governance}><Status value={reservation.status}/><span className={styles.status}>{reservation.paymentMode.replaceAll("_", " ")}</span></div></div>
+    <div className={styles.detailHeader}><div><span className="eyebrow">HandMeKey Cars · Booking Detail</span><h1>{reservation.reference}</h1><p>{ar ? "عرض تشغيلي ومالي كامل للحجز من منظور المنصة." : "Complete operational and financial booking view from the platform side."}</p></div><div className={styles.governance}><Status value={reservation.status}/><span className={styles.status}>{reservation.paymentMode.replaceAll("_", " ")}</span><span className={styles.status}>{reservation.collectedBy === "HANDMEKEY" ? "HANDMEKEY COLLECTED" : "COMPANY COLLECTED"}</span></div></div>
 
     <section className={styles.reservationSummary}>
       <Summary label={ar ? "الإجمالي" : "Booking total"} value={formatMoney(reservation.total, reservation.currency, locale)} small={`${reservation.rentalDays} ${ar ? "يوم" : "days"}`}/>
@@ -37,7 +37,8 @@ export default async function AdminCarReservationPage({params}: {params: Promise
     <section className={styles.panel}>
       <div className={styles.panelHeader}><div><span className="eyebrow">{ar ? "المالية" : "Finance"}</span><h2>{ar ? "الوضع المالي لهذا الحجز" : "Financial position for this booking"}</h2><p>{financialExplanation(reservation, ar)}</p></div><CircleDollarSign size={20}/></div>
       <div className={styles.infoList}>
-        <Info icon={reservation.collectedBy === "HANDMEKEY" ? <WalletCards size={14}/> : <Landmark size={14}/>} label={ar ? "الجهة التي تحصل المبلغ" : "Collector"} value={reservation.collectedBy === "HANDMEKEY" ? "HandMeKey" : (ar ? "شركة التأجير" : "Rental company")}/>
+        <Info icon={reservation.collectedBy === "HANDMEKEY" ? <WalletCards size={14}/> : <Landmark size={14}/>} label={ar ? "الجهة التي استلمت المبلغ" : "Payment collector"} value={reservation.collectedBy === "HANDMEKEY" ? "HandMeKey" : (ar ? "شركة التأجير" : "Rental company")}/>
+        <Info label={ar ? "طريقة الدفع" : "Payment mode"} value={reservation.paymentMode.replaceAll("_", " ")}/>
         <Info label={ar ? "الأهلية المالية" : "Finance eligibility"} value={reservation.financeEligible ? (ar ? "مستحق ماليًا" : "Financially eligible") : (ar ? "بانتظار اكتمال شرط التحصيل" : "Pending collection condition")}/>
         <Info label={ar ? "عمولة HandMeKey" : "HandMeKey commission"} value={formatMoney(reservation.platformCommission, reservation.currency, locale)}/>
         <Info label={ar ? "صافي حصة الشركة" : "Partner net share"} value={formatMoney(reservation.estimatedPartnerNet, reservation.currency, locale)}/>
@@ -85,9 +86,8 @@ export default async function AdminCarReservationPage({params}: {params: Promise
           <Info label={ar ? "الإجمالي" : "Total"} value={formatMoney(reservation.total, reservation.currency, locale)}/>
           <Info label={ar ? "عمولة المنصة" : "Platform commission"} value={formatMoney(reservation.platformCommission, reservation.currency, locale)}/>
           <Info label={ar ? "صافي الشريك" : "Partner net"} value={formatMoney(reservation.estimatedPartnerNet, reservation.currency, locale)}/>
-          <Info label={ar ? "طريقة التحصيل" : "Collection mode"} value={reservation.paymentMode.replaceAll("_", " ")}/>
         </div>
-        <p className={styles.muted} style={{fontSize: 10, marginTop: 12}}>{ar ? "PAY_NOW يعني أن HandMeKey هو المحصّل، وPAY_AT_COUNTER يعني أن شركة التأجير هي المحصّل. حجوزات الدفع عند الشركة لا تنشئ عمولة مستحقة إلا بعد COMPLETED." : "PAY_NOW is platform-collected; PAY_AT_COUNTER is company-collected. Company-collected bookings do not create commission receivable until COMPLETED."}</p>
+        <p className={styles.muted} style={{fontSize: 10, marginTop: 12}}>{ar ? "طريقة الدفع تحدد متى يدفع العميل، أما Payment Collector فيحدد أين وصلت الأموال. لذلك يمكن أن يكون الحجز PAY_NOW والمبلغ يذهب مباشرة إلى شركة التأجير عبر بوابة دفع الشركة، أو يذهب إلى HandMeKey." : "Payment mode defines when the customer pays; Payment Collector defines where the funds went. A PAY_NOW booking can therefore be collected directly by the rental company's gateway or by HandMeKey."}</p>
       </section>
 
       <section className={styles.panel}>
@@ -110,8 +110,8 @@ function Status({value}: {value: string}) {return <span className={`${styles.sta
 function Timeline({label, value, locale}: {label: string; value: string; locale: "en" | "ar"}) {return <div><i/><strong>{label}</strong><time>{formatDateTime(value, locale)}</time></div>}
 function formatDateTime(value: string, locale: "en" | "ar") {return new Intl.DateTimeFormat(locale === "ar" ? "ar-JO" : "en-GB", {day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"}).format(new Date(value))}
 function formatMoney(value: number, currency: string, locale: "en" | "ar") {return new Intl.NumberFormat(locale === "ar" ? "ar-JO" : "en-GB", {style: "currency", currency, maximumFractionDigits: 2}).format(value)}
-function financialExplanation(reservation: {paymentMode: string; status: string; companyName: string; financeEligible: boolean}, ar: boolean) {
+function financialExplanation(reservation: {collectedBy: string; companyName: string; financeEligible: boolean}, ar: boolean) {
   if (!reservation.financeEligible) return ar ? "لا يوجد رصيد مستحق لهذا الحجز حتى الآن؛ سيصبح مستحقًا عندما يتحقق شرط التحصيل." : "No balance is due for this booking yet; it becomes due when the collection condition is met.";
-  if (reservation.paymentMode === "PAY_NOW") return ar ? `HandMeKey حصّل المبلغ؛ يتم حجز العمولة ودفع صافي الحصة إلى ${reservation.companyName}.` : `HandMeKey collected the payment; commission is withheld and the net share is payable to ${reservation.companyName}.`;
-  return ar ? `${reservation.companyName} حصّلت المبلغ؛ عمولة HandMeKey أصبحت مستحقة على الشركة.` : `${reservation.companyName} collected the payment; HandMeKey commission is now receivable from the company.`;
+  if (reservation.collectedBy === "HANDMEKEY") return ar ? `HandMeKey استلم المبلغ؛ تُحجز العمولة ويصبح صافي حصة ${reservation.companyName} مستحقًا لها.` : `HandMeKey collected the payment; commission is withheld and the net share is payable to ${reservation.companyName}.`;
+  return ar ? `${reservation.companyName} استلمت المبلغ؛ عمولة HandMeKey أصبحت مستحقة على الشركة.` : `${reservation.companyName} collected the payment; HandMeKey commission is now receivable from the company.`;
 }
