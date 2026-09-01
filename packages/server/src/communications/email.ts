@@ -1,5 +1,6 @@
 import { database } from "@platform/database";
 
+// Resend is selected automatically in production when RESEND_API_KEY is configured.
 const MAX_ATTEMPTS = 8;
 const STALE_PROCESSING_MS = 10 * 60_000;
 const DEFAULT_EMAIL_FROM = "HandMeKey <bookings@handmekey.com>";
