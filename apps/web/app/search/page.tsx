@@ -57,7 +57,7 @@ export default async function SearchPage({searchParams}: {searchParams: Promise<
   const resultKind = onlyDemoResults ? ((data?.count??0)===1?copy.search.demoProperty:copy.search.demoProperties) : ((data?.count??0)===1?copy.search.verifiedProperty:copy.search.verifiedProperties);
   const resolvedLabel = data?.resolvedDestination ? (locale === "ar" ? data.resolvedDestination.nameAr ?? data.resolvedDestination.nameEn : data.resolvedDestination.nameEn) : raw.destination;
   const guests=parsed.success?parsed.data:{adults:2,children:0,infants:0,pets:0};
-  const guestSummary=guestMixLabel(locale,guests.adults,guests.children,guests.infants,guests.pets);
+  const guestSummary=guestMixLabel(market.baseLocale,guests.adults,guests.children,guests.infants,guests.pets);
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
