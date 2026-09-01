@@ -249,7 +249,7 @@ export async function listCarCompanyReservations(userId: string) {
 
 export async function listPublicCarVehicles() {
   const rows = await database().carVehicle.findMany({
-    where: {status: "ACTIVE", company: {status: "ACTIVE", verified: true}},
+    where: {status: "ACTIVE", deposit: {gt: 0}, company: {status: "ACTIVE", verified: true}},
     orderBy: [{dailyPrice: "asc"}, {createdAt: "desc"}],
     include: {company: true, homeLocation: true},
   });
