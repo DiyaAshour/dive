@@ -5,5 +5,11 @@
       "main": true,
       "*": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/v1/internal/email-maintenance",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
