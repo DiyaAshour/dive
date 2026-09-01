@@ -1,5 +1,5 @@
 import { database } from "@platform/database";
-import { bookingEmail, partnerBookingEmail, priceWatchEmail } from "./templates";
+import { bookingEmail, manualEmailContent, partnerBookingEmail, priceWatchEmail } from "./templates";
 import { queueEmail } from "./email";
 import { ensureBookingInvoice, ensureCancellationNote } from "../finance/service";
 
@@ -160,6 +160,54 @@ export async function syncPriceWatchNotificationEmails(limit = 500) {
     }
   }
   return {scanned: notifications.length};
+}
+
+export async function queuePartnerStatementEmail(statementId: string) {
+  const db = database();
+  const statement = await db.partnerStatement.findUnique({where: {id: statementId}});
+  if (!statement) return {queued: 0};
+  const hotel = await db.hotel.findUnique({
+    where: {id: statement.hotelId},
+    select: {
+      name: true,
+      memberships: {
+        where: {status: "ACTIVE", role: {in: ["OWNER", "MANAGER"]}},
+        select: {user: {select: {id: true, email: true, displayName: true}}},
+      },
+    },
+  });
+  if (!hotel) return {queued: 0};
+
+  const financeUrl = `${siteOrigin()}/hotel-dashboard/finance?hotelId=${encodeURIComponent(statement.hotelId)}`;
+  const subject = `Partner statement issued · ${statement.statementNumber} · ${hotel.name}`;
+  const content = manualEmailContent({
+    subject,
+    textBody: [
+      `A new HandMeKey partner statement has been issued for ${hotel.name}.`,
+      `Statement: ${statement.statementNumber}`,
+      `Period: ${dateKey(statement.periodStart)} → ${dateKey(statement.periodEnd)}`,
+      `Booking gross: ${Number(statement.bookingGross).toFixed(2)} ${statement.currency}`,
+      `Platform commission: ${Number(statement.platformCommission).toFixed(2)} ${statement.currency}`,
+      `Refunds: ${Number(statement.refunds).toFixed(2)} ${statement.currency}`,
+      `Open Finance: ${financeUrl}`,
+    ].join("\n"),
+  });
+
+  const recipients = uniqueRecipients(hotel.memberships.map((membership) => membership.user));
+  for (const recipient of recipients) {
+    await queueEmail({
+      kind: "PARTNER_STATEMENT",
+      toEmail: recipient.email,
+      toName: recipient.displayName,
+      subject: content.subject,
+      htmlBody: content.html,
+      textBody: content.text,
+      dedupeKey: `PARTNER_STATEMENT:${statement.id}:${recipient.id}`,
+      hotelId: statement.hotelId,
+      userId: recipient.id,
+    });
+  }
+  return {queued: recipients.length};
 }
 
 function siteOrigin(): string {
