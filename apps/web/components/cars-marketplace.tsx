@@ -15,6 +15,7 @@ export type CarSearchValues = Readonly<{
   returnDate: string;
   returnTime: string;
   driverAge: string;
+  brand?: string;
 }>;
 
 type Props = Readonly<{locale: Locale; initialSearch: CarSearchValues}>;
@@ -24,7 +25,7 @@ type SortValue = "recommended"|"priceAsc"|"priceDesc"|"rating"|"seats";
 export function CarsMarketplace({locale, initialSearch}: Props) {
   const ar = locale === "ar";
   const [query, setQuery] = useState("");
-  const [brand, setBrand] = useState("");
+  const [brand, setBrand] = useState(initialSearch.brand ?? "");
   const [category, setCategory] = useState("");
   const [fuel, setFuel] = useState("");
   const [transmission, setTransmission] = useState("");
@@ -232,6 +233,7 @@ export function CarsMarketplace({locale, initialSearch}: Props) {
 function CarCard({car,ar,copy,rentalDays,search}:{car:DemoCar;ar:boolean;copy:any;rentalDays:number;search:CarSearchValues}) {
   const total=car.dailyPrice*rentalDays;
   const params=new URLSearchParams({pickup:search.pickup,dropoff:search.dropoff,pickupDate:search.pickupDate,pickupTime:search.pickupTime,returnDate:search.returnDate,returnTime:search.returnTime,driverAge:search.driverAge});
+  if (search.brand) params.set("brand", search.brand);
   return <article className={styles.carCard}>
     <div className={styles.carMedia}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={(event)=>{event.currentTarget.src=`https://loremflickr.com/1200/800/car?lock=${Math.abs(hash(car.id))}`;}}/><span className={styles.demoPill}>{copy.demo}</span><span className={styles.categoryPill}>{categoryLabel(car.category,ar)}</span></div>
     <div className={styles.carMain}>
