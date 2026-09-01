@@ -37,12 +37,16 @@ export default async function AdminCarCompaniesPage({searchParams}: {searchParam
         {(query.q || query.status) && <Link className="secondaryButton" href="/admin/cars/companies">{ar ? "مسح" : "Clear"}</Link>}
       </form>
 
-      {companies.length ? <div className={styles.companyList}>{companies.map((company) => <article className={styles.companyCard} key={company.id}>
-        <div className={styles.identity}><div className={styles.heroActions}><Status value={company.status}/>{company.verified && <span className={styles.verified}><BadgeCheck size={14}/>{ar ? "موثقة" : "Verified"}</span>}</div><h2>{company.name}</h2><p>{company.slug}</p><small><MapPin size={11}/> {company.city}, {company.countryCode}</small></div>
-        <div className={styles.stats}><span><strong>{company.counts.vehicles}</strong>{ar ? "سيارات" : "Vehicles"}</span><span><strong>{company.counts.reservations}</strong>{ar ? "كل الحجوزات" : "Bookings"}</span><span><strong>{company.upcomingReservations}</strong>{ar ? "قادمة" : "Upcoming"}</span><span><strong>{company.counts.locations}</strong>{ar ? "فروع" : "Locations"}</span></div>
-        <div className={styles.meta}><strong>{formatMoney(company.bookedValue, company.currency, locale)}</strong><span>{ar ? "قيمة حجوزات مؤكدة" : "Confirmed booked value"}</span><small>{ar ? "عمولة المنصة" : "Commission"}: {(company.commissionRate * 100).toFixed(1)}%</small></div>
-        <div className={styles.heroActions}><Link className="secondaryButton" href={`/admin/cars/reservations?companyId=${company.id}`}>{ar ? "الحجوزات" : "Bookings"}</Link><Link className="primaryButton" href={`/admin/cars/companies/${company.id}`}>{ar ? "إدارة" : "Manage"}</Link></div>
-      </article>)}</div> : <div className={styles.empty}>{ar ? "لا توجد شركات تطابق البحث." : "No companies match these filters."}</div>}
+      {companies.length ? <div className={styles.companyList}>{companies.map((company) => {
+        const companyHref = `/admin/cars/companies/${company.id}`;
+        const reservationsHref = `/admin/cars/reservations?companyId=${encodeURIComponent(company.id)}`;
+        return <article className={styles.companyCard} key={company.id}>
+          <div className={styles.identity}><div className={styles.heroActions}><Status value={company.status}/>{company.verified && <span className={styles.verified}><BadgeCheck size={14}/>{ar ? "موثقة" : "Verified"}</span>}</div><h2><a className={styles.companyNameLink} href={companyHref}>{company.name}</a></h2><p>{company.slug}</p><small><MapPin size={11}/> {company.city}, {company.countryCode}</small></div>
+          <div className={styles.stats}><span><strong>{company.counts.vehicles}</strong>{ar ? "سيارات" : "Vehicles"}</span><span><strong>{company.counts.reservations}</strong>{ar ? "كل الحجوزات" : "Bookings"}</span><span><strong>{company.upcomingReservations}</strong>{ar ? "قادمة" : "Upcoming"}</span><span><strong>{company.counts.locations}</strong>{ar ? "فروع" : "Locations"}</span></div>
+          <div className={styles.meta}><strong>{formatMoney(company.bookedValue, company.currency, locale)}</strong><span>{ar ? "قيمة حجوزات مؤكدة" : "Confirmed booked value"}</span><small>{ar ? "عمولة المنصة" : "Commission"}: {(company.commissionRate * 100).toFixed(1)}%</small></div>
+          <div className={`${styles.heroActions} ${styles.companyActions}`}><a className="secondaryButton" href={reservationsHref}>{ar ? "الحجوزات" : "Bookings"}</a><a className="primaryButton" href={companyHref}>{ar ? "إدارة" : "Manage"}</a></div>
+        </article>;
+      })}</div> : <div className={styles.empty}>{ar ? "لا توجد شركات تطابق البحث." : "No companies match these filters."}</div>}
     </section>
   </AdminShell>;
 }
