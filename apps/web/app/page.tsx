@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CreditCard, MapPin, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Car, CreditCard, MapPin, Search, ShieldCheck } from "lucide-react";
 import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
+import { CarBookingSearch } from "@/components/car-booking-search";
 import { CustomerHeader } from "@/components/customer-header";
 import { HomeBookingSearch } from "@/components/home-booking-search";
 import { HomeValueCarousel } from "@/components/home-value-carousel";
@@ -10,6 +11,7 @@ import { guestUiCopy } from "@/lib/guest-ui-copy";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
 import destinationStyles from "./city-discovery.module.css";
+import serviceStyles from "./home-service-switch.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +46,10 @@ function flagEmoji(countryCode: string) {
   return countryCode.toUpperCase().replace(/[A-Z]/g, (letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)));
 }
 
-export default async function HomePage() {
+export default async function HomePage({searchParams}: {searchParams: Promise<{service?: string}>}) {
+  const params = await searchParams;
+  const service = params.service === "cars" ? "cars" : "stays";
+  const isCars = service === "cars";
   const [liveHotels,liveDestinations,market] = await Promise.all([
     listFeaturedHotels(6).catch(() => []),
     listFeaturedDestinations({countryCode: "JO", limit: 4}).catch(() => []),
@@ -60,49 +65,152 @@ export default async function HomePage() {
   const destinationCopy = ui.destination;
   const homeEnhancement = ui.destination;
   const regionNames = new Intl.DisplayNames([market.intlLocale], {type: "region"});
+  const serviceCopy = locale === "ar" ? {
+    stays: "الإقامات",
+    cars: "السيارات",
+    carKicker: "سيارات بأسعار واضحة",
+    carTitle: "اختر سيارتك واعرف السعر الذي ستدفعه فعليًا.",
+    carIntro: "أسعار شفافة بدون رسوم مخفية، تفاصيل تأمين واضحة وإلغاء مرن قبل تأكيد الحجز.",
+    noHidden: "بدون رسوم مخفية",
+    clearInsurance: "تأمين واضح",
+    flexibleCancel: "إلغاء مرن",
+    airportPickup: "استلام من المطار",
+    clearDeposit: "وديعة واضحة",
+    fuelPolicy: "سياسة وقود واضحة",
+    carsLabel: "HandMeKey Cars",
+    carVisualSub: "رحلتك تبدأ بمفتاح واضح",
+    carSectionEyebrow: "HandMeKey Cars",
+    carSectionTitle: "كل ما يهمك قبل استلام المفتاح.",
+    carSectionBody: "قسم السيارات مبني على نفس مبدأ HandMeKey: السعر النهائي والشروط المهمة تظهر قبل الحجز، بدون إخفاء الوديعة أو التأمين أو سياسة الوقود.",
+    priceTitle: "السعر النهائي أولًا",
+    priceBody: "نعرض الرسوم الإلزامية والوديعة والتغطية التأمينية بوضوح قبل الدفع.",
+    insuranceTitle: "تأمين مفهوم",
+    insuranceBody: "تعرف ما الذي يشمله التأمين وما قيمة التحمل قبل اختيار السيارة.",
+    pickupTitle: "استلام وتسليم واضحان",
+    pickupBody: "الموقع، الوقت، سياسة الوقود والمتطلبات تظهر قبل تأكيد الحجز.",
+    carValueTitle: "سيارة بلا مفاجآت عند الكاونتر.",
+    partnerEyebrow: "لشركات تأجير السيارات",
+    partnerTitle: "حوّل أسطولك إلى حجوزات مباشرة على HandMeKey.",
+    partnerBody: "إدارة السيارات والأسعار والتوفر والحجوزات من Partner Hub واحد.",
+    partnerCta: "أضف شركة التأجير",
+  } : {
+    stays: "Stays",
+    cars: "Cars",
+    carKicker: "Cars with clear pricing",
+    carTitle: "Choose your car and know what you will actually pay.",
+    carIntro: "Transparent pricing with no hidden fees, clear insurance details and flexible cancellation before you confirm.",
+    noHidden: "No hidden fees",
+    clearInsurance: "Clear insurance",
+    flexibleCancel: "Flexible cancellation",
+    airportPickup: "Airport pickup",
+    clearDeposit: "Clear deposit",
+    fuelPolicy: "Clear fuel policy",
+    carsLabel: "HandMeKey Cars",
+    carVisualSub: "Your trip starts with a clear key",
+    carSectionEyebrow: "HandMeKey Cars",
+    carSectionTitle: "Know what matters before you take the key.",
+    carSectionBody: "Cars follows the same HandMeKey principle: the final price and important conditions appear before booking, including deposits, insurance and fuel policy.",
+    priceTitle: "Final price first",
+    priceBody: "See mandatory fees, deposits and included coverage clearly before payment.",
+    insuranceTitle: "Insurance you can understand",
+    insuranceBody: "Know what is covered and what excess applies before choosing a car.",
+    pickupTitle: "Clear pick-up and return",
+    pickupBody: "Location, times, fuel policy and requirements are shown before confirmation.",
+    carValueTitle: "A rental car without counter surprises.",
+    partnerEyebrow: "For car rental companies",
+    partnerTitle: "Turn your fleet into direct HandMeKey bookings.",
+    partnerBody: "Manage vehicles, rates, availability and reservations from one Partner Hub.",
+    partnerCta: "List your rental company",
+  };
 
   return <main className="customerPage" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
-    <section className="premiumHero"><div className="shell premiumHeroGrid"><div className="premiumHeroCopy"><span className="heroKicker">{copy.home.kicker}</span><h1>{copy.home.title}</h1><p>{copy.home.intro}</p><div className="heroConfidence"><span><BadgeCheck size={17}/>{copy.home.verified}</span><span><ShieldCheck size={17}/>{copy.home.cancellation}</span><span><CreditCard size={17}/>{copy.home.total}</span></div></div><div className="heroVisual" aria-label={copy.home.verified}>{visualHotels.length ? visualHotels.map((hotel,index)=><Link prefetch={false} href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} className={`heroPhoto heroPhoto${index+1}`} key={hotel.id}><img src={hotel.coverPhoto!.url} alt={hotel.coverPhoto!.alt ?? hotel.name}/><span><small>{hotel.city}</small><strong>{hotel.name}</strong></span></Link>) : <div className="heroPlaceholder"><Search size={34}/><strong>{copy.home.livePlaceholder}</strong><span>{copy.home.livePlaceholderSub}</span></div>}</div></div>
-      <div className="shell"><HomeBookingSearch
-        locale={market.baseLocale}
-        defaultDestination={locale==="ar"?"عمّان":"Amman"}
-        defaultArrival={stay.arrival}
-        defaultDeparture={stay.departure}
-        copy={{
-          where: copy.home.where,
-          whereHint: copy.home.whereHint,
-          checkIn: copy.home.checkIn,
-          checkOut: copy.home.checkOut,
-          guests: copy.home.guests,
-          adults: copy.home.adults,
-          search: copy.home.search,
-        }}
-      /></div>
+    <section className="premiumHero">
+      <div className={`shell ${serviceStyles.modeShell}`}>
+        <nav className={serviceStyles.modeTabs} aria-label={locale === "ar" ? "نوع الحجز" : "Booking type"}>
+          <Link href="/?service=stays" className={`${serviceStyles.modeTab} ${!isCars ? serviceStyles.modeActive : ""}`}>{serviceCopy.stays}</Link>
+          <Link href="/?service=cars" className={`${serviceStyles.modeTab} ${isCars ? serviceStyles.modeActive : ""}`}><Car size={17}/>{serviceCopy.cars}</Link>
+        </nav>
+      </div>
+
+      <div className={`shell premiumHeroGrid ${serviceStyles.heroGrid}`}>
+        {!isCars ? <>
+          <div className="premiumHeroCopy"><span className="heroKicker">{copy.home.kicker}</span><h1>{copy.home.title}</h1><p>{copy.home.intro}</p><div className="heroConfidence"><span><BadgeCheck size={17}/>{copy.home.verified}</span><span><ShieldCheck size={17}/>{copy.home.cancellation}</span><span><CreditCard size={17}/>{copy.home.total}</span></div></div>
+          <div className="heroVisual" aria-label={copy.home.verified}>{visualHotels.length ? visualHotels.map((hotel,index)=><Link prefetch={false} href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} className={`heroPhoto heroPhoto${index+1}`} key={hotel.id}><img src={hotel.coverPhoto!.url} alt={hotel.coverPhoto!.alt ?? hotel.name}/><span><small>{hotel.city}</small><strong>{hotel.name}</strong></span></Link>) : <div className="heroPlaceholder"><Search size={34}/><strong>{copy.home.livePlaceholder}</strong><span>{copy.home.livePlaceholderSub}</span></div>}</div>
+        </> : <>
+          <div className="premiumHeroCopy"><span className="heroKicker">{serviceCopy.carKicker}</span><h1>{serviceCopy.carTitle}</h1><p>{serviceCopy.carIntro}</p><div className="heroConfidence"><span><BadgeCheck size={17}/>{serviceCopy.noHidden}</span><span><ShieldCheck size={17}/>{serviceCopy.clearInsurance}</span><span><CreditCard size={17}/>{serviceCopy.flexibleCancel}</span></div></div>
+          <div className={serviceStyles.carHeroVisual} aria-label={serviceCopy.carsLabel}>
+            <div className={serviceStyles.carStage}>
+              <div className={serviceStyles.carIconWrap}><Car size={76}/></div>
+              <div className={serviceStyles.carStageCopy}><span><small>{serviceCopy.carsLabel}</small><strong>{serviceCopy.carVisualSub}</strong></span><span>{serviceCopy.noHidden}</span></div>
+            </div>
+            <span className={`${serviceStyles.floatChip} ${serviceStyles.chipOne}`}><BadgeCheck size={14}/>{serviceCopy.airportPickup}</span>
+            <span className={`${serviceStyles.floatChip} ${serviceStyles.chipTwo}`}><ShieldCheck size={14}/>{serviceCopy.clearDeposit}</span>
+            <span className={`${serviceStyles.floatChip} ${serviceStyles.chipThree}`}><CreditCard size={14}/>{serviceCopy.fuelPolicy}</span>
+          </div>
+        </>}
+      </div>
+
+      <div className="shell">
+        {!isCars ? <HomeBookingSearch
+          locale={market.baseLocale}
+          defaultDestination={locale==="ar"?"عمّان":"Amman"}
+          defaultArrival={stay.arrival}
+          defaultDeparture={stay.departure}
+          copy={{
+            where: copy.home.where,
+            whereHint: copy.home.whereHint,
+            checkIn: copy.home.checkIn,
+            checkOut: copy.home.checkOut,
+            guests: copy.home.guests,
+            adults: copy.home.adults,
+            search: copy.home.search,
+          }}
+        /> : <>
+          <CarBookingSearch locale={market.baseLocale} defaultPickupDate={stay.arrival} defaultReturnDate={stay.departure}/>
+          <div className={serviceStyles.carTrustStrip}><span><BadgeCheck size={13}/>{serviceCopy.noHidden}</span><span><ShieldCheck size={13}/>{serviceCopy.clearInsurance}</span><span><CreditCard size={13}/>{serviceCopy.flexibleCancel}</span><span><Car size={13}/>{serviceCopy.airportPickup}</span></div>
+        </>}
+      </div>
     </section>
 
-    <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">{copy.home.liveEyebrow}</span><h2>{copy.home.liveTitle}</h2><p>{copy.home.liveIntro}</p></div><Link href={`/search?destination=${locale==="ar"?encodeURIComponent("عمّان"):"Amman"}&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>{copy.home.explore} <ArrowRight size={16}/></Link></div>
-      {hotels.length === 0 ? <div className="premiumEmpty"><BadgeCheck size={28}/><h3>{copy.home.noHotels}</h3><p>{copy.home.noHotelsSub}</p></div> : <div className="stayCardGrid" aria-label={copy.home.liveTitle}>{hotels.map((hotel)=><Link prefetch={false} className="stayCard" href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} key={hotel.id}><div className="stayCardMedia">{hotel.coverPhoto ? <img src={hotel.coverPhoto.url} alt={hotel.coverPhoto.alt ?? hotel.name} loading="lazy" decoding="async"/> : <div className="stayCardPlaceholder">{copy.home.photoPending}</div>}<span className="verifiedPill"><BadgeCheck size={14}/>{hotel.slug.startsWith("demo-")?copy.home.demoProperty:copy.home.verifiedLabel}</span></div><div className="stayCardBody"><div className="stayCardMeta">{hotel.starRating ? `${hotel.starRating}★ · ` : ""}{hotel.area ? `${hotel.area}, ` : ""}{hotel.city}</div><h3>{hotel.name}</h3>{hotel.reviewSummary.overall !== null && <div className="stayRating"><strong>{hotel.reviewSummary.overall.toFixed(1)}</strong><span>{hotel.reviewSummary.count} {hotel.reviewSummary.count===1?copy.home.review:copy.home.reviews}</span></div>}<div className="stayAmenities">{hotel.amenities.slice(0,3).map((item)=><span key={item.code}>{item.name}</span>)}</div><div className="stayCardCta"><span className="stayCardCtaCopy"><small>{homeEnhancement.clearPrice}</small><strong>{homeEnhancement.seeRooms}</strong></span><span className="stayCardCtaArrow"><ArrowRight size={17}/></span></div></div></Link>)}</div>}
-    </section>
+    {!isCars && <>
+      <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">{copy.home.liveEyebrow}</span><h2>{copy.home.liveTitle}</h2><p>{copy.home.liveIntro}</p></div><Link href={`/search?destination=${locale==="ar"?encodeURIComponent("عمّان"):"Amman"}&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>{copy.home.explore} <ArrowRight size={16}/></Link></div>
+        {hotels.length === 0 ? <div className="premiumEmpty"><BadgeCheck size={28}/><h3>{copy.home.noHotels}</h3><p>{copy.home.noHotelsSub}</p></div> : <div className="stayCardGrid" aria-label={copy.home.liveTitle}>{hotels.map((hotel)=><Link prefetch={false} className="stayCard" href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} key={hotel.id}><div className="stayCardMedia">{hotel.coverPhoto ? <img src={hotel.coverPhoto.url} alt={hotel.coverPhoto.alt ?? hotel.name} loading="lazy" decoding="async"/> : <div className="stayCardPlaceholder">{copy.home.photoPending}</div>}<span className="verifiedPill"><BadgeCheck size={14}/>{hotel.slug.startsWith("demo-")?copy.home.demoProperty:copy.home.verifiedLabel}</span></div><div className="stayCardBody"><div className="stayCardMeta">{hotel.starRating ? `${hotel.starRating}★ · ` : ""}{hotel.area ? `${hotel.area}, ` : ""}{hotel.city}</div><h3>{hotel.name}</h3>{hotel.reviewSummary.overall !== null && <div className="stayRating"><strong>{hotel.reviewSummary.overall.toFixed(1)}</strong><span>{hotel.reviewSummary.count} {hotel.reviewSummary.count===1?copy.home.review:copy.home.reviews}</span></div>}<div className="stayAmenities">{hotel.amenities.slice(0,3).map((item)=><span key={item.code}>{item.name}</span>)}</div><div className="stayCardCta"><span className="stayCardCtaCopy"><small>{homeEnhancement.clearPrice}</small><strong>{homeEnhancement.seeRooms}</strong></span><span className="stayCardCtaArrow"><ArrowRight size={17}/></span></div></div></Link>)}</div>}
+      </section>
 
-    {destinations.length > 0 && <section className={`shell ${destinationStyles.destinationSection}`}>
-      <div className={destinationStyles.destinationHead}><div className={destinationStyles.destinationHeadText}><span className={destinationStyles.destinationEyebrow}>{destinationCopy.eyebrow}</span><h2>{destinationCopy.title}</h2><p>{destinationCopy.intro}</p></div></div>
-      <div className={destinationStyles.destinationGrid}>{destinations.map((destination,index) => {
-        const cityName = locale === "ar" ? destination.nameAr ?? destination.nameEn : destination.nameEn;
-        const countryName = regionNames.of(destination.countryCode) ?? destination.countryCode;
-        const curatedPhoto = CURATED_DESTINATION_PHOTOS[destination.slug as keyof typeof CURATED_DESTINATION_PHOTOS];
-        const destinationPhoto = curatedPhoto ? {url: curatedPhoto.url, alt: locale === "ar" ? curatedPhoto.altAr : curatedPhoto.altEn} : destination.coverPhoto;
-        return <Link prefetch={false} key={destination.id} className={`${destinationStyles.destinationCard} ${index < 2 ? destinationStyles.destinationCardFeatured : ""}`} href={destination.landingPath}>
-          {destinationPhoto ? <div className={destinationStyles.destinationMedia}><img src={destinationPhoto.url} alt={destinationPhoto.alt ?? cityName} loading="lazy" decoding="async" style={curatedPhoto ? {objectPosition: curatedPhoto.objectPosition} : undefined}/></div> : <div className={destinationStyles.destinationFallback}><MapPin size={30}/><strong>{cityName}</strong></div>}
-          <div className={destinationStyles.destinationShade}/>
-          <div className={destinationStyles.destinationTopline}><span className={destinationStyles.destinationFlag}>{flagEmoji(destination.countryCode)}</span><span>{countryName}</span></div>
-          <div className={destinationStyles.destinationContent}><h3>{cityName}</h3><p>{destination.propertyCount} {destinationCopy.stays}</p><span className={destinationStyles.destinationCta}>{destinationCopy.explore}<ArrowRight size={15}/></span></div>
-        </Link>;
-      })}</div>
-    </section>}
+      {destinations.length > 0 && <section className={`shell ${destinationStyles.destinationSection}`}>
+        <div className={destinationStyles.destinationHead}><div className={destinationStyles.destinationHeadText}><span className={destinationStyles.destinationEyebrow}>{destinationCopy.eyebrow}</span><h2>{destinationCopy.title}</h2><p>{destinationCopy.intro}</p></div></div>
+        <div className={destinationStyles.destinationGrid}>{destinations.map((destination,index) => {
+          const cityName = locale === "ar" ? destination.nameAr ?? destination.nameEn : destination.nameEn;
+          const countryName = regionNames.of(destination.countryCode) ?? destination.countryCode;
+          const curatedPhoto = CURATED_DESTINATION_PHOTOS[destination.slug as keyof typeof CURATED_DESTINATION_PHOTOS];
+          const destinationPhoto = curatedPhoto ? {url: curatedPhoto.url, alt: locale === "ar" ? curatedPhoto.altAr : curatedPhoto.altEn} : destination.coverPhoto;
+          return <Link prefetch={false} key={destination.id} className={`${destinationStyles.destinationCard} ${index < 2 ? destinationStyles.destinationCardFeatured : ""}`} href={destination.landingPath}>
+            {destinationPhoto ? <div className={destinationStyles.destinationMedia}><img src={destinationPhoto.url} alt={destinationPhoto.alt ?? cityName} loading="lazy" decoding="async" style={curatedPhoto ? {objectPosition: curatedPhoto.objectPosition} : undefined}/></div> : <div className={destinationStyles.destinationFallback}><MapPin size={30}/><strong>{cityName}</strong></div>}
+            <div className={destinationStyles.destinationShade}/>
+            <div className={destinationStyles.destinationTopline}><span className={destinationStyles.destinationFlag}>{flagEmoji(destination.countryCode)}</span><span>{countryName}</span></div>
+            <div className={destinationStyles.destinationContent}><h3>{cityName}</h3><p>{destination.propertyCount} {destinationCopy.stays}</p><span className={destinationStyles.destinationCta}>{destinationCopy.explore}<ArrowRight size={15}/></span></div>
+          </Link>;
+        })}</div>
+      </section>}
 
-    <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">{copy.home.valueEyebrow}</span><h2>{copy.home.valueTitle}</h2></div></div><HomeValueCarousel finalTitle={copy.home.finalTitle} finalBody={copy.home.finalBody} policyTitle={copy.home.policyTitle} policyBody={copy.home.policyBody} watchTitle={copy.home.watchTitle} watchBody={copy.home.watchBody}/></div></section>
+      <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">{copy.home.valueEyebrow}</span><h2>{copy.home.valueTitle}</h2></div></div><HomeValueCarousel finalTitle={copy.home.finalTitle} finalBody={copy.home.finalBody} policyTitle={copy.home.policyTitle} policyBody={copy.home.policyBody} watchTitle={copy.home.watchTitle} watchBody={copy.home.watchBody}/></div></section>
+    </>}
 
-    <section className="shell partnerBridge"><div><span className="eyebrow">{copy.home.partnerEyebrow}</span><h2>{copy.home.partnerTitle}</h2><p>{copy.home.partnerBody}</p></div><Link href="/partner">{copy.home.partnerCta} <ArrowRight size={18}/></Link></section>
+    {isCars && <>
+      <section className={`shell ${serviceStyles.carsIntro}`}>
+        <div className={serviceStyles.carsIntroGrid}>
+          <div className={serviceStyles.carsIntroCopy}><span className="eyebrow">{serviceCopy.carSectionEyebrow}</span><h2>{serviceCopy.carSectionTitle}</h2><p>{serviceCopy.carSectionBody}</p></div>
+          <div className={serviceStyles.carsIntroList}>
+            <article><span><CreditCard size={20}/></span><div><h3>{serviceCopy.priceTitle}</h3><p>{serviceCopy.priceBody}</p></div></article>
+            <article><span><ShieldCheck size={20}/></span><div><h3>{serviceCopy.insuranceTitle}</h3><p>{serviceCopy.insuranceBody}</p></div></article>
+            <article><span><Car size={20}/></span><div><h3>{serviceCopy.pickupTitle}</h3><p>{serviceCopy.pickupBody}</p></div></article>
+          </div>
+        </div>
+      </section>
+      <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">HandMeKey Cars</span><h2>{serviceCopy.carValueTitle}</h2></div></div><div className="valueGrid"><article><span><CreditCard size={20}/></span><h3>{serviceCopy.priceTitle}</h3><p>{serviceCopy.priceBody}</p></article><article><span><ShieldCheck size={20}/></span><h3>{serviceCopy.insuranceTitle}</h3><p>{serviceCopy.insuranceBody}</p></article><article><span><Car size={20}/></span><h3>{serviceCopy.pickupTitle}</h3><p>{serviceCopy.pickupBody}</p></article></div></div></section>
+    </>}
+
+    <section className="shell partnerBridge"><div><span className="eyebrow">{isCars ? serviceCopy.partnerEyebrow : copy.home.partnerEyebrow}</span><h2>{isCars ? serviceCopy.partnerTitle : copy.home.partnerTitle}</h2><p>{isCars ? serviceCopy.partnerBody : copy.home.partnerBody}</p></div><Link href="/partner">{isCars ? serviceCopy.partnerCta : copy.home.partnerCta} <ArrowRight size={18}/></Link></section>
   </main>;
 }
