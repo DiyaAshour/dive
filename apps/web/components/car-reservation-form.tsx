@@ -18,6 +18,9 @@ type Props=Readonly<{
   defaultEmail:string;
   locations:Location[];
   defaultLocationId?:string;
+  totalLabel:string;
+  totalValue:string;
+  durationLabel:string;
 }>;
 
 export function CarReservationForm(props:Props){
@@ -26,9 +29,9 @@ export function CarReservationForm(props:Props){
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const copy=ar?{
-    guest:"بيانات السائق الرئيسي",name:"الاسم الكامل",email:"البريد الإلكتروني",phone:"رقم الهاتف",pickup:"موقع الاستلام",return:"موقع التسليم",confirm:"تأكيد حجز السيارة",loading:"جارٍ تأكيد الحجز...",failed:"تعذر تأكيد حجز السيارة.",secure:"سيتم حفظ الحجز باسم حسابك ويمكنك متابعته من حجوزاتي.",age:"الفئة العمرية للسائق"
+    name:"الاسم الكامل",email:"البريد الإلكتروني",phone:"رقم الهاتف",pickup:"موقع الاستلام",return:"موقع التسليم",confirm:"تأكيد الحجز",loading:"جارٍ التأكيد...",failed:"تعذر تأكيد حجز السيارة.",secure:"سيتم حفظ الحجز باسم حسابك ويمكنك متابعته من حجوزاتي.",age:"الفئة العمرية للسائق"
   }:{
-    guest:"Main driver details",name:"Full name",email:"Email address",phone:"Phone number",pickup:"Pick-up location",return:"Return location",confirm:"Confirm car booking",loading:"Confirming booking...",failed:"Could not confirm the car booking.",secure:"The reservation will be saved to your account and available under My bookings.",age:"Driver age range"
+    name:"Full name",email:"Email address",phone:"Phone number",pickup:"Pick-up location",return:"Return location",confirm:"Confirm booking",loading:"Confirming...",failed:"Could not confirm the car booking.",secure:"The reservation will be saved to your account and available under My bookings.",age:"Driver age range"
   };
   const defaultLocation=props.defaultLocationId??props.locations[0]?.id??"";
 
@@ -48,14 +51,17 @@ export function CarReservationForm(props:Props){
   }
 
   return <form className={styles.form} onSubmit={submit}>
-    <div className={`${styles.field} ${styles.full}`}><span>{copy.name}</span><input name="guestName" required minLength={2} defaultValue={props.defaultName} autoComplete="name"/></div>
+    <label className={`${styles.field} ${styles.full}`}><span>{copy.name}</span><input name="guestName" required minLength={2} defaultValue={props.defaultName} autoComplete="name"/></label>
     <label className={styles.field}><span>{copy.email}</span><input name="guestEmail" required type="email" defaultValue={props.defaultEmail} autoComplete="email"/></label>
     <label className={styles.field}><span>{copy.phone}</span><input name="guestPhone" inputMode="tel" autoComplete="tel" placeholder="+962"/></label>
-    <label className={styles.field}><span>{copy.pickup}</span><select name="pickupLocationId" defaultValue={defaultLocation} required>{props.locations.map((location)=><option key={location.id} value={location.id}>{location.name} · {location.city}{location.airportCode?` (${location.airportCode})`:""}</option>)}</select></label>
-    <label className={styles.field}><span>{copy.return}</span><select name="returnLocationId" defaultValue={defaultLocation} required>{props.locations.map((location)=><option key={location.id} value={location.id}>{location.name} · {location.city}{location.airportCode?` (${location.airportCode})`:""}</option>)}</select></label>
-    <div className={`${styles.field} ${styles.full}`}><span>{copy.age}</span><input value={props.driverAgeRange} readOnly/></div>
+    <label className={`${styles.field} ${styles.locationField}`}><span>{copy.pickup}</span><select name="pickupLocationId" defaultValue={defaultLocation} required>{props.locations.map((location)=><option key={location.id} value={location.id}>{location.name} · {location.city}{location.airportCode?` (${location.airportCode})`:""}</option>)}</select></label>
+    <label className={`${styles.field} ${styles.locationField}`}><span>{copy.return}</span><select name="returnLocationId" defaultValue={defaultLocation} required>{props.locations.map((location)=><option key={location.id} value={location.id}>{location.name} · {location.city}{location.airportCode?` (${location.airportCode})`:""}</option>)}</select></label>
+    <label className={`${styles.field} ${styles.full}`}><span>{copy.age}</span><input value={props.driverAgeRange} readOnly/></label>
     {error&&<div className={styles.error}>{error}</div>}
-    <button className={styles.submit} type="submit" disabled={loading}><ShieldCheck size={18}/>{loading?copy.loading:copy.confirm}</button>
-    <div className={`${styles.full} ${styles.notice}`}><Check size={13}/> {copy.secure}</div>
+    <div className={`${styles.full} ${styles.notice} ${styles.secureNotice}`}><Check size={13}/><span>{copy.secure}</span></div>
+    <div className={styles.submitBar}>
+      <div className={styles.submitTotal}><span>{props.totalLabel}</span><strong>{props.totalValue}</strong><small>{props.durationLabel}</small></div>
+      <button className={styles.submit} type="submit" disabled={loading}><ShieldCheck size={18}/>{loading?copy.loading:copy.confirm}</button>
+    </div>
   </form>;
 }
