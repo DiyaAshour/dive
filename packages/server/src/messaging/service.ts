@@ -116,7 +116,7 @@ async function queueBookingMessageEmails(bookingId: string, messageId: string, s
       textBody: `Hello ${booking.guestName},\n\n${booking.hotel.name} sent you a new message about booking ${booking.reference}:\n\n${body}\n\nOpen your booking and reply: ${bookingUrl}`,
     });
     await queueEmail({
-      kind: "BOOKING_MESSAGE",
+      kind: "MANUAL_EMAIL",
       toEmail: booking.guestEmail,
       toName: booking.guestName,
       subject: content.subject,
@@ -139,7 +139,7 @@ async function queueBookingMessageEmails(bookingId: string, messageId: string, s
   const recipients = uniqueRecipients(booking.hotel.memberships.map((membership) => membership.user));
   for (const recipient of recipients) {
     await queueEmail({
-      kind: "BOOKING_MESSAGE",
+      kind: "MANUAL_EMAIL",
       toEmail: recipient.email,
       toName: recipient.displayName,
       subject: content.subject,
