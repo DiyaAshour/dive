@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {ArrowLeft, Building2, CalendarRange, CarFront, CreditCard, MapPin, UserRound} from "lucide-react";
+import {ArrowLeft, Building2, CalendarRange, CarFront, CircleDollarSign, CreditCard, Landmark, MapPin, UserRound, WalletCards} from "lucide-react";
 import {getAdminCarReservation, getAdminNavigationCounts} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
@@ -19,17 +19,33 @@ export default async function AdminCarReservationPage({params}: {params: Promise
     getAdminCarReservation(principal.user.id, reservationId),
     getAdminNavigationCounts(principal.user.id),
   ]);
+  const companyOwesPlatform = reservation.commissionReceivable > 0;
+  const platformOwesCompany = reservation.companyPayable > 0;
 
   return <AdminShell locale={locale} principal={principal} active="cars" counts={counts}>
     <div className="adminBreadcrumb"><Link href="/admin/cars/reservations"><ArrowLeft size={15}/>{ar ? "كل حجوزات السيارات" : "All car reservations"}</Link><span>/</span><strong>{reservation.reference}</strong></div>
 
-    <div className={styles.detailHeader}><div><span className="eyebrow">HandMeKey Cars · Booking Detail</span><h1>{reservation.reference}</h1><p>{ar ? "عرض تشغيلي كامل للحجز من منظور المنصة." : "Complete operational booking view from the platform side."}</p></div><div className={styles.governance}><Status value={reservation.status}/><span className={styles.status}>{reservation.paymentMode.replaceAll("_", " ")}</span></div></div>
+    <div className={styles.detailHeader}><div><span className="eyebrow">HandMeKey Cars · Booking Detail</span><h1>{reservation.reference}</h1><p>{ar ? "عرض تشغيلي ومالي كامل للحجز من منظور المنصة." : "Complete operational and financial booking view from the platform side."}</p></div><div className={styles.governance}><Status value={reservation.status}/><span className={styles.status}>{reservation.paymentMode.replaceAll("_", " ")}</span><span className={styles.status}>{reservation.collectedBy === "HANDMEKEY" ? "HANDMEKEY COLLECTED" : "COMPANY COLLECTED"}</span></div></div>
 
     <section className={styles.reservationSummary}>
       <Summary label={ar ? "الإجمالي" : "Booking total"} value={formatMoney(reservation.total, reservation.currency, locale)} small={`${reservation.rentalDays} ${ar ? "يوم" : "days"}`}/>
-      <Summary label={ar ? "عمولة HandMeKey" : "HandMeKey commission"} value={formatMoney(reservation.platformCommission, reservation.currency, locale)} small={`${(reservation.commissionRate * 100).toFixed(1)}%`}/>
-      <Summary label={ar ? "صافي الشريك التقديري" : "Estimated partner net"} value={formatMoney(reservation.estimatedPartnerNet, reservation.currency, locale)} small={ar ? "قبل أي تسويات خارجية" : "Before external settlement adjustments"}/>
-      <Summary label={ar ? "الوديعة" : "Security deposit"} value={formatMoney(reservation.deposit, reservation.currency, locale)} small={ar ? "متطلب الحجز" : "Booking requirement"}/>
+      <Summary label={ar ? "عمولة HandMeKey" : "HandMeKey commission"} value={formatMoney(reservation.platformCommission, reservation.currency, locale)} small={`${(reservation.commissionRate * 100).toFixed(2)}% · ${ar ? "مثبتة وقت الحجز" : "snapshotted at booking"}`}/>
+      <Summary label={ar ? "مستحق للشركة" : "Company payable"} value={formatMoney(reservation.companyPayable, reservation.currency, locale)} small={platformOwesCompany ? (ar ? "HandMeKey يدفع للشركة" : "HandMeKey owes company") : (ar ? "لا يوجد مستحق حالي" : "No current payable")}/>
+      <Summary label={ar ? "مستحق لـ HandMeKey" : "Commission receivable"} value={formatMoney(reservation.commissionReceivable, reservation.currency, locale)} small={companyOwesPlatform ? (ar ? "الشركة تدفع العمولة" : "Company owes commission") : (ar ? "لا يوجد مستحق حالي" : "No current receivable")}/>
+    </section>
+
+    <section className={styles.panel}>
+      <div className={styles.panelHeader}><div><span className="eyebrow">{ar ? "المالية" : "Finance"}</span><h2>{ar ? "الوضع المالي لهذا الحجز" : "Financial position for this booking"}</h2><p>{financialExplanation(reservation, ar)}</p></div><CircleDollarSign size={20}/></div>
+      <div className={styles.infoList}>
+        <Info icon={reservation.collectedBy === "HANDMEKEY" ? <WalletCards size={14}/> : <Landmark size={14}/>} label={ar ? "الجهة التي استلمت المبلغ" : "Payment collector"} value={reservation.collectedBy === "HANDMEKEY" ? "HandMeKey" : (ar ? "شركة التأجير" : "Rental company")}/>
+        <Info label={ar ? "طريقة الدفع" : "Payment mode"} value={reservation.paymentMode.replaceAll("_", " ")}/>
+        <Info label={ar ? "الأهلية المالية" : "Finance eligibility"} value={reservation.financeEligible ? (ar ? "مستحق ماليًا" : "Financially eligible") : (ar ? "بانتظار اكتمال شرط التحصيل" : "Pending collection condition")}/>
+        <Info label={ar ? "عمولة HandMeKey" : "HandMeKey commission"} value={formatMoney(reservation.platformCommission, reservation.currency, locale)}/>
+        <Info label={ar ? "صافي حصة الشركة" : "Partner net share"} value={formatMoney(reservation.estimatedPartnerNet, reservation.currency, locale)}/>
+        <Info label={ar ? "مستحق للشركة" : "Company payable"} value={formatMoney(reservation.companyPayable, reservation.currency, locale)}/>
+        <Info label={ar ? "عمولة مستحقة لنا" : "Commission receivable"} value={formatMoney(reservation.commissionReceivable, reservation.currency, locale)}/>
+      </div>
+      <div className={styles.heroActions} style={{marginTop: 14}}><Link className="primaryButton" href={`/admin/cars/finance?companyId=${encodeURIComponent(reservation.companyId)}`}><CircleDollarSign size={15}/>{ar ? "فتح مالية الشركة" : "Open company finance"}</Link></div>
     </section>
 
     <div className={styles.detailGrid}>
@@ -69,10 +85,9 @@ export default async function AdminCarReservationPage({params}: {params: Promise
           <Info label={ar ? "الرسوم" : "Fees"} value={formatMoney(reservation.fees, reservation.currency, locale)}/>
           <Info label={ar ? "الإجمالي" : "Total"} value={formatMoney(reservation.total, reservation.currency, locale)}/>
           <Info label={ar ? "عمولة المنصة" : "Platform commission"} value={formatMoney(reservation.platformCommission, reservation.currency, locale)}/>
-          <Info label={ar ? "صافي الشريك التقديري" : "Estimated partner net"} value={formatMoney(reservation.estimatedPartnerNet, reservation.currency, locale)}/>
-          <Info label={ar ? "تعليمات الدفع" : "Payment instruction"} value={reservation.paymentMode.replaceAll("_", " ")}/>
+          <Info label={ar ? "صافي الشريك" : "Partner net"} value={formatMoney(reservation.estimatedPartnerNet, reservation.currency, locale)}/>
         </div>
-        <p className={styles.muted} style={{fontSize: 10, marginTop: 12}}>{ar ? "ملاحظة: نموذج حجوزات السيارات الحالي يسجل طريقة الدفع، لكنه لا يحتوي بعد على حالة تحصيل مالية مستقلة مثل CAPTURED/REFUNDED؛ لذلك لا يتم الادعاء بأن المبلغ تم تحصيله هنا." : "Note: the current car reservation model stores the payment mode but not a separate capture/refund state, so this page does not claim the booking has been collected."}</p>
+        <p className={styles.muted} style={{fontSize: 10, marginTop: 12}}>{ar ? "طريقة الدفع تحدد متى يدفع العميل، أما Payment Collector فيحدد أين وصلت الأموال. لذلك يمكن أن يكون الحجز PAY_NOW والمبلغ يذهب مباشرة إلى شركة التأجير عبر بوابة دفع الشركة، أو يذهب إلى HandMeKey." : "Payment mode defines when the customer pays; Payment Collector defines where the funds went. A PAY_NOW booking can therefore be collected directly by the rental company's gateway or by HandMeKey."}</p>
       </section>
 
       <section className={styles.panel}>
@@ -95,3 +110,8 @@ function Status({value}: {value: string}) {return <span className={`${styles.sta
 function Timeline({label, value, locale}: {label: string; value: string; locale: "en" | "ar"}) {return <div><i/><strong>{label}</strong><time>{formatDateTime(value, locale)}</time></div>}
 function formatDateTime(value: string, locale: "en" | "ar") {return new Intl.DateTimeFormat(locale === "ar" ? "ar-JO" : "en-GB", {day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"}).format(new Date(value))}
 function formatMoney(value: number, currency: string, locale: "en" | "ar") {return new Intl.NumberFormat(locale === "ar" ? "ar-JO" : "en-GB", {style: "currency", currency, maximumFractionDigits: 2}).format(value)}
+function financialExplanation(reservation: {collectedBy: string; companyName: string; financeEligible: boolean}, ar: boolean) {
+  if (!reservation.financeEligible) return ar ? "لا يوجد رصيد مستحق لهذا الحجز حتى الآن؛ سيصبح مستحقًا عندما يتحقق شرط التحصيل." : "No balance is due for this booking yet; it becomes due when the collection condition is met.";
+  if (reservation.collectedBy === "HANDMEKEY") return ar ? `HandMeKey استلم المبلغ؛ تُحجز العمولة ويصبح صافي حصة ${reservation.companyName} مستحقًا لها.` : `HandMeKey collected the payment; commission is withheld and the net share is payable to ${reservation.companyName}.`;
+  return ar ? `${reservation.companyName} استلمت المبلغ؛ عمولة HandMeKey أصبحت مستحقة على الشركة.` : `${reservation.companyName} collected the payment; HandMeKey commission is now receivable from the company.`;
+}

@@ -47,6 +47,11 @@ enum CarPaymentMode {
   PAY_AT_COUNTER
 }
 
+enum CarPaymentCollector {
+  HANDMEKEY
+  COMPANY
+}
+
 model CarRentalCompany {
   id             String                 @id @default(cuid())
   name           String
@@ -200,6 +205,9 @@ model CarReservation {
   returnAt         DateTime
   status           CarReservationStatus @default(HOLD)
   paymentMode      CarPaymentMode       @default(PAY_AT_COUNTER)
+  paymentCollector CarPaymentCollector  @default(COMPANY)
+  commissionRate   Decimal              @default(0.10) @db.Decimal(6, 5)
+  commissionAmount Decimal              @default(0) @db.Decimal(10, 2)
   currency         String               @db.Char(3)
   dailyRate        Decimal              @db.Decimal(10, 2)
   rentalDays       Int
@@ -214,6 +222,7 @@ model CarReservation {
   updatedAt        DateTime             @updatedAt
 
   @@index([companyId, status, pickupAt])
+  @@index([companyId, paymentCollector, paymentMode, status, createdAt])
   @@index([vehicleId, pickupAt, returnAt])
   @@index([userId, createdAt])
   @@index([guestEmail, createdAt])

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {Building2, CalendarRange, CarFront, Search} from "lucide-react";
+import {Building2, CalendarRange, CarFront, CircleDollarSign, Search} from "lucide-react";
 import {getAdminNavigationCounts, listAdminCarCompanies, listAdminCarReservations} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
@@ -32,7 +32,7 @@ export default async function AdminCarReservationsPage({searchParams}: {searchPa
   return <AdminShell locale={locale} principal={principal} active="cars" counts={counts}>
     <header className="adminTopbar"><div><span className="eyebrow">HandMeKey Cars · Reservation Operations</span><h1>{ar ? "كل حجوزات السيارات" : "All car reservations"}</h1><p>{ar ? "سجل موحد لكل الحجوزات من جميع شركات التأجير، مع الوصول المباشر للشركة والحجز." : "One operational ledger for reservations across every rental company, with direct access to each booking and partner."}</p></div><div className="adminSessionBadge"><CalendarRange size={18}/><span><strong>{reservations.length} {ar ? "حجز" : "reservations"}</strong><small>{ar ? "حسب الفلاتر الحالية" : "current filters"}</small></span></div></header>
 
-    <nav className={styles.tabs}><Link href="/admin/cars"><CarFront size={15}/>{ar ? "نظرة عامة" : "Overview"}</Link><Link href="/admin/cars/companies"><Building2 size={15}/>{ar ? "الشركات" : "Companies"}</Link><Link className={styles.active} href="/admin/cars/reservations"><CalendarRange size={15}/>{ar ? "كل الحجوزات" : "All reservations"}</Link></nav>
+    <nav className={styles.tabs}><Link href="/admin/cars"><CarFront size={15}/>{ar ? "نظرة عامة" : "Overview"}</Link><Link href="/admin/cars/companies"><Building2 size={15}/>{ar ? "الشركات" : "Companies"}</Link><Link className={styles.active} href="/admin/cars/reservations"><CalendarRange size={15}/>{ar ? "كل الحجوزات" : "All reservations"}</Link><Link href="/admin/cars/finance"><CircleDollarSign size={15}/>{ar ? "المالية" : "Finance"}</Link></nav>
 
     <section className={styles.reservationSummary}>
       <Summary label={ar ? "النتائج" : "Results"} value={reservations.length}/>
@@ -58,8 +58,8 @@ export default async function AdminCarReservationsPage({searchParams}: {searchPa
           <td><strong>{reservation.vehicle}</strong><small>{reservation.vehicleYear} · {reservation.vehicleCategory}</small></td>
           <td><strong>{formatDateTime(reservation.pickupAt, locale)}</strong><small>{reservation.pickupLocation} → {formatDateTime(reservation.returnAt, locale)} · {reservation.returnLocation}</small></td>
           <td><Status value={reservation.status}/></td>
-          <td><strong>{reservation.paymentMode.replaceAll("_", " ")}</strong><small>{ar ? "طريقة الدفع فقط" : "Payment instruction"}</small></td>
-          <td className={styles.money}><strong>{formatMoney(reservation.total, reservation.currency, locale)}</strong><small>{ar ? "HandMeKey" : "HandMeKey"}: {formatMoney(reservation.platformCommission, reservation.currency, locale)}</small></td>
+          <td><strong>{reservation.paymentMode.replaceAll("_", " ")}</strong><small>{ar ? "طريقة الدفع" : "Payment instruction"}</small></td>
+          <td className={styles.money}><strong>{formatMoney(reservation.total, reservation.currency, locale)}</strong><small>HandMeKey: {formatMoney(reservation.platformCommission, reservation.currency, locale)}</small></td>
         </tr>)}
       </tbody></table></div> : <div className={styles.empty}>{ar ? "لا توجد حجوزات تطابق هذه الفلاتر." : "No reservations match these filters."}</div>}
     </section>
