@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-async function setEnglish(page: Parameters<typeof test>[0] extends never ? never : any) {
+async function setEnglish(page: Page) {
   await page.goto("/");
   await page.evaluate(async () => {
     await fetch("/api/v1/preferences/locale", {
