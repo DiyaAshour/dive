@@ -2,7 +2,7 @@ import { database } from "@platform/database";
 import type { Prisma } from "@platform/database";
 import { ApplicationError, notFound } from "../errors";
 import { requirePlatformAdmin } from "../admin/authorization";
-import { emailCapabilities } from "./email";
+import { emailCapabilities, processEmailOutboxItem } from "./email";
 
 export const ADMIN_EMAIL_STATUSES = ["PENDING", "PROCESSING", "SENT", "FAILED", "DEAD"] as const;
 export const ADMIN_EMAIL_KINDS = [
@@ -10,6 +10,7 @@ export const ADMIN_EMAIL_KINDS = [
   "BOOKING_MODIFIED",
   "BOOKING_CANCELLED",
   "PARTNER_BOOKING_NOTICE",
+  "BOOKING_MESSAGE",
   "PRICE_WATCH",
   "PASSWORD_RESET",
   "EMAIL_VERIFICATION",
@@ -110,7 +111,7 @@ export async function getAdminEmailOperations(actorUserId: string, filters: Admi
 export async function retryAdminEmail(actorUserId: string, emailId: string) {
   await requirePlatformAdmin(actorUserId);
   const db = database();
-  return db.$transaction(async (tx) => {
+  const queued = await db.$transaction(async (tx) => {
     const before = await tx.emailOutbox.findUnique({
       where: {id: emailId},
       select: {id: true, status: true, attempts: true, lastError: true, hotelId: true, bookingId: true, toEmail: true, subject: true},
@@ -145,4 +146,12 @@ export async function retryAdminEmail(actorUserId: string, emailId: string) {
     }});
     return updated;
   });
+
+  // Retry means retry now when Resend is configured; the outbox still keeps the
+  // failure/backoff state if the provider rejects or the network is unavailable.
+  await processEmailOutboxItem(emailId).catch(() => undefined);
+  return (await db.emailOutbox.findUnique({
+    where: {id: emailId},
+    select: {id: true, status: true, attempts: true, nextAttemptAt: true, updatedAt: true},
+  })) ?? queued;
 }
