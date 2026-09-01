@@ -24,23 +24,25 @@ export function CarReservationActions({reservationId, status, pickupAt, returnAt
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const selectedStatus = options.some((option) => option.value === nextStatus) ? nextStatus : options[0]?.value ?? "";
 
   if (finalStatuses.has(status) || options.length === 0) {
     return <span className={styles.final}>{ar ? "حالة نهائية" : "Final state"}</span>;
   }
 
   async function updateStatus() {
-    if (!nextStatus || loading) return;
+    if (!selectedStatus || loading) return;
     setLoading(true);
     setError("");
     try {
       const response = await fetch(`/api/v1/cars/partner/reservations/${reservationId}`, {
         method: "PATCH",
         headers: {"content-type": "application/json"},
-        body: JSON.stringify({status: nextStatus, ...(nextStatus === "CANCELLED" && note.trim() ? {note: note.trim()} : {})}),
+        body: JSON.stringify({status: selectedStatus, ...(selectedStatus === "CANCELLED" && note.trim() ? {note: note.trim()} : {})}),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message || (ar ? "تعذر تحديث الحجز" : "Could not update reservation"));
+      setNote("");
       router.refresh();
     } catch (value) {
       setError(value instanceof Error ? value.message : (ar ? "تعذر تحديث الحجز" : "Could not update reservation"));
@@ -51,14 +53,14 @@ export function CarReservationActions({reservationId, status, pickupAt, returnAt
 
   return <div className={styles.box}>
     <div className={styles.row}>
-      <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as ManagedStatus)} aria-label={ar ? "تغيير حالة الحجز" : "Change reservation status"}>
+      <select value={selectedStatus} onChange={(event) => setNextStatus(event.target.value as ManagedStatus)} aria-label={ar ? "تغيير حالة الحجز" : "Change reservation status"}>
         {options.map((option) => <option key={option.value} value={option.value}>{ar ? option.ar : option.en}</option>)}
       </select>
-      <button type="button" onClick={updateStatus} disabled={loading || !nextStatus}>
+      <button type="button" onClick={updateStatus} disabled={loading || !selectedStatus}>
         {loading ? (ar ? "جارٍ الحفظ..." : "Saving...") : (ar ? "تحديث" : "Update")}
       </button>
     </div>
-    {nextStatus === "CANCELLED" && <input value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} placeholder={ar ? "سبب الإلغاء (اختياري)" : "Cancellation reason (optional)"}/>} 
+    {selectedStatus === "CANCELLED" && <input value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} placeholder={ar ? "سبب الإلغاء (اختياري)" : "Cancellation reason (optional)"}/>} 
     {error && <small className={styles.error}>{error}</small>}
   </div>;
 }
