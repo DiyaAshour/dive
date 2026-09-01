@@ -112,10 +112,10 @@ export function CarBookingSearch({locale,defaultPickupDate,defaultReturnDate}:Pr
 function MomentField({label,date,time,onDate,onTime}:{label:string;date:string;time:string;onDate:()=>void;onTime:()=>void}){
   return <div className={`${styles.field} ${styles.momentField}`}>
     <span className={styles.label}><CalendarDays size={16}/>{label}</span>
-    <div className={styles.momentControls}>
-      <button type="button" className={styles.momentButton} onClick={onDate}><strong>{date}</strong><ChevronDown size={14}/></button>
+    <div className={styles.momentControls} style={{gridTemplateColumns:"minmax(0,1fr) 1px auto"}}>
+      <button type="button" className={styles.momentButton} onClick={onDate}><strong style={{overflow:"visible",textOverflow:"clip",fontVariantNumeric:"tabular-nums",fontSize:"12px"}}>{date}</strong></button>
       <span className={styles.momentDivider}/>
-      <button type="button" className={styles.momentButton} onClick={onTime}><Clock size={15}/><strong>{time}</strong><ChevronDown size={14}/></button>
+      <button type="button" className={styles.momentButton} onClick={onTime}><Clock size={14}/><strong style={{overflow:"visible",textOverflow:"clip",fontVariantNumeric:"tabular-nums"}}>{time}</strong></button>
     </div>
   </div>;
 }
