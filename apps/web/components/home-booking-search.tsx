@@ -160,15 +160,20 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
   }
 
   return <div className={styles.root} ref={rootRef}>
-    <form className={styles.dock} action="/search" method="get">
-      <label className={`${styles.field} ${styles.whereField}`} onPointerDown={() => setOpenPanel(null)}>
+    <span
+      className="premiumSearchDock"
+      aria-hidden="true"
+      style={{position:"absolute",insetInlineStart:0,top:0,width:1,height:1,display:"block",margin:0,padding:0,border:0,background:"transparent",boxShadow:"none",pointerEvents:"none"}}
+    />
+    <form className={`${styles.dock} homeSearchDock`} action="/search" method="get">
+      <label className={`${styles.field} ${styles.whereField} homeSearchWhere`} onPointerDown={() => setOpenPanel(null)}>
         <span className={styles.fieldLabel}><MapPin size={14}/>{copy.where}</span>
         <DestinationAutocomplete locale={locale} defaultValue={defaultDestination} required ariaLabel={copy.where} className={styles.destinationInput ?? ""}/>
         <small>{copy.whereHint}</small>
       </label>
 
       <button
-        className={`${styles.field} ${styles.dateField} ${openPanel === "dates" && activeDate === "checkIn" ? styles.activeField : ""}`}
+        className={`${styles.field} ${styles.dateField} homeSearchCheckIn ${openPanel === "dates" && activeDate === "checkIn" ? styles.activeField : ""}`}
         type="button"
         onClick={() => openDates("checkIn")}
         aria-expanded={openPanel === "dates" && activeDate === "checkIn"}
@@ -180,7 +185,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
       </button>
 
       <button
-        className={`${styles.field} ${styles.dateField} ${openPanel === "dates" && activeDate === "checkOut" ? styles.activeField : ""}`}
+        className={`${styles.field} ${styles.dateField} homeSearchCheckOut ${openPanel === "dates" && activeDate === "checkOut" ? styles.activeField : ""}`}
         type="button"
         onClick={() => openDates("checkOut")}
         aria-expanded={openPanel === "dates" && activeDate === "checkOut"}
@@ -192,7 +197,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
       </button>
 
       <button
-        className={`${styles.field} ${styles.guestField} ${openPanel === "guests" ? styles.activeField : ""}`}
+        className={`${styles.field} ${styles.guestField} homeSearchGuests ${openPanel === "guests" ? styles.activeField : ""}`}
         type="button"
         onClick={() => setOpenPanel((current) => current === "guests" ? null : "guests")}
         aria-expanded={openPanel === "guests"}
