@@ -1,0 +1,10 @@
+@media (max-width:450px){
+  .partnerAuthHeader>.shell,.partnerOnboardingHeader>.shell{min-width:0;gap:10px}
+  .partnerHeaderTools{min-width:0;flex:0 1 auto;gap:8px}
+  .partnerHeaderTools>a{display:none}
+  .partnerHeaderTools .languageSwitcher{min-width:0;max-width:100%}
+  .partnerAuthShell,.partnerOnboardingShell{min-width:0}
+  .partnerAuthShell>*,.partnerOnboardingShell>*{min-width:0;max-width:100%}
+  .partnerAuthPage .premiumAuthCard,.partnerOnboardingCard{width:100%;max-width:100%;min-width:0;padding:22px}
+  .partnerAuthPage input,.partnerOnboardingPage input{width:100%;min-width:0;max-width:100%}
+}
