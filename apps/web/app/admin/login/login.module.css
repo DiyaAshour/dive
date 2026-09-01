@@ -1,0 +1,9 @@
+.page{overflow-x:clip}
+
+@media(max-width:520px){
+  .page :global(.adminLoginHeader .shell){width:calc(100% - 24px);min-width:0;gap:10px}
+  .page :global(.adminLoginHeaderActions){min-width:0;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .page :global(.adminLoginHeaderActions>a){display:none}
+  .page :global(.adminLoginShell){width:calc(100% - 24px);min-width:0}
+  .page :global(.adminLoginIntro){min-width:0;max-width:100%}
+}
