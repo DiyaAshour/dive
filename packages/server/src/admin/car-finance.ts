@@ -37,7 +37,7 @@ export async function getAdminCarFinance(adminUserId: string, filters: FinanceFi
     };
   }
 
-  const selectedCompany = companies.find((company) => company.id === filters.companyId) ?? companies[0];
+  const selectedCompany = companies.find((company) => company.id === filters.companyId) ?? companies[0]!;
   const period = resolvePeriod(filters.from, filters.to);
   const range = inclusiveRange(period.from, period.to);
 
@@ -221,14 +221,15 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
       })),
     });
 
-    const ledgerRows = items.flatMap((item) => {
+    const ledgerRows: any[] = [];
+    for (const item of items) {
       if (item.collectedBy === "HANDMEKEY") {
-        return [
+        ledgerRows.push(
           {
             companyId: company.id,
             reservationId: item.id,
             settlementId: created.id,
-            type: "CUSTOMER_PAYMENT" as const,
+            type: "CUSTOMER_PAYMENT",
             currency: company.currency,
             amount: item.total,
             companyBalanceDelta: item.total,
@@ -239,40 +240,41 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
             companyId: company.id,
             reservationId: item.id,
             settlementId: created.id,
-            type: "PLATFORM_COMMISSION" as const,
+            type: "PLATFORM_COMMISSION",
             currency: company.currency,
             amount: item.platformCommission,
             companyBalanceDelta: -item.platformCommission,
             metadata: {reference: item.reference, collector: "HANDMEKEY", withheld: true},
             createdByUserId: adminUserId,
           },
-        ];
+        );
+      } else {
+        ledgerRows.push(
+          {
+            companyId: company.id,
+            reservationId: item.id,
+            settlementId: created.id,
+            type: "COMPANY_COLLECTED_PAYMENT",
+            currency: company.currency,
+            amount: item.total,
+            companyBalanceDelta: 0,
+            metadata: {reference: item.reference, collector: "COMPANY"},
+            createdByUserId: adminUserId,
+          },
+          {
+            companyId: company.id,
+            reservationId: item.id,
+            settlementId: created.id,
+            type: "PLATFORM_COMMISSION",
+            currency: company.currency,
+            amount: item.platformCommission,
+            companyBalanceDelta: -item.platformCommission,
+            metadata: {reference: item.reference, collector: "COMPANY", receivable: true},
+            createdByUserId: adminUserId,
+          },
+        );
       }
-      return [
-        {
-          companyId: company.id,
-          reservationId: item.id,
-          settlementId: created.id,
-          type: "COMPANY_COLLECTED_PAYMENT" as const,
-          currency: company.currency,
-          amount: item.total,
-          companyBalanceDelta: 0,
-          metadata: {reference: item.reference, collector: "COMPANY"},
-          createdByUserId: adminUserId,
-        },
-        {
-          companyId: company.id,
-          reservationId: item.id,
-          settlementId: created.id,
-          type: "PLATFORM_COMMISSION" as const,
-          currency: company.currency,
-          amount: item.platformCommission,
-          companyBalanceDelta: -item.platformCommission,
-          metadata: {reference: item.reference, collector: "COMPANY", receivable: true},
-          createdByUserId: adminUserId,
-        },
-      ];
-    });
+    }
     await tx.carFinanceTransaction.createMany({data: ledgerRows});
 
     await tx.auditLog.create({
@@ -365,7 +367,7 @@ function financeReservation(row: any, settlementId: string | null) {
   const platformCommission = Number(row.commissionAmount);
   const collectedBy = row.paymentMode === "PAY_NOW" ? "HANDMEKEY" : "COMPANY";
   const financeEligible = collectedBy === "HANDMEKEY"
-    ? PLATFORM_ELIGIBLE_STATUSES.includes(row.status)
+    ? PLATFORM_ELIGIBLE_STATUSES.some((status) => status === row.status)
     : row.status === "COMPLETED";
   const companyPayable = financeEligible && collectedBy === "HANDMEKEY" ? roundMoney(total - platformCommission) : 0;
   const commissionReceivable = financeEligible && collectedBy === "COMPANY" ? platformCommission : 0;
@@ -423,8 +425,8 @@ function serializeSettlement(row: any) {
 
 function resolvePeriod(from?: string, to?: string) {
   const fallback = defaultPeriod();
-  const resolvedFrom = validDateString(from) ? from! : fallback.from;
-  const resolvedTo = validDateString(to) ? to! : fallback.to;
+  const resolvedFrom = validDateString(from) ? from : fallback.from;
+  const resolvedTo = validDateString(to) ? to : fallback.to;
   if (resolvedFrom > resolvedTo) badRequest("CAR_FINANCE_PERIOD_INVALID", "Finance period start must be on or before the end date");
   return {from: resolvedFrom, to: resolvedTo};
 }
