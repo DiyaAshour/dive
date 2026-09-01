@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import styles from "./car-partner-shell.module.css";
+import styles from "./car-reservation-actions.module.css";
 
 type ManagedStatus = "CONFIRMED" | "CANCELLED" | "NO_SHOW" | "COMPLETED";
 
@@ -24,7 +24,7 @@ export function CarReservationActions({reservationId, status, locale}: Props) {
   const [error, setError] = useState("");
 
   if (finalStatuses.has(status) || options.length === 0) {
-    return <span className={styles.reservationFinal}>{ar ? "حالة نهائية" : "Final state"}</span>;
+    return <span className={styles.final}>{ar ? "حالة نهائية" : "Final state"}</span>;
   }
 
   async function updateStatus() {
@@ -47,8 +47,8 @@ export function CarReservationActions({reservationId, status, locale}: Props) {
     }
   }
 
-  return <div className={styles.reservationActionBox}>
-    <div className={styles.reservationActionRow}>
+  return <div className={styles.box}>
+    <div className={styles.row}>
       <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value as ManagedStatus)} aria-label={ar ? "تغيير حالة الحجز" : "Change reservation status"}>
         {options.map((option) => <option key={option.value} value={option.value}>{ar ? option.ar : option.en}</option>)}
       </select>
@@ -57,7 +57,7 @@ export function CarReservationActions({reservationId, status, locale}: Props) {
       </button>
     </div>
     {nextStatus === "CANCELLED" && <input value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} placeholder={ar ? "سبب الإلغاء (اختياري)" : "Cancellation reason (optional)"}/>} 
-    {error && <small className={styles.reservationActionError}>{error}</small>}
+    {error && <small className={styles.error}>{error}</small>}
   </div>;
 }
 
