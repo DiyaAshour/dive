@@ -1,0 +1,46 @@
+enum CarVehiclePhotoCategory {
+  EXTERIOR_FRONT
+  EXTERIOR_REAR
+  EXTERIOR_LEFT
+  EXTERIOR_RIGHT
+  INTERIOR_DASHBOARD
+  INTERIOR_FRONT_SEATS
+  INTERIOR_REAR_SEATS
+  TRUNK
+  INFOTAINMENT
+  STEERING_WHEEL
+  ODOMETER
+  KEYS_ACCESSORIES
+  OTHER
+}
+
+enum CarVehiclePhotoState {
+  PENDING_UPLOAD
+  READY
+  DELETED
+}
+
+model CarVehiclePhoto {
+  id                String                  @id @default(cuid())
+  vehicleId         String
+  uploadedByUserId  String
+  category          CarVehiclePhotoCategory @default(OTHER)
+  objectKey         String                  @unique
+  publicUrl         String
+  originalFileName  String
+  contentType       String
+  expectedSizeBytes Int
+  alt               String?
+  sortOrder         Int                     @default(0)
+  isPrimary         Boolean                 @default(false)
+  state             CarVehiclePhotoState    @default(PENDING_UPLOAD)
+  uploadExpiresAt   DateTime
+  uploadedAt        DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([vehicleId, state, isPrimary, sortOrder])
+  @@index([vehicleId, category, state, sortOrder])
+  @@index([uploadExpiresAt, state])
+}
