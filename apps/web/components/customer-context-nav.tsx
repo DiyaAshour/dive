@@ -71,7 +71,7 @@ export function CustomerContextNav({ locale, rewardsHref, guideHref }: NavProps)
     <Link href={cars ? "/?service=cars" : "/search"}>{cars && <CarFront size={15}/>} {copy.search}</Link>
     <Link href={rewardsHref}><Sparkles size={15}/>{copy.rewards}</Link>
     <Link href={cars ? `${guideHref}?topic=cars` : guideHref}><BookOpenText size={15}/>{copy.guide}</Link>
-    <Link href={cars ? "/trips?service=cars" : "/trips"}>{copy.bookings}</Link>
+    <Link href={cars ? "/cars/bookings" : "/trips"}>{copy.bookings}</Link>
     <Link href={cars ? "/account/alerts?service=cars" : "/account/alerts"}><Bell size={16}/>{copy.alerts}</Link>
   </>;
 }
