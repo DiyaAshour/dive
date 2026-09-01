@@ -9,15 +9,17 @@ type ManagedStatus = "CONFIRMED" | "CANCELLED" | "NO_SHOW" | "COMPLETED";
 type Props = Readonly<{
   reservationId: string;
   status: string;
+  pickupAt: string;
+  returnAt: string;
   locale: "ar" | "en";
 }>;
 
 const finalStatuses = new Set(["CANCELLED", "NO_SHOW", "COMPLETED", "EXPIRED"]);
 
-export function CarReservationActions({reservationId, status, locale}: Props) {
+export function CarReservationActions({reservationId, status, pickupAt, returnAt, locale}: Props) {
   const ar = locale === "ar";
   const router = useRouter();
-  const options = useMemo(() => availableStatuses(status), [status]);
+  const options = useMemo(() => availableStatuses(status, pickupAt, returnAt), [status, pickupAt, returnAt]);
   const [nextStatus, setNextStatus] = useState<ManagedStatus | "">(options[0]?.value ?? "");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,15 +63,22 @@ export function CarReservationActions({reservationId, status, locale}: Props) {
   </div>;
 }
 
-function availableStatuses(status: string) {
+function availableStatuses(status: string, pickupAt: string, returnAt: string) {
   if (status === "HOLD") return [
     {value: "CONFIRMED" as const, ar: "تأكيد الحجز", en: "Confirm"},
     {value: "CANCELLED" as const, ar: "إلغاء الحجز", en: "Cancel"},
   ];
-  if (status === "CONFIRMED" || status === "MODIFIED") return [
-    {value: "COMPLETED" as const, ar: "مكتمل", en: "Complete"},
-    {value: "NO_SHOW" as const, ar: "لم يحضر", en: "No-show"},
-    {value: "CANCELLED" as const, ar: "إلغاء الحجز", en: "Cancel"},
-  ];
+
+  if (status === "CONFIRMED" || status === "MODIFIED") {
+    const now = Date.now();
+    const pickup = Date.parse(pickupAt);
+    const dropoff = Date.parse(returnAt);
+    const options: Array<{value: ManagedStatus; ar: string; en: string}> = [];
+    if (Number.isFinite(dropoff) && now >= dropoff) options.push({value: "COMPLETED", ar: "مكتمل", en: "Complete"});
+    if (Number.isFinite(pickup) && now >= pickup) options.push({value: "NO_SHOW", ar: "لم يحضر", en: "No-show"});
+    options.push({value: "CANCELLED", ar: "إلغاء الحجز", en: "Cancel"});
+    return options;
+  }
+
   return [];
 }
