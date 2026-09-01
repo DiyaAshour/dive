@@ -20,22 +20,22 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   const marketEdge = market.direction === "rtl" ? "right" : "left";
   const rewardsHref = `/rewards/${market.baseLocale}`;
 
-  const contextualNav = <CustomerContextNav
-    locale={market.locale}
-    staysSearchLabel={copy.home.search}
-    rewardsLabel={ui.header.rewards}
-    guideLabel={ui.header.guide}
-    tripsLabel={copy.nav.trips}
-    alertsLabel={copy.nav.alerts}
-    rewardsHref={rewardsHref}
-  />;
+  const navProps = {
+    locale: market.locale,
+    staysSearchLabel: copy.home.search,
+    rewardsLabel: ui.header.rewards,
+    guideLabel: ui.header.guide,
+    tripsLabel: copy.nav.trips,
+    alertsLabel: copy.nav.alerts,
+    rewardsHref,
+  };
 
   return <>
     <header className="siteHeader">
       <div className="desktopMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/></div>
       <div className="shell siteHeaderInner">
         <SiteBrand />
-        {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{contextualNav}</nav>}
+        {!minimal && <nav className="siteNav" aria-label={copy.nav.account}><CustomerContextNav {...navProps}/></nav>}
         <div className="siteActions">
           {!minimal && <CustomerContextPartnerLink locale={market.locale} staysLabel={copy.nav.partner}/>} 
           <div className="compactMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
@@ -46,7 +46,7 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
           {!minimal && <details className="mobileSiteNav">
             <summary aria-label={ui.header.menu}><Menu size={20}/><span>{ui.header.menu}</span></summary>
             <div className="mobileSiteNavPanel">
-              <nav aria-label={ui.header.menu}>{contextualNav}</nav>
+              <nav aria-label={ui.header.menu}><CustomerContextNav {...navProps} mobile/></nav>
               <CustomerContextPartnerLink locale={market.locale} staysLabel={copy.nav.partner} mobile/>
               {user && <SignOutButton locale={market.baseLocale}/>} 
             </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BookOpenText, Building2, Car, Search, Sparkles } from "lucide-react";
+import { Bell, BookOpenText, Building2, Car, ChevronDown, Search, Sparkles } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
+import styles from "./customer-context-nav.module.css";
 
 type Props = Readonly<{
   locale: string;
@@ -12,6 +13,7 @@ type Props = Readonly<{
   tripsLabel: string;
   alertsLabel: string;
   rewardsHref: string;
+  mobile?: boolean;
 }>;
 
 function useCarsMode() {
@@ -28,16 +30,35 @@ export function CustomerContextNav({
   tripsLabel,
   alertsLabel,
   rewardsHref,
+  mobile = false,
 }: Props) {
   const isCars = useCarsMode();
   const ar = locale.startsWith("ar");
 
   if (isCars) {
+    const searchCars = <Link href="/?service=cars#car-search"><Search size={15}/>{ar ? "ابحث عن سيارة" : "Search cars"}</Link>;
+    const carBookings = <Link href="/trips"><Car size={15}/>{ar ? "حجوزات السيارات" : "Car bookings"}</Link>;
+    const priceAlerts = <Link href="/account/alerts"><Bell size={15}/>{ar ? "تنبيهات الأسعار" : "Price alerts"}</Link>;
+    const rentalCompanies = <Link href="/cars"><Building2 size={15}/>{ar ? "شركات التأجير" : "Rental companies"}</Link>;
+
+    if (mobile) return <>{searchCars}{carBookings}{priceAlerts}{rentalCompanies}</>;
+
     return <>
-      <Link href="/?service=cars#car-search"><Search size={15}/>{ar ? "ابحث عن سيارة" : "Search cars"}</Link>
-      <Link href="/trips"><Car size={15}/>{ar ? "حجوزات السيارات" : "Car bookings"}</Link>
-      <Link href="/account/alerts"><Bell size={15}/>{ar ? "تنبيهات الأسعار" : "Price alerts"}</Link>
-      <Link href="/cars"><Building2 size={15}/>{ar ? "شركات التأجير" : "Rental companies"}</Link>
+      {searchCars}
+      {carBookings}
+      <details className={styles.moreMenu}>
+        <summary><span>{ar ? "المزيد" : "More"}</span><ChevronDown size={15}/></summary>
+        <div className={styles.morePanel}>
+          <section>
+            <span className={styles.groupLabel}>{ar ? "لرحلتك" : "For your trip"}</span>
+            {priceAlerts}
+          </section>
+          <section>
+            <span className={styles.groupLabel}>{ar ? "استكشف" : "Explore"}</span>
+            {rentalCompanies}
+          </section>
+        </div>
+      </details>
     </>;
   }
 
