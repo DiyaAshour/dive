@@ -17,8 +17,6 @@ export function SearchStarRatingEnhancer(){
       picker.setAttribute("aria-label",labelText);
 
       const buttons:Array<HTMLButtonElement>=[];
-      const valueLabel=document.createElement("span");
-      valueLabel.className="searchStarPickerValue";
 
       const current=()=>{
         const value=Number(select.value);
@@ -30,7 +28,6 @@ export function SearchStarRatingEnhancer(){
           button.classList.toggle("isActive",value<=visible);
           button.setAttribute("aria-checked",String(selected===value));
         });
-        valueLabel.textContent=selected?`${selected} ★`:"—";
       };
       const choose=(value:number)=>{
         const next=current()===value?0:value;
@@ -63,7 +60,6 @@ export function SearchStarRatingEnhancer(){
       }
 
       picker.addEventListener("mouseleave",()=>paint(current(),current()));
-      picker.appendChild(valueLabel);
       select.insertAdjacentElement("afterend",picker);
       paint(current(),current());
     };
@@ -77,14 +73,13 @@ export function SearchStarRatingEnhancer(){
 
   return <style>{`
     .searchStarNativeSelect{display:none!important}
-    .searchStarPicker{display:flex;align-items:center;gap:5px;width:100%;min-height:48px;padding:7px 8px;border:1px solid #d3dde6;border-radius:13px;background:linear-gradient(180deg,#fff 0%,#f8fbfd 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
-    .searchStarPickerButton{width:38px;height:34px;flex:0 0 38px;border:0;border-radius:9px;background:transparent;color:#a9b4be;font-size:23px;line-height:1;display:grid;place-items:center;cursor:pointer;transition:color .14s ease,background .14s ease,transform .14s ease}
-    .searchStarPickerButton.isActive{color:#d49a16;background:#fff6d9}
-    .searchStarPickerButton:hover{background:#f1f5f8;transform:translateY(-1px)}
-    .searchStarPickerButton.isActive:hover{background:#fff1c4}
-    .searchStarPickerButton:focus-visible{outline:3px solid rgba(23,112,207,.2);outline-offset:2px}
-    .searchStarPickerValue{min-width:45px;margin-inline-start:auto;padding-inline-start:8px;border-inline-start:1px solid #dfe7ed;text-align:center;color:#344f66;font-size:11px;font-weight:900;white-space:nowrap}
-    .mobileSearchSheet .searchStarPicker{min-height:52px;border-radius:14px}.mobileSearchSheet .searchStarPickerButton{height:38px;width:40px;flex-basis:40px;font-size:24px}
-    @media(max-width:390px){.searchStarPicker{gap:3px;padding:7px 6px}.searchStarPickerButton{width:35px;flex-basis:35px}.searchStarPickerValue{min-width:38px;padding-inline-start:4px}}
+    .searchStarPicker{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;gap:2px;width:100%;height:40px;min-height:40px;padding:3px 6px;border:1px solid #d3dde6;border-radius:11px;background:#fff;box-shadow:0 1px 2px rgba(18,45,68,.035);overflow:hidden}
+    .searchStarPickerButton{width:100%;height:32px;min-width:0;border:0;border-radius:7px;background:transparent;color:#aab5bf;font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;transition:color .14s ease,background .14s ease,transform .14s ease}
+    .searchStarPickerButton.isActive{color:#d49a16;background:#fff7df}
+    .searchStarPickerButton:hover{background:#f4f7f9;color:#7f8f9d;transform:translateY(-1px)}
+    .searchStarPickerButton.isActive:hover{background:#fff1c8;color:#c58b0b}
+    .searchStarPickerButton:focus-visible{outline:2px solid rgba(23,112,207,.22);outline-offset:-2px}
+    .mobileSearchSheet .searchStarPicker{height:42px;min-height:42px;padding:4px 6px;border-radius:11px}.mobileSearchSheet .searchStarPickerButton{height:32px;font-size:19px}
+    @media(max-width:390px){.searchStarPicker{gap:1px;padding-inline:5px}.searchStarPickerButton{font-size:17px}}
   `}</style>;
 }
