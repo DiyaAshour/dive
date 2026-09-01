@@ -86,12 +86,90 @@ export function priceWatchEmail(input: Readonly<{title: string; body: string; ur
 }
 
 export function manualEmailContent(input: Readonly<{subject: string; textBody: string}>): EmailContent {
+  if (/enjoy\s+your\s+holiday/i.test(input.subject)) return holidayEmail(input);
   const paragraphs = input.textBody.split(/\n{2,}/).map((part) => `<p style="white-space:pre-wrap;line-height:1.7">${escapeHtml(part)}</p>`).join("");
   return {
     subject: input.subject,
     html: layout(input.subject, `${paragraphs}<p style="margin-top:24px;color:#64748b;font-size:13px">HandMeKey Support · support@handmekey.com</p>`),
     text: input.textBody,
   };
+}
+
+function holidayEmail(input: Readonly<{subject: string; textBody: string}>): EmailContent {
+  const paragraphs = input.textBody
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => `<p style="margin:0 0 18px;white-space:pre-wrap;line-height:1.75;color:#2b3b4f;font-size:15px">${escapeHtml(part)}</p>`)
+    .join("");
+  const siteUrl = publicSiteUrl();
+  const logoUrl = `${siteUrl}/brand/hmk-2026-header-dark.svg`;
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>${escapeHtml(input.subject)}</title>
+</head>
+<body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;color:#132238">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">A quick note from HandMeKey — enjoy your holiday.</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#eef1f4">
+    <tr>
+      <td align="center" style="padding:30px 14px">
+        <table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;border-collapse:separate;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 16px 42px rgba(15,39,71,.12)">
+          <tr>
+            <td style="padding:20px 24px;background:#06182a">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td valign="middle" style="width:55%">
+                    <img src="${escapeAttr(logoUrl)}" width="168" alt="HandMeKey" style="display:block;width:168px;max-width:100%;height:auto;border:0">
+                  </td>
+                  <td valign="middle" align="right" style="color:#cbd5e1;font-size:11px;line-height:1.4;letter-spacing:.03em">A quick note, nothing more</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 30px;background:#fffaf0">
+              <div style="width:56px;height:4px;background:#d4a52e;border-radius:0 0 5px 5px"></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 30px 28px;background:#fffaf0;border-bottom:1px solid #efe6d2">
+              <div style="margin:0 0 12px;color:#8a6819;font-size:11px;font-weight:800;letter-spacing:.14em">TIME TO UNPLUG</div>
+              <h1 style="margin:0;color:#06182a;font-size:36px;line-height:1.08;letter-spacing:-1px">Enjoy your holiday.</h1>
+              <p style="margin:12px 0 0;color:#667085;font-size:14px;line-height:1.65">No action needed — just wishing you a great break.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 30px 22px;background:#ffffff">
+              ${paragraphs}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:17px 30px;border-top:1px solid #edf0f3;background:#fbfcfd">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td style="color:#0f2747;font-size:13px;font-weight:800">HandMeKey</td>
+                  <td align="right" style="color:#7a8592;font-size:11px">Hotels, clearly priced</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <div style="margin:15px auto 0;color:#8b96a3;font-size:11px;line-height:1.5">Sent with HandMeKey · ${escapeHtml(siteUrl.replace(/^https?:\/\//i, ""))}</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  return {subject: input.subject, html, text: input.textBody};
+}
+
+function publicSiteUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (configured && /^https?:\/\//i.test(configured)) return configured;
+  return "https://handmekey.com";
 }
 
 function actionEmail(subject:string, greeting:string, en:string, ar:string, label:string, url:string):EmailContent {
