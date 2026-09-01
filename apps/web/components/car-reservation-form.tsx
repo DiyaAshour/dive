@@ -43,7 +43,7 @@ export function CarReservationForm(props:Props){
       const response=await fetch("/api/v1/cars/reservations",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
       const result=await response.json();
       if(!response.ok)throw new Error(result?.error?.message||copy.failed);
-      router.push(`/cars/bookings/${result.data.id}`);router.refresh();
+      router.push(`/cars/bookings/${result.data.id}?booked=1`);router.refresh();
     }catch(value){setError(value instanceof Error?value.message:copy.failed);}finally{setLoading(false);}
   }
 
