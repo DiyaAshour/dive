@@ -10,7 +10,7 @@ type Mode = "login" | "register";
 type Portal = "guest" | "partner";
 type Context = "default" | "cars";
 
-type Props = Readonly<{portal?: Portal;locale?:GuestLocale;nextPath?:string;context?:Context}>;
+type Props = Readonly<{portal?: Portal;locale?:GuestLocale;nextPath?:string|undefined;context?:Context}>;
 
 export default function AuthForm({portal = "guest",locale="en",nextPath,context="default"}: Props) {
   const [mode,setMode]=useState<Mode>("login");
