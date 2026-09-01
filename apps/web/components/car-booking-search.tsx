@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, Clock, MapPin, Search, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, Check, ChevronDown, Clock, MapPin, Search, Users, X } from "lucide-react";
 import styles from "./car-booking-search.module.css";
 
 type Locale = "ar" | "en";
-type FeaturedBrand = "Toyota" | "BMW" | "Mercedes-Benz";
 
 type Props = Readonly<{
   locale: Locale;
@@ -13,15 +12,39 @@ type Props = Readonly<{
   defaultReturnDate: string;
 }>;
 
-const FEATURED_BRANDS: ReadonlyArray<{value: FeaturedBrand; label: string}> = [
-  {value: "Toyota", label: "Toyota"},
-  {value: "BMW", label: "BMW"},
-  {value: "Mercedes-Benz", label: "Mercedes"},
-];
+const CAR_BRANDS = [
+  "Toyota",
+  "Hyundai",
+  "Kia",
+  "Nissan",
+  "Honda",
+  "BMW",
+  "Mercedes-Benz",
+  "Audi",
+  "Volkswagen",
+  "Ford",
+  "Chevrolet",
+  "Lexus",
+  "Tesla",
+  "BYD",
+  "MG",
+  "Geely",
+  "Land Rover",
+  "Mazda",
+  "Mitsubishi",
+  "Suzuki",
+  "Jeep",
+] as const;
+
+type CarBrand = (typeof CAR_BRANDS)[number];
 
 export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}: Props) {
   const [sameDropoff, setSameDropoff] = useState(true);
-  const [brand, setBrand] = useState<FeaturedBrand | "">("");
+  const [brand, setBrand] = useState<CarBrand | "">("");
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brandQuery, setBrandQuery] = useState("");
+  const brandPickerRef = useRef<HTMLDivElement>(null);
+
   const copy = locale === "ar" ? {
     pickup: "مكان الاستلام",
     pickupPlaceholder: "عمّان - مطار الملكة علياء",
@@ -35,6 +58,12 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
     driverAgeValue: "30 - 65 سنة",
     brand: "الماركة",
     brandHint: "اختياري",
+    anyBrand: "أي ماركة",
+    chooseBrand: "اختر الماركة",
+    brandSearch: "ابحث عن الماركة",
+    popularBrands: "الماركات",
+    clearBrand: "إلغاء اختيار الماركة",
+    noBrands: "لا توجد ماركة بهذا الاسم",
     search: "ابحث عن سيارة",
   } : {
     pickup: "Pick-up location",
@@ -49,8 +78,47 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
     driverAgeValue: "30 - 65 years",
     brand: "Brand",
     brandHint: "Optional",
+    anyBrand: "Any brand",
+    chooseBrand: "Choose brand",
+    brandSearch: "Search brands",
+    popularBrands: "Brands",
+    clearBrand: "Clear brand",
+    noBrands: "No matching brand",
     search: "Search cars",
   };
+
+  const filteredBrands = useMemo(() => {
+    const query = brandQuery.trim().toLowerCase();
+    if (!query) return CAR_BRANDS;
+    return CAR_BRANDS.filter((item) => item.toLowerCase().includes(query));
+  }, [brandQuery]);
+
+  useEffect(() => {
+    if (!brandOpen) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (brandPickerRef.current && !brandPickerRef.current.contains(event.target as Node)) {
+        setBrandOpen(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setBrandOpen(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [brandOpen]);
+
+  function chooseBrand(value: CarBrand) {
+    setBrand(value);
+    setBrandQuery("");
+    setBrandOpen(false);
+  }
 
   return <div className={styles.root}>
     <form className={styles.dock} action="/cars" method="get">
@@ -106,23 +174,60 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
         </select>
       </label>
 
-      <div className={`${styles.field} ${styles.brandField}`}>
+      <div className={`${styles.field} ${styles.brandField}`} ref={brandPickerRef}>
         <span className={styles.brandLabel}><span>{copy.brand}</span><small>{copy.brandHint}</small></span>
-        <div className={styles.brandTabs} role="group" aria-label={copy.brand}>
-          {FEATURED_BRANDS.map((item) => {
-            const active = brand === item.value;
-            return <button
-              key={item.value}
-              type="button"
-              className={`${styles.brandTab} ${active ? styles.brandTabActive : ""}`}
-              aria-pressed={active}
-              onClick={() => setBrand((current) => current === item.value ? "" : item.value)}
-            >
-              <BrandMark brand={item.value}/>
-              <span>{item.label}</span>
-            </button>;
-          })}
-        </div>
+        <button
+          className={`${styles.brandTrigger} ${brand ? styles.brandTriggerSelected : ""}`}
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={brandOpen}
+          onClick={() => setBrandOpen((current) => !current)}
+        >
+          <span className={styles.brandTriggerText}>
+            {brand ? <><BrandBadge brand={brand}/><strong>{brand}</strong></> : <strong>{copy.chooseBrand}</strong>}
+          </span>
+          <ChevronDown size={16} className={brandOpen ? styles.chevronOpen : ""}/>
+        </button>
+
+        {brandOpen && <div className={styles.brandPopover}>
+          <div className={styles.brandPopoverHead}>
+            <div>
+              <strong>{copy.brand}</strong>
+              <span>{copy.anyBrand}</span>
+            </div>
+            <button type="button" className={styles.brandClose} aria-label={copy.clearBrand} onClick={() => setBrandOpen(false)}><X size={17}/></button>
+          </div>
+
+          <label className={styles.brandSearch}>
+            <Search size={16}/>
+            <input autoFocus value={brandQuery} onChange={(event) => setBrandQuery(event.target.value)} placeholder={copy.brandSearch}/>
+            {brandQuery && <button type="button" aria-label={copy.clearBrand} onClick={() => setBrandQuery("")}><X size={14}/></button>}
+          </label>
+
+          <span className={styles.brandSectionTitle}>{copy.popularBrands}</span>
+          <div className={styles.brandGrid} role="listbox" aria-label={copy.brand}>
+            {filteredBrands.map((item) => {
+              const active = brand === item;
+              return <button
+                type="button"
+                key={item}
+                role="option"
+                aria-selected={active}
+                className={`${styles.brandOption} ${active ? styles.brandOptionActive : ""}`}
+                onClick={() => chooseBrand(item)}
+              >
+                <BrandBadge brand={item}/>
+                <span>{item}</span>
+                {active && <Check size={15}/>} 
+              </button>;
+            })}
+          </div>
+
+          {filteredBrands.length === 0 && <div className={styles.brandEmpty}>{copy.noBrands}</div>}
+
+          {brand && <button type="button" className={styles.clearBrandButton} onClick={() => {setBrand("");setBrandQuery("");setBrandOpen(false);}}>{copy.clearBrand}</button>}
+        </div>}
+
         {brand && <input type="hidden" name="brand" value={brand}/>} 
       </div>
 
@@ -131,23 +236,7 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
   </div>;
 }
 
-function BrandMark({brand}: {brand: FeaturedBrand}) {
-  if (brand === "Toyota") return <svg className={styles.brandMark} viewBox="0 0 32 32" aria-hidden="true">
-    <ellipse cx="16" cy="16" rx="13" ry="9.5" fill="none" stroke="currentColor" strokeWidth="2"/>
-    <ellipse cx="16" cy="13.2" rx="5.3" ry="8.5" fill="none" stroke="currentColor" strokeWidth="1.8"/>
-    <ellipse cx="16" cy="12" rx="10.1" ry="4.2" fill="none" stroke="currentColor" strokeWidth="1.7"/>
-  </svg>;
-
-  if (brand === "BMW") return <svg className={styles.brandMark} viewBox="0 0 32 32" aria-hidden="true">
-    <circle cx="16" cy="16" r="13" fill="#fff" stroke="currentColor" strokeWidth="1.8"/>
-    <circle cx="16" cy="17" r="7.2" fill="#fff" stroke="currentColor" strokeWidth="1"/>
-    <path d="M16 9.8v7.2H8.8A7.2 7.2 0 0 1 16 9.8Z" fill="#4a9bd8"/>
-    <path d="M16 17h7.2A7.2 7.2 0 0 1 16 24.2Z" fill="#4a9bd8"/>
-    <path d="M9.3 11.1 11.2 8.8M22.7 11.1 20.8 8.8M13.2 7.1h5.6" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>;
-
-  return <svg className={styles.brandMark} viewBox="0 0 32 32" aria-hidden="true">
-    <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" strokeWidth="1.6"/>
-    <path d="M16 5.8 18.1 15.2 26.1 21.5 17 18.4 7 21.5 13.9 15.2Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
-  </svg>;
+function BrandBadge({brand}: {brand: CarBrand}) {
+  const short = brand === "Mercedes-Benz" ? "MB" : brand === "Land Rover" ? "LR" : brand.slice(0, 2).toUpperCase();
+  return <span className={styles.brandBadge} aria-hidden="true">{short}</span>;
 }
