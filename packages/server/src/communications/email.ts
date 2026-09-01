@@ -2,6 +2,8 @@ import { database } from "@platform/database";
 
 const MAX_ATTEMPTS = 8;
 const STALE_PROCESSING_MS = 10 * 60_000;
+const DEFAULT_EMAIL_FROM = "HandMeKey <bookings@handmekey.com>";
+const DEFAULT_EMAIL_REPLY_TO = "support@handmekey.com";
 
 export type EmailKind =
   | "BOOKING_CONFIRMED"
@@ -35,7 +37,7 @@ export function emailCapabilities() {
   const provider = normalizedProvider();
   if (provider === "resend") {
     return {
-      configured: Boolean(process.env.RESEND_API_KEY?.trim() && process.env.EMAIL_FROM?.trim()),
+      configured: Boolean(process.env.RESEND_API_KEY?.trim()),
       provider,
     } as const;
   }
@@ -142,8 +144,8 @@ async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toNa
   const provider = normalizedProvider();
   if (provider !== "resend") throw new Error("No email provider is configured");
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.EMAIL_FROM?.trim();
-  if (!apiKey || !from) throw new Error("Resend email provider is missing RESEND_API_KEY or EMAIL_FROM");
+  const from = process.env.EMAIL_FROM?.trim() || DEFAULT_EMAIL_FROM;
+  if (!apiKey) throw new Error("Resend email provider is missing RESEND_API_KEY");
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -154,7 +156,7 @@ async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toNa
       subject: input.subject,
       html: input.htmlBody,
       text: input.textBody,
-      ...((input.replyTo ?? process.env.EMAIL_REPLY_TO?.trim()) ? {reply_to: input.replyTo ?? process.env.EMAIL_REPLY_TO?.trim()} : {}),
+      reply_to: input.replyTo ?? process.env.EMAIL_REPLY_TO?.trim() ?? DEFAULT_EMAIL_REPLY_TO,
     }),
   });
   const body = await response.json().catch(() => ({})) as {id?: unknown; message?: unknown; name?: unknown};
@@ -164,6 +166,9 @@ async function sendWithConfiguredProvider(input: Readonly<{toEmail: string; toNa
   return body.id;
 }
 
-function normalizedProvider(): string {return (process.env.EMAIL_PROVIDER ?? "none").trim().toLowerCase();}
+function normalizedProvider(): string {
+  if (process.env.RESEND_API_KEY?.trim()) return "resend";
+  return (process.env.EMAIL_PROVIDER ?? "none").trim().toLowerCase();
+}
 function normalizeEmail(value: string): string {return value.trim().toLowerCase();}
 function errorMessage(error: unknown): string {const value = error instanceof Error ? error.message : "Unknown email delivery error"; return value.slice(0, 2_000);}
