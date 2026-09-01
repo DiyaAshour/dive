@@ -145,6 +145,7 @@ async function evaluateCandidate(candidate: SearchCandidate, input: DiscoverySea
   if(advanced.areas.length&&(!hotel.area||!advanced.areas.includes(normalizeFilterText(hotel.area))))return null;
   if(advanced.amenities.length&&!advanced.amenities.every((code)=>hotelHasAmenity(hotel,code)))return null;
   const offers = hotel.offers.filter((offer) => {
+    if(offer.maxInfants<input.infants)return false;
     if(advanced.propertyTypes.length&&!advanced.propertyTypes.some((type)=>offerMatchesPropertyType(hotel,offer,type)))return false;
     if(advanced.mealPlans.length&&!advanced.mealPlans.includes(offer.mealPlan.toUpperCase()))return false;
     if(advanced.roomFeatures.length&&!advanced.roomFeatures.every((feature)=>offerMatchesRoomFeature(offer,feature)))return false;
@@ -272,6 +273,8 @@ function searchFingerprint(input: DiscoverySearchInput, destinationId: string | 
     departure: input.departure,
     adults: input.adults,
     children: input.children,
+    infants: input.infants,
+    pets: input.pets,
     minPrice: input.minPrice ?? null,
     maxPrice: input.maxPrice ?? null,
     stars: [...input.stars].sort(),
