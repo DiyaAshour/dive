@@ -95,6 +95,8 @@ export async function createCarReservation(userId: string, input: CreateCarReser
   const subtotal = roundMoney(dayRate * rentalDays);
   const fees = 0;
   const total = roundMoney(subtotal + fees);
+  const commissionRate = Number(vehicle.company.commissionRate);
+  const commissionAmount = roundMoney(total * commissionRate);
   const reference = reservationReference();
 
   const row = await db.carReservation.create({
@@ -113,6 +115,8 @@ export async function createCarReservation(userId: string, input: CreateCarReser
       returnAt,
       status: "CONFIRMED",
       paymentMode: "PAY_AT_COUNTER",
+      commissionRate,
+      commissionAmount,
       currency: vehicle.company.currency,
       dailyRate: dayRate,
       rentalDays,
@@ -179,6 +183,8 @@ function serializeReservation(row: any) {
     reference: row.reference,
     status: row.status,
     paymentMode: row.paymentMode,
+    commissionRate: Number(row.commissionRate),
+    commissionAmount: Number(row.commissionAmount),
     guestName: row.guestName,
     guestEmail: row.guestEmail,
     guestPhone: row.guestPhone,
