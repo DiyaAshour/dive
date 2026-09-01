@@ -59,11 +59,11 @@ export async function generateMetadata(): Promise<Metadata> {
     ? {icon: identity.faviconUrl, shortcut: identity.faviconUrl, apple: identity.faviconUrl}
     : {
         icon: [
-          {url: "/brand/hmk-favicon-light.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)"},
-          {url: "/brand/hmk-favicon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)"},
+          {url: "/brand/hmk-2026-favicon-light.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)"},
+          {url: "/brand/hmk-2026-favicon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)"},
         ],
-        shortcut: "/brand/hmk-favicon-light.svg",
-        apple: "/brand/hmk-app-icon-navy.svg",
+        shortcut: "/brand/hmk-2026-favicon-light.svg",
+        apple: "/brand/hmk-2026-app-icon.svg",
       };
   return {
     metadataBase: new URL(siteUrl()),
