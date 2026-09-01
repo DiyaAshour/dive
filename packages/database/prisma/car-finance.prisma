@@ -41,49 +41,50 @@ model CarFinanceTransaction {
 }
 
 model CarFinanceSettlement {
-  id                        String                 @id @default(cuid())
-  companyId                 String
-  settlementNumber          String                 @unique
-  periodStart               DateTime               @db.Date
-  periodEnd                 DateTime               @db.Date
-  currency                  String                 @db.Char(3)
-  bookingCount              Int                    @default(0)
-  grossBookingValue         Decimal                @default(0) @db.Decimal(14, 2)
-  platformCollectedGross    Decimal                @default(0) @db.Decimal(14, 2)
-  companyCollectedGross     Decimal                @default(0) @db.Decimal(14, 2)
-  platformCommission        Decimal                @default(0) @db.Decimal(14, 2)
-  companyCommissionReceivable Decimal              @default(0) @db.Decimal(14, 2)
-  companyGrossPayable       Decimal                @default(0) @db.Decimal(14, 2)
-  netAmount                 Decimal                @default(0) @db.Decimal(14, 2)
-  direction                 CarSettlementDirection
-  status                    CarSettlementStatus    @default(READY)
-  externalReference         String?
-  notes                     String?                @db.Text
-  attachmentUrl             String?
-  snapshot                  Json
-  createdByUserId           String
-  paidByUserId              String?
-  paidAt                    DateTime?
-  voidedAt                  DateTime?
-  createdAt                 DateTime               @default(now())
-  updatedAt                 DateTime               @updatedAt
+  id                          String                 @id @default(cuid())
+  companyId                   String
+  settlementNumber            String                 @unique
+  periodStart                 DateTime               @db.Date
+  periodEnd                   DateTime               @db.Date
+  currency                    String                 @db.Char(3)
+  bookingCount                Int                    @default(0)
+  grossBookingValue           Decimal                @default(0) @db.Decimal(14, 2)
+  platformCollectedGross      Decimal                @default(0) @db.Decimal(14, 2)
+  companyCollectedGross       Decimal                @default(0) @db.Decimal(14, 2)
+  platformCommission          Decimal                @default(0) @db.Decimal(14, 2)
+  companyCommissionReceivable Decimal                @default(0) @db.Decimal(14, 2)
+  companyGrossPayable         Decimal                @default(0) @db.Decimal(14, 2)
+  netAmount                   Decimal                @default(0) @db.Decimal(14, 2)
+  direction                   CarSettlementDirection
+  status                      CarSettlementStatus    @default(READY)
+  externalReference           String?
+  notes                       String?                @db.Text
+  attachmentUrl               String?
+  snapshot                    Json
+  createdByUserId             String
+  paidByUserId                String?
+  paidAt                      DateTime?
+  voidedAt                    DateTime?
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
 
   @@index([companyId, status, periodEnd])
   @@index([companyId, createdAt])
 }
 
 model CarFinanceSettlementItem {
-  id                  String   @id @default(cuid())
-  settlementId        String
-  reservationId       String   @unique
+  id                   String   @id @default(cuid())
+  settlementId         String
+  reservationId        String   @unique
   reservationReference String
-  paymentMode         String
-  grossAmount         Decimal  @db.Decimal(14, 2)
-  commissionAmount    Decimal  @db.Decimal(14, 2)
-  companyPayable      Decimal  @default(0) @db.Decimal(14, 2)
-  companyReceivable   Decimal  @default(0) @db.Decimal(14, 2)
-  netCompanyDelta     Decimal  @db.Decimal(14, 2)
-  createdAt           DateTime @default(now())
+  paymentMode          String
+  paymentCollector     String
+  grossAmount          Decimal  @db.Decimal(14, 2)
+  commissionAmount     Decimal  @db.Decimal(14, 2)
+  companyPayable       Decimal  @default(0) @db.Decimal(14, 2)
+  companyReceivable    Decimal  @default(0) @db.Decimal(14, 2)
+  netCompanyDelta      Decimal  @db.Decimal(14, 2)
+  createdAt            DateTime @default(now())
 
   @@index([settlementId, createdAt])
   @@index([reservationReference])
