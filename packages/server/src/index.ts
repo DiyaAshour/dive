@@ -21,6 +21,7 @@ export * from "./cars/service";
 export * from "./cars/booking";
 export * from "./cars/demo-booking";
 export * from "./cars/reservation-management";
+export * from "./cars/media";
 export * from "./publishing/service";
 export {listFeaturedHotels, searchHotels} from "./discovery/service";
 export * from "./discovery/destinations";
