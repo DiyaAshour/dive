@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     if (!user) return Response.json({data:null,error:{code:"UNAUTHORIZED",message:"Authentication required"}},{status:401});
     const parsed = createCarLocationSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
-    return ok(await createCarRentalLocation(user.id, parsed.data), {status:201});
+    const input = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, value]) => value !== undefined),
+    ) as Parameters<typeof createCarRentalLocation>[1];
+    return ok(await createCarRentalLocation(user.id, input), {status:201});
   } catch (error) { return handleApiError(error); }
 }
