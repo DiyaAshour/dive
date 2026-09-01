@@ -18,12 +18,16 @@ type Params = Promise<{
   returnDate?: string;
   returnTime?: string;
   driverAge?: string;
+  brand?: string;
 }>;
+
+const HOMEPAGE_BRANDS = new Set(["Toyota", "BMW", "Mercedes-Benz"]);
 
 export default async function CarsPage({searchParams}: {searchParams: Params}) {
   const [market, query] = await Promise.all([requestGuestMarket(), searchParams]);
   const dates = defaultStayDates();
   const ar = market.locale === "ar";
+  const requestedBrand = query.brand?.trim() || "";
   const initialSearch: CarSearchValues = {
     pickup: query.pickup?.trim() || (ar ? "عمّان - مطار الملكة علياء" : "Amman - Queen Alia Airport"),
     dropoff: query.dropoff?.trim() || "same",
@@ -32,6 +36,7 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
     returnDate: query.returnDate || dates.departure,
     returnTime: query.returnTime || "10:00",
     driverAge: query.driverAge || "30-65",
+    brand: HOMEPAGE_BRANDS.has(requestedBrand) ? requestedBrand : "",
   };
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
