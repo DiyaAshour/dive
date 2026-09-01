@@ -17,13 +17,13 @@ export function MobileAppNav({locale,rewardsHref}:Props){
   const carMode=pathname.startsWith("/cars")||searchParams.get("service")==="cars";
   const bookingsLabel=carMode?(locale==="ar"?"حجوزاتي":"Bookings"):copy.trips;
   const BookingsIcon=carMode?CarFront:CalendarDays;
-  const tripsHref=carMode?"/trips?service=cars":"/trips";
+  const bookingsHref=carMode?"/cars/bookings":"/trips";
   const homeHref=carMode?"/?service=cars":"/";
 
   const items=[
     {href:homeHref,label:copy.home,icon:Home,active:pathname==="/"},
-    {href:carMode?"/?service=cars":"/search",label:copy.search,icon:Search,active:carMode?pathname.startsWith("/cars"):pathname.startsWith("/search")},
-    {href:tripsHref,label:bookingsLabel,icon:BookingsIcon,active:pathname.startsWith("/trips")},
+    {href:carMode?"/?service=cars":"/search",label:copy.search,icon:Search,active:carMode?pathname==="/cars":pathname.startsWith("/search")},
+    {href:bookingsHref,label:bookingsLabel,icon:BookingsIcon,active:carMode?pathname.startsWith("/cars/bookings"):pathname.startsWith("/trips")},
     {href:rewardsHref,label:copy.rewards,icon:Sparkles,active:pathname.startsWith("/rewards")},
     {href:"/account",label:copy.account,icon:UserRound,active:pathname.startsWith("/account")},
   ];
