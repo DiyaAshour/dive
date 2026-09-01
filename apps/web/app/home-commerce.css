@@ -3,6 +3,7 @@
 
 .homeSearchFieldLabel{display:flex!important;align-items:center;gap:6px}.homeSearchFieldLabel svg{flex:0 0 auto;color:var(--navy)}
 .stayCardCtaCopy{display:grid;gap:2px;min-width:0}.stayCardCtaCopy small{font-size:9px;font-weight:700;color:#8a96a6;line-height:1.2}.stayCardCtaCopy strong{font-size:13px;color:var(--navy);line-height:1.25}.stayCardCtaArrow{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;background:#f1f5f8;color:var(--navy);transition:.18s ease}.stayCard:hover .stayCardCtaArrow{background:var(--navy);color:#fff}
+.homeValueDots{display:none}
 
 @media (max-width:780px){
   .premiumHero .homeSearchDock{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:0!important;margin-top:7px!important;padding:6px!important;border-radius:18px!important;overflow:visible!important;box-shadow:0 13px 34px rgba(16,40,64,.13)!important}
@@ -35,6 +36,21 @@
   .customerPage .stayCardCtaCopy small{font-size:8px!important}
   .customerPage .stayCardCtaCopy strong{font-size:12px!important}
   .customerPage .stayCardCtaArrow{width:32px;height:32px;border-radius:10px}
+
+  .customerPage .valueSection{padding:52px 0 46px!important;overflow:hidden}
+  .customerPage .valueSection .premiumSectionHead{align-items:flex-start!important;margin-bottom:17px!important}
+  .customerPage .valueSection .premiumSectionHead h2{max-width:520px;font-size:28px!important;line-height:1.08!important;margin-top:6px!important}
+  .customerPage .homeValueCarousel{display:flex!important;grid-template-columns:none!important;gap:12px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory;scroll-padding-inline:0;padding:1px 0 5px!important;overscroll-behavior-inline:contain;touch-action:pan-x pan-y;scrollbar-width:none}
+  .customerPage .homeValueCarousel::-webkit-scrollbar{display:none}
+  .customerPage .homeValueCarousel article{flex:0 0 min(82vw,340px)!important;width:min(82vw,340px)!important;min-height:238px!important;scroll-snap-align:start;scroll-snap-stop:always;border-radius:20px!important;padding:22px!important;display:flex;flex-direction:column;align-items:flex-start}
+  .customerPage .homeValueCarousel article>span{width:46px!important;height:46px!important;border-radius:14px!important}
+  .customerPage .homeValueCarousel article>span svg{width:24px;height:24px}
+  .customerPage .homeValueCarousel h3{font-size:20px!important;line-height:1.18!important;margin:20px 0 9px!important}
+  .customerPage .homeValueCarousel p{font-size:13.5px!important;line-height:1.55!important;margin:0!important}
+  .customerPage .homeValueDots{display:flex;align-items:center;justify-content:center;gap:0;margin-top:9px;height:30px}
+  .customerPage .homeValueDots button{position:relative;width:28px;height:28px;min-height:28px;padding:0;border:0;background:transparent;border-radius:999px}
+  .customerPage .homeValueDots button:after{content:"";position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:999px;background:rgba(255,255,255,.34);transform:translate(-50%,-50%);transition:width .2s ease,background .2s ease}
+  .customerPage .homeValueDots button.isActive:after{width:20px;background:#f4c66a}
 }
 
 @media (max-width:480px){
@@ -44,4 +60,7 @@
   .customerPage .premiumHero .homeSearchDock{margin-top:5px!important}
   .customerPage .premiumHero .homeSearchDock label{min-height:59px!important;padding:7px 9px!important}
   .customerPage .discoverySection{padding-top:30px!important}
+  .customerPage .valueSection{padding-top:44px!important}
+  .customerPage .valueSection .premiumSectionHead h2{font-size:25px!important}
+  .customerPage .homeValueCarousel article{flex-basis:84vw!important;width:84vw!important;min-height:230px!important;padding:20px!important}
 }
