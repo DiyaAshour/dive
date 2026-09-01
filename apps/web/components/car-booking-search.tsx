@@ -11,6 +11,31 @@ type Props = Readonly<{locale:Locale;defaultPickupDate:string;defaultReturnDate:
 
 const CAR_BRANDS = ["Toyota","Hyundai","Kia","Nissan","Honda","BMW","Mercedes-Benz","Audi","Volkswagen","Ford","Chevrolet","Lexus","Tesla","BYD","MG","Geely","Land Rover","Mazda","Mitsubishi","Suzuki","Jeep"] as const;
 type CarBrand = (typeof CAR_BRANDS)[number];
+
+const CAR_BRAND_LOGOS: Record<CarBrand,string> = {
+  Toyota:"toyota",
+  Hyundai:"hyundai",
+  Kia:"kia",
+  Nissan:"nissan",
+  Honda:"honda",
+  BMW:"bmw",
+  "Mercedes-Benz":"mercedesbenz",
+  Audi:"audi",
+  Volkswagen:"volkswagen",
+  Ford:"ford",
+  Chevrolet:"chevrolet",
+  Lexus:"lexus",
+  Tesla:"tesla",
+  BYD:"byd",
+  MG:"mg",
+  Geely:"geely",
+  "Land Rover":"landrover",
+  Mazda:"mazda",
+  Mitsubishi:"mitsubishi",
+  Suzuki:"suzuki",
+  Jeep:"jeep",
+};
+
 const DRIVER_AGES = ["18-24","25-29","30-65","66+"] as const;
 const TIME_SLOTS = Array.from({length:48},(_,index)=>`${String(Math.floor(index/2)).padStart(2,"0")}:${index%2?"30":"00"}`);
 
@@ -78,7 +103,7 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
 
 function PickerField({icon,label,value,onClick}:{icon:React.ReactNode;label:string;value:string;onClick:()=>void}){return <div className={styles.field}><span className={styles.label}>{icon}{label}</span><button type="button" className={styles.fieldButton} onClick={onClick}><strong>{value}</strong><ChevronDown size={15}/></button></div>;}
 function CalendarPicker({month,setMonth,months,weekdays,selected,minDate,onSelect}:{month:Date;setMonth:(value:Date)=>void;months:string[];weekdays:string[];selected:string;minDate:string|undefined;onSelect:(value:string)=>void}){const year=month.getUTCFullYear(),monthIndex=month.getUTCMonth();const daysInMonth=new Date(Date.UTC(year,monthIndex+1,0)).getUTCDate();const firstDay=new Date(Date.UTC(year,monthIndex,1)).getUTCDay();const cells:Array<number|null>=[...Array.from({length:firstDay},()=>null),...Array.from({length:daysInMonth},(_,i)=>i+1)];return <div className={styles.calendar}><div className={styles.calendarHead}><button type="button" onClick={()=>setMonth(new Date(Date.UTC(year,monthIndex-1,1)))} aria-label="Previous"><ChevronLeft size={19}/></button><strong>{months[monthIndex]??""} {year}</strong><button type="button" onClick={()=>setMonth(new Date(Date.UTC(year,monthIndex+1,1)))} aria-label="Next"><ChevronRight size={19}/></button></div><div className={styles.weekdays}>{weekdays.map((day,index)=><span key={`${day}-${index}`}>{day}</span>)}</div><div className={styles.calendarGrid}>{cells.map((day,index)=>{if(day===null)return <span key={`empty-${index}`}/>;const value=`${year}-${String(monthIndex+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;const disabled=Boolean(minDate&&value<minDate);const active=value===selected;return <button type="button" key={value} disabled={disabled} className={active?styles.dateActive:""} onClick={()=>onSelect(value)}><span>{day}</span></button>;})}</div></div>;}
-function BrandBadge({brand}:{brand:CarBrand}){const short=brand==="Mercedes-Benz"?"MB":brand==="Land Rover"?"LR":brand.slice(0,2).toUpperCase();return <span className={styles.brandBadge} aria-hidden="true">{short}</span>;}
+function BrandBadge({brand}:{brand:CarBrand}){const short=brand==="Mercedes-Benz"?"MB":brand==="Land Rover"?"LR":brand.slice(0,2).toUpperCase();return <span className={styles.brandBadge} aria-hidden="true" style={{width:34,height:34,flexBasis:34}}><img src={`https://cdn.simpleicons.org/${CAR_BRAND_LOGOS[brand]}`} alt="" width={25} height={25} loading="lazy" decoding="async" style={{display:"block",objectFit:"contain",maxWidth:"25px",maxHeight:"25px"}} onError={(event)=>{event.currentTarget.style.display="none";const fallback=event.currentTarget.nextElementSibling;if(fallback instanceof HTMLElement)fallback.style.display="grid";}}/><span style={{display:"none",placeItems:"center",width:"100%",height:"100%",fontSize:"8px",fontWeight:900}}>{short}</span></span>;}
 function pickerTitle(picker:Exclude<Picker,null>,copy:any){if(picker==="pickupDate")return copy.choosePickupDate;if(picker==="returnDate")return copy.chooseReturnDate;if(picker==="pickupTime")return copy.choosePickupTime;if(picker==="returnTime")return copy.chooseReturnTime;if(picker==="age")return copy.chooseAge;return copy.brandTitle;}
 function dateParts(value:string){const parts=value.split("-");return {year:Number(parts[0]??"1970"),month:Number(parts[1]??"1"),day:Number(parts[2]??"1")};}
 function monthStart(value:string){const {year,month}=dateParts(value);return new Date(Date.UTC(year,month-1,1));}
