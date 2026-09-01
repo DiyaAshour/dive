@@ -30,19 +30,19 @@ export function CarsMarketplace({locale, initialSearch}: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const copy = ar ? {
-    demo:"بيانات تجريبية",demoBody:"السيارات والأسعار والموردون في هذه الصفحة Demo لاختبار تجربة HandMeKey Cars. الصور صور سيارات حقيقية وليست رسومات، لكن التوفر والأسعار ليست حجوزات حية بعد.",
-    title:"اختر السيارة المناسبة لرحلتك",found:"سيارة متاحة في العرض التجريبي",searchCar:"ابحث باسم السيارة أو الماركة",filters:"الفلاتر",reset:"إعادة ضبط",close:"إغلاق",
+    demo:"حجز تجريبي فعّال",demoBody:"السيارات والأسعار والموردون هنا مخزون اختباري، لكن مسار الحجز فعّال داخل HandMeKey: عند اختيار السيارة وتأكيدها يُنشأ حجز في حسابك برقم مرجعي وتُمنع التواريخ المتعارضة لنفس السيارة. لا يتم تحصيل دفعة إلكترونية أو التواصل مع شركة تأجير خارجية.",
+    title:"اختر السيارة المناسبة لرحلتك",found:"سيارة متاحة للحجز التجريبي",searchCar:"ابحث باسم السيارة أو الماركة",filters:"الفلاتر",reset:"إعادة ضبط",close:"إغلاق",
     category:"نوع السيارة",brand:"الماركة",transmission:"ناقل الحركة",fuel:"الوقود",supplier:"شركة التأجير",seats:"الحد الأدنى للمقاعد",maxPrice:"أقصى سعر لليوم",any:"الكل",
     automatic:"أوتوماتيك",manual:"عادي",petrol:"بنزين",diesel:"ديزل",hybrid:"هايبرد",electric:"كهرباء",freeCancellation:"إلغاء مجاني",unlimitedMileage:"كيلومترات غير محدودة",airportPickup:"استلام من المطار",zeroDeposit:"بدون وديعة",
-    sort:"ترتيب حسب",recommended:"الموصى به",lowPrice:"السعر: الأقل أولاً",highPrice:"السعر: الأعلى أولاً",rating:"تقييم المورد",seatSort:"عدد المقاعد",perDay:"لليوم",total:"الإجمالي التجريبي",days:"أيام",day:"يوم",deposit:"الوديعة",noDeposit:"بدون وديعة",freeCancel:"إلغاء مجاني",unlimited:"غير محدود",airport:"المطار",seatsLabel:"مقاعد",bags:"حقائب",ac:"تكييف",details:"اختيار السيارة",orSimilar:"أو سيارة مشابهة",
+    sort:"ترتيب حسب",recommended:"الموصى به",lowPrice:"السعر: الأقل أولاً",highPrice:"السعر: الأعلى أولاً",rating:"تقييم المورد",seatSort:"عدد المقاعد",perDay:"لليوم",total:"الإجمالي",days:"أيام",day:"يوم",deposit:"الوديعة",noDeposit:"بدون وديعة",freeCancel:"إلغاء مجاني",unlimited:"غير محدود",airport:"المطار",seatsLabel:"مقاعد",bags:"حقائب",ac:"تكييف",details:"اختيار السيارة",orSimilar:"أو سيارة مشابهة",
     noResults:"لا توجد سيارات تطابق هذه الفلاتر.",noResultsBody:"جرّب إزالة فلتر أو رفع حد السعر.",showMore:"عرض سيارات أكثر",searchSummary:"تفاصيل البحث",pickup:"الاستلام",dropoff:"التسليم",changeSearch:"تعديل البحث",driverAge:"عمر السائق",
     showCars:"عرض السيارات",activeFilters:"فلتر نشط",quick:"اختيارات سريعة",suv:"SUV",fiveSeats:"5+ مقاعد",remove:"إزالة"
   } : {
-    demo:"Demo data",demoBody:"Cars, prices and suppliers on this page are demo data for testing HandMeKey Cars. Photos are real car photography, but availability and prices are not live bookings yet.",
-    title:"Choose the right car for your trip",found:"cars available in the demo",searchCar:"Search car or brand",filters:"Filters",reset:"Reset",close:"Close",
+    demo:"Bookable test",demoBody:"Cars, prices and suppliers here are test inventory, but the HandMeKey reservation flow is active: choosing a car and confirming it creates a booking in your account with a reference and blocks overlapping dates for that car. No online charge is taken and no external rental company is contacted.",
+    title:"Choose the right car for your trip",found:"cars available for test booking",searchCar:"Search car or brand",filters:"Filters",reset:"Reset",close:"Close",
     category:"Car type",brand:"Brand",transmission:"Transmission",fuel:"Fuel",supplier:"Rental company",seats:"Minimum seats",maxPrice:"Maximum daily price",any:"Any",
     automatic:"Automatic",manual:"Manual",petrol:"Petrol",diesel:"Diesel",hybrid:"Hybrid",electric:"Electric",freeCancellation:"Free cancellation",unlimitedMileage:"Unlimited mileage",airportPickup:"Airport pickup",zeroDeposit:"Zero deposit",
-    sort:"Sort by",recommended:"Recommended",lowPrice:"Price: low to high",highPrice:"Price: high to low",rating:"Supplier rating",seatSort:"Seats",perDay:"per day",total:"Demo total",days:"days",day:"day",deposit:"Deposit",noDeposit:"No deposit",freeCancel:"Free cancellation",unlimited:"Unlimited",airport:"Airport",seatsLabel:"seats",bags:"bags",ac:"A/C",details:"Choose car",orSimilar:"or similar",
+    sort:"Sort by",recommended:"Recommended",lowPrice:"Price: low to high",highPrice:"Price: high to low",rating:"Supplier rating",seatSort:"Seats",perDay:"per day",total:"Total",days:"days",day:"day",deposit:"Deposit",noDeposit:"No deposit",freeCancel:"Free cancellation",unlimited:"Unlimited",airport:"Airport",seatsLabel:"seats",bags:"bags",ac:"A/C",details:"Choose car",orSimilar:"or similar",
     noResults:"No cars match these filters.",noResultsBody:"Try removing a filter or increasing the maximum price.",showMore:"Show more cars",searchSummary:"Search details",pickup:"Pick-up",dropoff:"Drop-off",changeSearch:"Change search",driverAge:"Driver age",
     showCars:"Show cars",activeFilters:"active filters",quick:"Quick picks",suv:"SUV",fiveSeats:"5+ seats",remove:"Remove"
   };
