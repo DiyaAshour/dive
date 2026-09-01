@@ -1,5 +1,5 @@
 import { partnerStatementRequestSchema } from "@platform/contracts";
-import { issuePartnerStatement } from "@platform/server";
+import { issuePartnerStatement, queuePartnerStatementEmail } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
 import { requestUser } from "@/lib/request-auth";
 
@@ -13,6 +13,10 @@ export async function POST(request: Request,{params}:{params:Promise<{hotelId:st
     const statementInput=parsed.data.currency
       ? {from:parsed.data.from,to:parsed.data.to,currency:parsed.data.currency}
       : {from:parsed.data.from,to:parsed.data.to};
-    return ok(await issuePartnerStatement(user.id,hotelId,statementInput));
+    const statement=await issuePartnerStatement(user.id,hotelId,statementInput);
+    await queuePartnerStatementEmail(statement.id).catch((error)=>{
+      console.error(JSON.stringify({event:"partner_statement_email_failed",statementId:statement.id,message:error instanceof Error?error.message:"unknown error"}));
+    });
+    return ok(statement);
   }catch(error){return handleApiError(error)}
 }
