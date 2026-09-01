@@ -141,8 +141,9 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
     where: {
       companyId: company.id,
       OR: [
-        {paymentMode: "PAY_NOW", status: {in: [...PLATFORM_ELIGIBLE_STATUSES]}, createdAt: {gte: range.start, lt: range.endExclusive}},
-        {paymentMode: "PAY_AT_COUNTER", status: "COMPLETED", returnAt: {gte: range.start, lt: range.endExclusive}},
+        {paymentCollector: "HANDMEKEY", status: {in: [...PLATFORM_ELIGIBLE_STATUSES]}, createdAt: {gte: range.start, lt: range.endExclusive}},
+        {paymentCollector: "COMPANY", paymentMode: "PAY_NOW", status: {in: [...PLATFORM_ELIGIBLE_STATUSES]}, createdAt: {gte: range.start, lt: range.endExclusive}},
+        {paymentCollector: "COMPANY", paymentMode: "PAY_AT_COUNTER", status: "COMPLETED", returnAt: {gte: range.start, lt: range.endExclusive}},
       ],
     },
     orderBy: {createdAt: "asc"},
@@ -196,7 +197,7 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
             reservationId: item.id,
             reference: item.reference,
             paymentMode: item.paymentMode,
-            collectedBy: item.collectedBy,
+            paymentCollector: item.collectedBy,
             gross: item.total,
             commission: item.platformCommission,
             companyPayable: item.companyPayable,
@@ -213,6 +214,7 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
         reservationId: item.id,
         reservationReference: item.reference,
         paymentMode: item.paymentMode,
+        paymentCollector: item.collectedBy,
         grossAmount: item.total,
         commissionAmount: item.platformCommission,
         companyPayable: item.companyPayable,
@@ -233,7 +235,7 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
             currency: company.currency,
             amount: item.total,
             companyBalanceDelta: item.total,
-            metadata: {reference: item.reference, collector: "HANDMEKEY"},
+            metadata: {reference: item.reference, collector: "HANDMEKEY", paymentMode: item.paymentMode},
             createdByUserId: adminUserId,
           },
           {
@@ -244,7 +246,7 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
             currency: company.currency,
             amount: item.platformCommission,
             companyBalanceDelta: -item.platformCommission,
-            metadata: {reference: item.reference, collector: "HANDMEKEY", withheld: true},
+            metadata: {reference: item.reference, collector: "HANDMEKEY", withheld: true, paymentMode: item.paymentMode},
             createdByUserId: adminUserId,
           },
         );
@@ -258,7 +260,7 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
             currency: company.currency,
             amount: item.total,
             companyBalanceDelta: 0,
-            metadata: {reference: item.reference, collector: "COMPANY"},
+            metadata: {reference: item.reference, collector: "COMPANY", paymentMode: item.paymentMode},
             createdByUserId: adminUserId,
           },
           {
@@ -269,7 +271,7 @@ export async function createAdminCarSettlement(adminUserId: string, input: Settl
             currency: company.currency,
             amount: item.platformCommission,
             companyBalanceDelta: -item.platformCommission,
-            metadata: {reference: item.reference, collector: "COMPANY", receivable: true},
+            metadata: {reference: item.reference, collector: "COMPANY", receivable: true, paymentMode: item.paymentMode},
             createdByUserId: adminUserId,
           },
         );
@@ -365,8 +367,9 @@ function financeReservation(row: any, settlementId: string | null) {
   const total = Number(row.total);
   const commissionRate = Number(row.commissionRate);
   const platformCommission = Number(row.commissionAmount);
-  const collectedBy = row.paymentMode === "PAY_NOW" ? "HANDMEKEY" : "COMPANY";
-  const financeEligible = collectedBy === "HANDMEKEY"
+  const collectedBy = row.paymentCollector === "HANDMEKEY" ? "HANDMEKEY" : "COMPANY";
+  const onlineCollection = row.paymentMode === "PAY_NOW";
+  const financeEligible = collectedBy === "HANDMEKEY" || onlineCollection
     ? PLATFORM_ELIGIBLE_STATUSES.some((status) => status === row.status)
     : row.status === "COMPLETED";
   const companyPayable = financeEligible && collectedBy === "HANDMEKEY" ? roundMoney(total - platformCommission) : 0;
