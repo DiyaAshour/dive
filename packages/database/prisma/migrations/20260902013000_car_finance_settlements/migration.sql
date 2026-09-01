@@ -1,15 +1,9 @@
 CREATE TYPE "CarFinanceTransactionType" AS ENUM ('CUSTOMER_PAYMENT', 'COMPANY_COLLECTED_PAYMENT', 'PLATFORM_COMMISSION', 'COMPANY_PAYOUT', 'COMPANY_REMITTANCE', 'REFUND', 'CHARGEBACK', 'ADJUSTMENT');
 CREATE TYPE "CarSettlementStatus" AS ENUM ('READY', 'PAID', 'VOID');
 CREATE TYPE "CarSettlementDirection" AS ENUM ('PLATFORM_OWES_COMPANY', 'COMPANY_OWES_PLATFORM', 'BALANCED');
-CREATE TYPE "CarPaymentCollector" AS ENUM ('HANDMEKEY', 'COMPANY');
 
-ALTER TABLE "CarReservation" ADD COLUMN "paymentCollector" "CarPaymentCollector" NOT NULL DEFAULT 'COMPANY';
 ALTER TABLE "CarReservation" ADD COLUMN "commissionRate" DECIMAL(6,5) NOT NULL DEFAULT 0.10;
 ALTER TABLE "CarReservation" ADD COLUMN "commissionAmount" DECIMAL(10,2) NOT NULL DEFAULT 0;
-
-UPDATE "CarReservation"
-SET "paymentCollector" = 'HANDMEKEY'
-WHERE "paymentMode" = 'PAY_NOW';
 
 UPDATE "CarReservation" r
 SET "commissionRate" = c."commissionRate",
@@ -17,7 +11,7 @@ SET "commissionRate" = c."commissionRate",
 FROM "CarRentalCompany" c
 WHERE c."id" = r."companyId";
 
-CREATE INDEX "CarReservation_companyId_paymentCollector_paymentMode_status_createdAt_idx" ON "CarReservation"("companyId", "paymentCollector", "paymentMode", "status", "createdAt");
+CREATE INDEX "CarReservation_companyId_paymentMode_status_createdAt_idx" ON "CarReservation"("companyId", "paymentMode", "status", "createdAt");
 
 CREATE TABLE "CarFinanceTransaction" (
   "id" TEXT NOT NULL,
@@ -70,7 +64,6 @@ CREATE TABLE "CarFinanceSettlementItem" (
   "reservationId" TEXT NOT NULL,
   "reservationReference" TEXT NOT NULL,
   "paymentMode" TEXT NOT NULL,
-  "paymentCollector" TEXT NOT NULL,
   "grossAmount" DECIMAL(14,2) NOT NULL,
   "commissionAmount" DECIMAL(14,2) NOT NULL,
   "companyPayable" DECIMAL(14,2) NOT NULL DEFAULT 0,
