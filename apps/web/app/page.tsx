@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BellRing, CalendarDays, CreditCard, MapPin, Search, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarDays, CreditCard, MapPin, Search, ShieldCheck, Users } from "lucide-react";
 import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
+import { HomeValueCarousel } from "@/components/home-value-carousel";
 import { demoDestinationsFallback, demoFeaturedHotelsFallback } from "@/lib/demo-catalog-fallback";
 import { guestDictionary } from "@/lib/guest-i18n";
 import { guestUiCopy } from "@/lib/guest-ui-copy";
@@ -92,7 +93,7 @@ export default async function HomePage() {
       })}</div>
     </section>}
 
-    <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">{copy.home.valueEyebrow}</span><h2>{copy.home.valueTitle}</h2></div></div><div className="valueGrid"><article><span><CreditCard/></span><h3>{copy.home.finalTitle}</h3><p>{copy.home.finalBody}</p></article><article><span><ShieldCheck/></span><h3>{copy.home.policyTitle}</h3><p>{copy.home.policyBody}</p></article><article><span><BellRing/></span><h3>{copy.home.watchTitle}</h3><p>{copy.home.watchBody}</p></article></div></div></section>
+    <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">{copy.home.valueEyebrow}</span><h2>{copy.home.valueTitle}</h2></div></div><HomeValueCarousel finalTitle={copy.home.finalTitle} finalBody={copy.home.finalBody} policyTitle={copy.home.policyTitle} policyBody={copy.home.policyBody} watchTitle={copy.home.watchTitle} watchBody={copy.home.watchBody}/></div></section>
 
     <section className="shell partnerBridge"><div><span className="eyebrow">{copy.home.partnerEyebrow}</span><h2>{copy.home.partnerTitle}</h2><p>{copy.home.partnerBody}</p></div><Link href="/partner">{copy.home.partnerCta} <ArrowRight size={18}/></Link></section>
   </main>;
