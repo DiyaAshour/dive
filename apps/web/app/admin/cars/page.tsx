@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {BadgeCheck, Building2, CalendarRange, CarFront, CircleAlert, MapPin, ShieldCheck} from "lucide-react";
+import {BadgeCheck, Building2, CalendarRange, CarFront, CircleAlert, CircleDollarSign, MapPin, ShieldCheck} from "lucide-react";
 import {getAdminCarOverview, getAdminNavigationCounts} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
@@ -31,6 +31,7 @@ export default async function AdminCarsPage() {
       <Link className={styles.active} href="/admin/cars"><CarFront size={15}/>{ar ? "نظرة عامة" : "Overview"}</Link>
       <Link href="/admin/cars/companies"><Building2 size={15}/>{ar ? "الشركات" : "Companies"}</Link>
       <Link href="/admin/cars/reservations"><CalendarRange size={15}/>{ar ? "كل الحجوزات" : "All reservations"}</Link>
+      <Link href="/admin/cars/finance"><CircleDollarSign size={15}/>{ar ? "المالية" : "Finance"}</Link>
     </nav>
 
     <section className={styles.metricGrid}>
@@ -64,7 +65,7 @@ export default async function AdminCarsPage() {
           <div className={styles.infoItem}><span>{ar ? "حجوزات قادمة" : "Upcoming bookings"}</span><strong>{m.upcomingReservations}</strong></div>
           <div className={styles.infoItem}><span>{ar ? "سيارات فعالة" : "Active vehicles"}</span><strong>{m.activeVehicles}</strong></div>
         </div>
-        <div className={styles.heroActions} style={{marginTop: 14}}><Link className="primaryButton" href="/admin/cars/companies?status=PENDING_REVIEW"><BadgeCheck size={15}/>{ar ? "راجع الشركات" : "Review companies"}</Link></div>
+        <div className={styles.heroActions} style={{marginTop: 14}}><Link className="primaryButton" href="/admin/cars/finance"><CircleDollarSign size={15}/>{ar ? "فتح المالية" : "Open finance"}</Link><Link className="secondaryButton" href="/admin/cars/companies?status=PENDING_REVIEW"><BadgeCheck size={15}/>{ar ? "راجع الشركات" : "Review companies"}</Link></div>
       </aside>
     </div>
 
@@ -74,7 +75,7 @@ export default async function AdminCarsPage() {
         <div className={styles.identity}><Status value={company.status}/><h2>{company.name}</h2><p>{company.slug}</p><small><MapPin size={11}/> {company.city}, {company.countryCode}</small></div>
         <div className={styles.stats}><span><strong>{company.counts.vehicles}</strong>{ar ? "سيارات" : "Vehicles"}</span><span><strong>{company.counts.reservations}</strong>{ar ? "حجوزات" : "Bookings"}</span><span><strong>{company.counts.locations}</strong>{ar ? "فروع" : "Locations"}</span><span><strong>{company.counts.memberships}</strong>{ar ? "فريق" : "Team"}</span></div>
         <div className={styles.meta}>{company.verified ? <span className={styles.verified}><BadgeCheck size={14}/>{ar ? "موثقة" : "Verified"}</span> : <span>{ar ? "غير موثقة" : "Not verified"}</span>}<small>{formatDate(company.createdAt, locale)}</small></div>
-        <Link className="primaryButton" href={`/admin/cars/companies/${company.id}`}>{ar ? "افتح الشركة" : "Open company"}</Link>
+        <div className={styles.heroActions}><Link className="secondaryButton" href={`/admin/cars/finance?companyId=${encodeURIComponent(company.id)}`}>{ar ? "المالية" : "Finance"}</Link><Link className="primaryButton" href={`/admin/cars/companies/${company.id}`}>{ar ? "افتح الشركة" : "Open company"}</Link></div>
       </article>)}</div> : <div className={styles.empty}>{ar ? "لا توجد شركات سيارات مسجلة." : "No rental companies registered."}</div>}
     </section>
   </AdminShell>;
