@@ -275,8 +275,9 @@ function serializeAdminReservation(reservation: any) {
   const total = Number(reservation.total);
   const commissionRate = Number(reservation.commissionRate ?? reservation.company.commissionRate);
   const commission = Number(reservation.commissionAmount ?? roundMoney(total * commissionRate));
-  const collectedBy = reservation.paymentMode === "PAY_NOW" ? "HANDMEKEY" : "COMPANY";
-  const financeEligible = collectedBy === "HANDMEKEY"
+  const collectedBy = reservation.paymentCollector === "HANDMEKEY" ? "HANDMEKEY" : "COMPANY";
+  const onlineCollection = reservation.paymentMode === "PAY_NOW";
+  const financeEligible = collectedBy === "HANDMEKEY" || onlineCollection
     ? ["CONFIRMED", "MODIFIED", "COMPLETED"].includes(reservation.status)
     : reservation.status === "COMPLETED";
   const companyPayable = financeEligible && collectedBy === "HANDMEKEY" ? roundMoney(total - commission) : 0;
@@ -295,6 +296,7 @@ function serializeAdminReservation(reservation: any) {
     driverAgeRange: reservation.driverAgeRange,
     status: reservation.status,
     paymentMode: reservation.paymentMode,
+    paymentCollector: reservation.paymentCollector,
     collectedBy,
     financeEligible,
     currency: reservation.currency,
