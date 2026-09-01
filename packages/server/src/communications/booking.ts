@@ -210,6 +210,42 @@ export async function queuePartnerStatementEmail(statementId: string) {
   return {queued: recipients.length};
 }
 
+export async function queueRefundCompletedEmail(refundId: string) {
+  const db = database();
+  const refund = await db.refund.findUnique({
+    where: {id: refundId},
+    include: {booking: {include: {hotel: {select: {name: true}}}}},
+  });
+  if (!refund || refund.status !== "COMPLETED") return {queued: false};
+
+  const bookingUrl = `${siteOrigin()}/booking/${encodeURIComponent(refund.bookingId)}`;
+  const subject = `Refund completed · ${refund.booking.reference} · ${refund.booking.hotel.name}`;
+  const content = manualEmailContent({
+    subject,
+    textBody: [
+      `Hello ${refund.booking.guestName},`,
+      `Your refund for booking ${refund.booking.reference} at ${refund.booking.hotel.name} has been completed.`,
+      `Refund amount: ${Number(refund.amount).toFixed(2)} ${refund.currency}`,
+      refund.externalReference ? `Refund reference: ${refund.externalReference}` : "",
+      `Manage booking: ${bookingUrl}`,
+      "Depending on your bank or card issuer, the refunded amount may take additional time to appear on your account.",
+    ].filter(Boolean).join("\n"),
+  });
+  await queueEmail({
+    kind: "MANUAL_EMAIL",
+    toEmail: refund.booking.guestEmail,
+    toName: refund.booking.guestName,
+    subject: content.subject,
+    htmlBody: content.html,
+    textBody: content.text,
+    dedupeKey: `REFUND_COMPLETED:${refund.id}`,
+    bookingId: refund.bookingId,
+    hotelId: refund.booking.hotelId,
+    userId: refund.booking.userId,
+  });
+  return {queued: true};
+}
+
 function siteOrigin(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").trim().replace(/\/$/, "");
 }
