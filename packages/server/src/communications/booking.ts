@@ -115,30 +115,46 @@ export async function syncBookingLifecycleEmails(limit = 500) {
   return {scanned};
 }
 
+export async function queuePriceWatchNotificationEmail(notificationId: string) {
+  const notification = await database().userNotification.findUnique({
+    where: {id: notificationId},
+    include: {user: {select: {id: true, email: true, displayName: true}}},
+  });
+  if (!notification || (notification.kind !== "PRICE_DROP" && notification.kind !== "PRICE_TARGET_REACHED")) {
+    return {queued: false};
+  }
+
+  const content = priceWatchEmail({
+    title: notification.title,
+    body: notification.body,
+    url: absoluteUrl(notification.link ?? "/account/alerts"),
+  });
+  await queueEmail({
+    kind: "PRICE_WATCH",
+    toEmail: notification.user.email,
+    toName: notification.user.displayName,
+    subject: content.subject,
+    htmlBody: content.html,
+    textBody: content.text,
+    dedupeKey: `PRICE_WATCH:${notification.id}`,
+    userId: notification.user.id,
+  });
+  return {queued: true};
+}
+
 export async function syncPriceWatchNotificationEmails(limit = 500) {
   const notifications = await database().userNotification.findMany({
     where: {kind: {in: ["PRICE_DROP", "PRICE_TARGET_REACHED"]}},
+    select: {id: true},
     orderBy: {createdAt: "desc"},
     take: Math.max(1, Math.min(limit, 2_000)),
   });
-  if (!notifications.length) return {scanned: 0};
-  const userIds = [...new Set(notifications.map((notification) => notification.userId))];
-  const users = await database().user.findMany({where: {id: {in: userIds}}, select: {id: true, email: true, displayName: true}});
-  const byId = new Map(users.map((user) => [user.id, user]));
   for (const notification of notifications) {
-    const user = byId.get(notification.userId);
-    if (!user) continue;
-    const content = priceWatchEmail({title: notification.title, body: notification.body, url: absoluteUrl(notification.link ?? "/account/alerts")});
-    await queueEmail({
-      kind: "PRICE_WATCH",
-      toEmail: user.email,
-      toName: user.displayName,
-      subject: content.subject,
-      htmlBody: content.html,
-      textBody: content.text,
-      dedupeKey: `PRICE_WATCH:${notification.id}`,
-      userId: user.id,
-    });
+    try {
+      await queuePriceWatchNotificationEmail(notification.id);
+    } catch (error) {
+      console.error(JSON.stringify({event: "price_watch_email_sync_failed", notificationId: notification.id, message: error instanceof Error ? error.message : "unknown error"}));
+    }
   }
   return {scanned: notifications.length};
 }
