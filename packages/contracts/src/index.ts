@@ -18,3 +18,4 @@ export * from "./blog";
 export * from "./communications";
 export * from "./finance";
 export * from "./loyalty-admin";
+export * from "./cars";

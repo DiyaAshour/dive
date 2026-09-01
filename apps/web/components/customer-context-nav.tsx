@@ -19,7 +19,7 @@ type Props = Readonly<{
 function useCarsMode() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  return pathname.startsWith("/cars") || (pathname === "/" && searchParams.get("service") === "cars");
+  return pathname.startsWith("/cars") || pathname.startsWith("/car-dashboard") || (pathname === "/" && searchParams.get("service") === "cars");
 }
 
 export function CustomerContextNav({
@@ -37,8 +37,8 @@ export function CustomerContextNav({
 
   if (isCars) {
     const searchCars = <Link href="/?service=cars#car-search"><Search size={15}/>{ar ? "ابحث عن سيارة" : "Search cars"}</Link>;
-    const carBookings = <Link href="/trips"><Car size={15}/>{ar ? "حجوزات السيارات" : "Car bookings"}</Link>;
-    const priceAlerts = <Link href="/account/alerts"><Bell size={15}/>{ar ? "تنبيهات الأسعار" : "Price alerts"}</Link>;
+    const carBookings = <Link href="/cars/bookings"><Car size={15}/>{ar ? "حجوزات السيارات" : "Car bookings"}</Link>;
+    const priceAlerts = <Link href="/account/alerts?service=cars"><Bell size={15}/>{ar ? "تنبيهات الأسعار" : "Price alerts"}</Link>;
     const rentalCompanies = <Link href="/cars"><Building2 size={15}/>{ar ? "شركات التأجير" : "Rental companies"}</Link>;
 
     if (mobile) return <>{searchCars}{carBookings}{priceAlerts}{rentalCompanies}</>;
@@ -74,8 +74,8 @@ export function CustomerContextNav({
 export function CustomerContextPartnerLink({locale, staysLabel, mobile = false}: {locale:string;staysLabel:string;mobile?:boolean}) {
   const isCars = useCarsMode();
   const ar = locale.startsWith("ar");
-  return <Link className={mobile ? "mobilePartnerEntry" : "partnerEntry"} href="/partner">
-    <Building2 size={mobile ? 17 : 16}/>
+  return <Link className={mobile ? "mobilePartnerEntry" : "partnerEntry"} href={isCars ? "/cars/partner" : "/partner"}>
+    {isCars ? <Car size={mobile ? 17 : 16}/> : <Building2 size={mobile ? 17 : 16}/>}
     {isCars ? (ar ? "أضف شركة تأجير" : "List rental company") : staysLabel}
   </Link>;
 }
