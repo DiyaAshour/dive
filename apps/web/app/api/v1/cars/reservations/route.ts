@@ -1,6 +1,7 @@
 import { createCarReservationSchema } from "@platform/contracts";
-import { createCarReservation, listMyCarReservations } from "@platform/server";
+import { createCarReservation, ensureBookableDemoCar, listMyCarReservations } from "@platform/server";
 import { handleApiError, ok, validationError } from "@/lib/api";
+import { demoCars } from "@/lib/demo-cars";
 import { requestUser } from "@/lib/request-auth";
 
 export async function GET(request: Request) {
@@ -17,6 +18,10 @@ export async function POST(request: Request) {
     if (!user) return Response.json({data:null,error:{code:"UNAUTHORIZED",message:"Authentication required"}},{status:401});
     const parsed = createCarReservationSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error);
+
+    const demoCar = demoCars.find((car) => car.id === parsed.data.vehicleId);
+    if (demoCar) await ensureBookableDemoCar(demoCar);
+
     const input = Object.fromEntries(
       Object.entries(parsed.data).filter(([, value]) => value !== undefined),
     ) as Parameters<typeof createCarReservation>[1];
