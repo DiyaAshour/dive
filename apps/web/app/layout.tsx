@@ -54,12 +54,22 @@ import "./hotel-mobile-head.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const identity = await getSiteIdentityConfig();
+  const icons: Metadata["icons"] = identity.faviconUrl
+    ? {icon: identity.faviconUrl, shortcut: identity.faviconUrl, apple: identity.faviconUrl}
+    : {
+        icon: [
+          {url: "/brand/hmk-favicon-light.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)"},
+          {url: "/brand/hmk-favicon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)"},
+        ],
+        shortcut: "/brand/hmk-favicon-light.svg",
+        apple: "/brand/hmk-app-icon-navy.svg",
+      };
   return {
     metadataBase: new URL(siteUrl()),
     applicationName: identity.brandName,
     title: {default: identity.siteTitle, template: `%s · ${identity.brandName}`},
     description: identity.description,
-    icons: identity.faviconUrl ? {icon: identity.faviconUrl, shortcut: identity.faviconUrl, apple: identity.faviconUrl} : undefined,
+    icons,
     openGraph: {
       type: "website",
       siteName: identity.brandName,
