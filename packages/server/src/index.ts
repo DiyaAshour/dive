@@ -18,6 +18,7 @@ export * from "./hotels/content";
 export * from "./hotels/translations";
 export * from "./cars/service";
 export * from "./cars/booking";
+export * from "./cars/demo-booking";
 export * from "./cars/reservation-management";
 export * from "./publishing/service";
 export {listFeaturedHotels, searchHotels} from "./discovery/service";
