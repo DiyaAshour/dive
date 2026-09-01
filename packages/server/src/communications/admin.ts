@@ -10,7 +10,6 @@ export const ADMIN_EMAIL_KINDS = [
   "BOOKING_MODIFIED",
   "BOOKING_CANCELLED",
   "PARTNER_BOOKING_NOTICE",
-  "BOOKING_MESSAGE",
   "PRICE_WATCH",
   "PASSWORD_RESET",
   "EMAIL_VERIFICATION",
@@ -147,8 +146,6 @@ export async function retryAdminEmail(actorUserId: string, emailId: string) {
     return updated;
   });
 
-  // Retry means retry now when Resend is configured; the outbox still keeps the
-  // failure/backoff state if the provider rejects or the network is unavailable.
   await processEmailOutboxItem(emailId).catch(() => undefined);
   return (await db.emailOutbox.findUnique({
     where: {id: emailId},
