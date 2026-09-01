@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CarFront, Plus, X } from "lucide-react";
+import { BadgeDollarSign, CarFront, ImagePlus, MapPin, Plus, Settings2, ShieldCheck, X } from "lucide-react";
 import styles from "./car-partner-shell.module.css";
 
 type Vehicle={id:string;make:string;model:string;year:number;category:string;transmission:string;fuel:string;seats:number;bags:number;doors:number;dailyPrice:number;deposit:number;freeCancellation:boolean;unlimitedMileage:boolean;airportPickup:boolean;imageUrl:string|null;imageAlt:string|null;status:string;homeLocation:{id:string;name:string;city:string}|null;createdAt:string;updatedAt:string};
@@ -15,11 +15,13 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const copy=ar?{
-    title:"الأسطول",body:"أضف سيارات الشركة وحدد السعر اليومي والوديعة والمواصفات التي ستظهر للعميل.",add:"أضف سيارة",close:"إغلاق",save:"حفظ السيارة",saving:"جارٍ الحفظ...",
-    make:"الماركة",model:"الموديل",year:"السنة",category:"الفئة",transmission:"ناقل الحركة",fuel:"الوقود",seats:"المقاعد",bags:"الحقائب",price:"السعر اليومي",deposit:"الوديعة",location:"الفرع الأساسي",image:"رابط صورة السيارة",conditions:"شروط العرض",freeCancel:"إلغاء مجاني",unlimited:"كيلومترات غير محدودة",airport:"استلام من المطار",automatic:"أوتوماتيك",manual:"عادي",empty:"لا توجد سيارات في الأسطول بعد",emptyBody:"أضف أول سيارة حتى تبدأ بتجهيز الأسعار والتوفر قبل نشر الشركة.",failed:"تعذر حفظ السيارة."
+    title:"الأسطول",body:"أضف السيارة بسرعة. اجعل البيانات الأساسية واضحة، ثم السعر والوديعة، وبعدها المزايا الاختيارية.",add:"إضافة سيارة",close:"إغلاق",save:"حفظ السيارة",saving:"جارٍ الحفظ...",
+    basicTitle:"بيانات السيارة",basicBody:"المعلومات التي تعرّف السيارة للعميل.",rentalTitle:"التأجير والسعر",rentalBody:"السعر والوديعة وموقع الاستلام الأساسي.",extrasTitle:"المزايا والصورة",extrasBody:"خيارات إضافية يمكن تعديلها حسب العرض.",
+    make:"الماركة",model:"الموديل",year:"السنة",category:"الفئة",transmission:"ناقل الحركة",fuel:"الوقود",seats:"المقاعد",bags:"الحقائب",price:"السعر اليومي",deposit:"الوديعة",location:"الفرع الأساسي",image:"رابط صورة السيارة",conditions:"مزايا العرض",freeCancel:"إلغاء مجاني",unlimited:"كيلومترات غير محدودة",airport:"استلام من المطار",automatic:"أوتوماتيك",manual:"عادي",empty:"لا توجد سيارات في الأسطول بعد",emptyBody:"أضف أول سيارة حتى تبدأ بتجهيز الأسعار والتوفر قبل نشر الشركة.",failed:"تعذر حفظ السيارة.",required:"إلزامي",depositHint:"يجب تحديد وديعة أكبر من صفر لكل سيارة ولكل شركة، بدون استثناء.",photoOptional:"صورة السيارة اختيارية",photoHint:"أضف رابط صورة واضحة للسيارة. يمكنك تركها فارغة الآن.",stored:"السيارة تحفظ فعليًا في قاعدة بيانات شركة التأجير ولن تظهر للعامة حتى يتم توثيق الشركة وتفعيلها.",depositMissing:"الوديعة مطلوبة"
   }:{
-    title:"Fleet",body:"Add company vehicles and define the daily price, deposit and specifications customers will see.",add:"Add vehicle",close:"Close",save:"Save vehicle",saving:"Saving...",
-    make:"Make",model:"Model",year:"Year",category:"Category",transmission:"Transmission",fuel:"Fuel",seats:"Seats",bags:"Bags",price:"Daily price",deposit:"Deposit",location:"Home location",image:"Vehicle image URL",conditions:"Offer conditions",freeCancel:"Free cancellation",unlimited:"Unlimited mileage",airport:"Airport pickup",automatic:"Automatic",manual:"Manual",empty:"No vehicles in the fleet yet",emptyBody:"Add the first vehicle to prepare rates and availability before publishing the company.",failed:"Could not save the vehicle."
+    title:"Fleet",body:"Add a vehicle quickly: essential details first, then pricing and deposit, then optional extras.",add:"Add vehicle",close:"Close",save:"Save vehicle",saving:"Saving...",
+    basicTitle:"Vehicle details",basicBody:"The core information customers use to identify the vehicle.",rentalTitle:"Rental & pricing",rentalBody:"Daily rate, mandatory deposit and primary pickup location.",extrasTitle:"Extras & photo",extrasBody:"Optional features that can vary by offer.",
+    make:"Make",model:"Model",year:"Year",category:"Category",transmission:"Transmission",fuel:"Fuel",seats:"Seats",bags:"Bags",price:"Daily price",deposit:"Deposit",location:"Home location",image:"Vehicle image URL",conditions:"Offer features",freeCancel:"Free cancellation",unlimited:"Unlimited mileage",airport:"Airport pickup",automatic:"Automatic",manual:"Manual",empty:"No vehicles in the fleet yet",emptyBody:"Add the first vehicle to prepare rates and availability before publishing the company.",failed:"Could not save the vehicle.",required:"Required",depositHint:"A deposit greater than zero is mandatory for every vehicle and every rental company, with no exceptions.",photoOptional:"Vehicle photo is optional",photoHint:"Add a clear vehicle image URL, or leave it empty for now.",stored:"The vehicle is stored in the rental-company database and will not be public until the company is verified and activated.",depositMissing:"Deposit required"
   };
 
   async function submit(event:React.FormEvent<HTMLFormElement>){
@@ -28,7 +30,7 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
     const payload={
       make:String(form.get("make")||""),model:String(form.get("model")||""),year:Number(form.get("year")),category:String(form.get("category")||"Economy"),
       transmission:String(form.get("transmission")) as "AUTOMATIC"|"MANUAL",fuel:String(form.get("fuel")) as "PETROL"|"DIESEL"|"HYBRID"|"ELECTRIC",
-      seats:Number(form.get("seats")),bags:Number(form.get("bags")),doors:4,dailyPrice:Number(form.get("dailyPrice")),deposit:Number(form.get("deposit")||0),
+      seats:Number(form.get("seats")),bags:Number(form.get("bags")),doors:4,dailyPrice:Number(form.get("dailyPrice")),deposit:Number(form.get("deposit")),
       freeCancellation:form.get("freeCancellation")==="on",unlimitedMileage:form.get("unlimitedMileage")==="on",airportPickup:form.get("airportPickup")==="on",
       imageUrl:String(form.get("imageUrl")||"")||undefined,homeLocationId:String(form.get("homeLocationId")||"")||undefined,
     };
@@ -42,18 +44,52 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
 
   return <>
     <div className={styles.pageHead}><div><span>Operate · Fleet</span><h1>{copy.title}</h1><p>{copy.body}</p></div><button className={styles.primary} type="button" onClick={()=>setOpen((value)=>!value)}>{open?<X size={17}/>:<Plus size={17}/>} {open?copy.close:copy.add}</button></div>
-    {open&&<div className={styles.formCard}><div className={styles.notice}><CarFront size={18}/><span>{ar?"السيارة تحفظ فعليًا في قاعدة البيانات الخاصة بشركة التأجير. لن تظهر للعامة حتى يتم توثيق الشركة وتفعيلها.":"The vehicle is stored in the rental-company database. It will not be public until the company is verified and activated."}</span></div><form onSubmit={submit}><div className={styles.formGrid}>
-      <Field label={copy.make}><input name="make" required placeholder="Toyota"/></Field><Field label={copy.model}><input name="model" required placeholder="Corolla"/></Field>
-      <Field label={copy.year}><input name="year" type="number" required min="1990" max={new Date().getFullYear()+1} defaultValue={new Date().getFullYear()}/></Field><Field label={copy.category}><select name="category" defaultValue="Economy"><option>Economy</option><option>Compact</option><option>SUV</option><option>Luxury</option><option>Family</option><option>Electric</option></select></Field>
-      <Field label={copy.transmission}><select name="transmission" defaultValue="AUTOMATIC"><option value="AUTOMATIC">{copy.automatic}</option><option value="MANUAL">{copy.manual}</option></select></Field><Field label={copy.fuel}><select name="fuel" defaultValue="PETROL"><option value="PETROL">Petrol</option><option value="DIESEL">Diesel</option><option value="HYBRID">Hybrid</option><option value="ELECTRIC">Electric</option></select></Field>
-      <Field label={copy.seats}><input name="seats" type="number" min="1" max="16" defaultValue="5" required/></Field><Field label={copy.bags}><input name="bags" type="number" min="0" max="12" defaultValue="2" required/></Field>
-      <Field label={`${copy.price} · ${currency}`}><input name="dailyPrice" type="number" min="1" step="0.01" defaultValue="35" required/></Field><Field label={`${copy.deposit} · ${currency}`}><input name="deposit" type="number" min="0" step="0.01" defaultValue="0"/></Field>
-      <Field label={copy.location}><select name="homeLocationId" defaultValue={locations[0]?.id??""}><option value="">—</option>{locations.map((location)=><option key={location.id} value={location.id}>{location.name} · {location.city}</option>)}</select></Field><div className={styles.field}></div>
-      <div className={`${styles.field} ${styles.fieldFull}`}><span>{copy.image}</span><input name="imageUrl" type="url" placeholder="https://..."/></div>
-      <div className={`${styles.field} ${styles.fieldFull}`}><span>{copy.conditions}</span><label><input type="checkbox" name="freeCancellation" defaultChecked/> {copy.freeCancel}</label><label><input type="checkbox" name="unlimitedMileage"/> {copy.unlimited}</label><label><input type="checkbox" name="airportPickup"/> {copy.airport}</label></div>
-    </div>{error&&<div className={styles.error}>{error}</div>}<div className={styles.formActions}><button className={styles.primary} type="submit" disabled={loading}><Plus size={16}/>{loading?copy.saving:copy.save}</button></div></form></div>}
 
-    <section className={styles.panel} style={{marginTop:open?18:0}}>{vehicles.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{ar?"السيارة":"Vehicle"}</th><th>{ar?"الفئة":"Category"}</th><th>{ar?"المواصفات":"Specs"}</th><th>{ar?"الفرع":"Location"}</th><th>{ar?"السعر":"Price"}</th><th>{ar?"الوديعة":"Deposit"}</th><th>{ar?"الحالة":"Status"}</th></tr></thead><tbody>{vehicles.map((vehicle)=><tr key={vehicle.id}><td><strong>{vehicle.make} {vehicle.model}</strong><div>{vehicle.year}</div></td><td>{vehicle.category}</td><td>{vehicle.transmission} · {vehicle.fuel} · {vehicle.seats} {ar?"مقاعد":"seats"}</td><td>{vehicle.homeLocation?.name??"—"}</td><td><strong>{vehicle.dailyPrice.toFixed(2)} {currency}</strong></td><td>{vehicle.deposit.toFixed(2)} {currency}</td><td><span className={`${styles.chip} ${vehicle.status==="ACTIVE"?styles.chipActive:vehicle.status==="MAINTENANCE"?styles.chipWarn:""}`}>{vehicle.status}</span></td></tr>)}</tbody></table></div>:<div className={styles.empty}><span className={styles.emptyIcon}><CarFront size={25}/></span><h3>{copy.empty}</h3><p>{copy.emptyBody}</p><button className={styles.primary} type="button" onClick={()=>setOpen(true)}><Plus size={16}/>{copy.add}</button></div>}</section>
+    {open&&<div className={`${styles.formCard} ${styles.fleetFormCard}`}>
+      <div className={styles.notice}><CarFront size={18}/><span>{copy.stored}</span></div>
+      <form onSubmit={submit}>
+        <section className={styles.vehicleFormSection}>
+          <div className={styles.vehicleFormHead}><span className={styles.vehicleFormIcon}><CarFront size={18}/></span><div><h2>{copy.basicTitle}</h2><p>{copy.basicBody}</p></div></div>
+          <div className={styles.vehicleQuickGrid}>
+            <Field label={copy.make}><input name="make" required placeholder="Toyota" autoComplete="off"/></Field>
+            <Field label={copy.model}><input name="model" required placeholder="Corolla" autoComplete="off"/></Field>
+            <Field label={copy.year}><input name="year" type="number" required min="1990" max={new Date().getFullYear()+1} defaultValue={new Date().getFullYear()}/></Field>
+            <Field label={copy.category}><select name="category" defaultValue="Economy"><option>Economy</option><option>Compact</option><option>SUV</option><option>Luxury</option><option>Family</option><option>Electric</option></select></Field>
+            <Field label={copy.transmission}><select name="transmission" defaultValue="AUTOMATIC"><option value="AUTOMATIC">{copy.automatic}</option><option value="MANUAL">{copy.manual}</option></select></Field>
+            <Field label={copy.fuel}><select name="fuel" defaultValue="PETROL"><option value="PETROL">Petrol</option><option value="DIESEL">Diesel</option><option value="HYBRID">Hybrid</option><option value="ELECTRIC">Electric</option></select></Field>
+            <Field label={copy.seats}><input name="seats" type="number" min="1" max="16" defaultValue="5" required/></Field>
+            <Field label={copy.bags}><input name="bags" type="number" min="0" max="12" defaultValue="2" required/></Field>
+          </div>
+        </section>
+
+        <section className={styles.vehicleFormSection}>
+          <div className={styles.vehicleFormHead}><span className={styles.vehicleFormIcon}><BadgeDollarSign size={18}/></span><div><h2>{copy.rentalTitle}</h2><p>{copy.rentalBody}</p></div></div>
+          <div className={styles.vehiclePricingGrid}>
+            <Field label={`${copy.price} · ${currency}`}><input name="dailyPrice" type="number" min="0.01" step="0.01" placeholder="35.00" required inputMode="decimal"/></Field>
+            <label className={`${styles.field} ${styles.depositField}`}><span>{copy.deposit} · {currency} <b className={styles.requiredTag}>{copy.required}</b></span><input name="deposit" type="number" min="0.01" step="0.01" placeholder="100.00" required inputMode="decimal"/><small>{copy.depositHint}</small></label>
+            <Field label={copy.location}><select name="homeLocationId" defaultValue={locations[0]?.id??""}><option value="">—</option>{locations.map((location)=><option key={location.id} value={location.id}>{location.name} · {location.city}</option>)}</select></Field>
+          </div>
+        </section>
+
+        <section className={styles.vehicleFormSection}>
+          <div className={styles.vehicleFormHead}><span className={styles.vehicleFormIcon}><Settings2 size={18}/></span><div><h2>{copy.extrasTitle}</h2><p>{copy.extrasBody}</p></div></div>
+          <div className={styles.policyGrid}>
+            <label className={styles.policyOption}><input type="checkbox" name="freeCancellation" defaultChecked/><span><ShieldCheck size={17}/><b>{copy.freeCancel}</b></span></label>
+            <label className={styles.policyOption}><input type="checkbox" name="unlimitedMileage"/><span><Settings2 size={17}/><b>{copy.unlimited}</b></span></label>
+            <label className={styles.policyOption}><input type="checkbox" name="airportPickup"/><span><MapPin size={17}/><b>{copy.airport}</b></span></label>
+          </div>
+          <details className={styles.optionalVehicleDetails}>
+            <summary><ImagePlus size={16}/><span><b>{copy.photoOptional}</b><small>{copy.photoHint}</small></span></summary>
+            <div className={styles.optionalVehicleBody}><Field label={copy.image}><input name="imageUrl" type="url" placeholder="https://..."/></Field></div>
+          </details>
+        </section>
+
+        {error&&<div className={styles.error}>{error}</div>}
+        <div className={styles.formActions}><button className={styles.primary} type="submit" disabled={loading}><Plus size={16}/>{loading?copy.saving:copy.save}</button></div>
+      </form>
+    </div>}
+
+    <section className={styles.panel} style={{marginTop:open?18:0}}>{vehicles.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{ar?"السيارة":"Vehicle"}</th><th>{ar?"الفئة":"Category"}</th><th>{ar?"المواصفات":"Specs"}</th><th>{ar?"الفرع":"Location"}</th><th>{ar?"السعر":"Price"}</th><th>{ar?"الوديعة":"Deposit"}</th><th>{ar?"الحالة":"Status"}</th></tr></thead><tbody>{vehicles.map((vehicle)=><tr key={vehicle.id}><td><strong>{vehicle.make} {vehicle.model}</strong><div>{vehicle.year}</div></td><td>{vehicle.category}</td><td>{vehicle.transmission} · {vehicle.fuel} · {vehicle.seats} {ar?"مقاعد":"seats"}</td><td>{vehicle.homeLocation?.name??"—"}</td><td><strong>{vehicle.dailyPrice.toFixed(2)} {currency}</strong></td><td>{vehicle.deposit>0?<strong>{vehicle.deposit.toFixed(2)} {currency}</strong>:<span className={styles.depositMissing}>{copy.depositMissing}</span>}</td><td><span className={`${styles.chip} ${vehicle.status==="ACTIVE"?styles.chipActive:vehicle.status==="MAINTENANCE"?styles.chipWarn:""}`}>{vehicle.status}</span></td></tr>)}</tbody></table></div>:<div className={styles.empty}><span className={styles.emptyIcon}><CarFront size={25}/></span><h3>{copy.empty}</h3><p>{copy.emptyBody}</p><button className={styles.primary} type="button" onClick={()=>setOpen(true)}><Plus size={16}/>{copy.add}</button></div>}</section>
   </>;
 }
 
