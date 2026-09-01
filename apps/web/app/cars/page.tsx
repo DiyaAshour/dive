@@ -1,12 +1,14 @@
+import { listPublicCarVehicles } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
+import { CarsLiveMarketplace, type LiveCar } from "@/components/cars-live-marketplace";
 import { CarsMarketplace, type CarSearchValues } from "@/components/cars-marketplace";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { defaultStayDates } from "@/lib/stay-dates";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "HandMeKey Cars",
-  description: "Explore the HandMeKey Cars demo marketplace with car search, filters, transparent demo pricing and rental terms.",
+  title: "HandMeKey Cars · Car rental",
+  description: "Find rental cars with clear daily pricing, deposits, insurance-friendly terms and pickup details on HandMeKey Cars.",
   robots: {index: false, follow: false},
 };
 
@@ -21,13 +23,14 @@ type Params = Promise<{
   brand?: string;
 }>;
 
-const HOMEPAGE_BRANDS = new Set(["Toyota", "BMW", "Mercedes-Benz"]);
-
 export default async function CarsPage({searchParams}: {searchParams: Params}) {
-  const [market, query] = await Promise.all([requestGuestMarket(), searchParams]);
+  const [market, query, liveCars] = await Promise.all([
+    requestGuestMarket(),
+    searchParams,
+    listPublicCarVehicles().catch(() => []),
+  ]);
   const dates = defaultStayDates();
   const ar = market.locale === "ar";
-  const requestedBrand = query.brand?.trim() || "";
   const initialSearch: CarSearchValues = {
     pickup: query.pickup?.trim() || (ar ? "عمّان - مطار الملكة علياء" : "Amman - Queen Alia Airport"),
     dropoff: query.dropoff?.trim() || "same",
@@ -36,11 +39,15 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
     returnDate: query.returnDate || dates.departure,
     returnTime: query.returnTime || "10:00",
     driverAge: query.driverAge || "30-65",
-    brand: HOMEPAGE_BRANDS.has(requestedBrand) ? requestedBrand : "",
+    brand: query.brand?.trim() || "",
   };
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
-    <div className="shell"><CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/></div>
+    <div className="shell">
+      {liveCars.length > 0
+        ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={liveCars as LiveCar[]}/>
+        : <CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/>} 
+    </div>
   </main>;
 }
