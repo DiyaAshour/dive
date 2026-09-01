@@ -144,6 +144,35 @@ export async function getMyCarReservation(userId: string, reservationId: string)
   return row ? serializeReservation(row) : null;
 }
 
+export async function cancelMyCarReservation(userId: string, reservationId: string, reason?: string) {
+  const db = database();
+  const reservation = await db.carReservation.findFirst({
+    where: {id: reservationId, userId},
+    include: {vehicle:true,pickupLocation:true,returnLocation:true,company:true},
+  });
+  if (!reservation) notFound("Car reservation");
+  if (!["HOLD","CONFIRMED","MODIFIED"].includes(reservation.status)) {
+    badRequest("CAR_CANCELLATION_FINAL", "This reservation can no longer be cancelled");
+  }
+  if (!reservation.vehicle.freeCancellation) {
+    badRequest("CAR_CANCELLATION_REVIEW_REQUIRED", "This reservation is not eligible for self-service cancellation");
+  }
+  if (Date.now() >= reservation.pickupAt.getTime()) {
+    badRequest("CAR_CANCELLATION_TOO_LATE", "This reservation can no longer be cancelled after the pickup time");
+  }
+
+  const updated = await db.carReservation.update({
+    where: {id: reservation.id},
+    data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      cancellationNote: reason?.trim().slice(0,1000) || "Cancelled by guest",
+    },
+    include: {vehicle:true,pickupLocation:true,returnLocation:true,company:true},
+  });
+  return serializeReservation(updated);
+}
+
 function serializeReservation(row: any) {
   return {
     id: row.id,
@@ -163,7 +192,9 @@ function serializeReservation(row: any) {
     total: Number(row.total),
     deposit: Number(row.deposit),
     currency: row.currency,
-    vehicle: {id:row.vehicle.id,make:row.vehicle.make,model:row.vehicle.model,year:row.vehicle.year,category:row.vehicle.category,imageUrl:row.vehicle.imageUrl,imageAlt:row.vehicle.imageAlt},
+    cancellationNote: row.cancellationNote ?? null,
+    cancelledAt: row.cancelledAt?.toISOString() ?? null,
+    vehicle: {id:row.vehicle.id,make:row.vehicle.make,model:row.vehicle.model,year:row.vehicle.year,category:row.vehicle.category,imageUrl:row.vehicle.imageUrl,imageAlt:row.vehicle.imageAlt,freeCancellation:row.vehicle.freeCancellation},
     company: {id:row.company.id,name:row.company.name,verified:row.company.verified},
     pickupLocation: publicLocation(row.pickupLocation),
     returnLocation: publicLocation(row.returnLocation),
