@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Bell, BookOpenText, Building2, Menu, Sparkles, UserRound } from "lucide-react";
+import { Menu, UserRound } from "lucide-react";
 import { guestDictionary } from "@/lib/guest-i18n";
 import { guestUiCopy } from "@/lib/guest-ui-copy";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { currentUser } from "@/lib/server-session";
+import { CustomerContextNav, CustomerContextPartnerLink } from "./customer-context-nav";
 import { MarketSwitcher } from "./market-switcher";
 import { MobileAppNav } from "./mobile-app-nav";
 import { SignOutButton } from "./sign-out-button";
@@ -19,22 +20,24 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
   const marketEdge = market.direction === "rtl" ? "right" : "left";
   const rewardsHref = `/rewards/${market.baseLocale}`;
 
-  const navLinks = <>
-    <Link href="/search">{copy.home.search}</Link>
-    <Link href={rewardsHref}><Sparkles size={15}/>{ui.header.rewards}</Link>
-    <Link href={`/blog/${market.baseLocale}`}><BookOpenText size={15}/>{ui.header.guide}</Link>
-    <Link href="/trips">{copy.nav.trips}</Link>
-    <Link href="/account/alerts"><Bell size={16}/>{copy.nav.alerts}</Link>
-  </>;
+  const contextualNav = <CustomerContextNav
+    locale={market.locale}
+    staysSearchLabel={copy.home.search}
+    rewardsLabel={ui.header.rewards}
+    guideLabel={ui.header.guide}
+    tripsLabel={copy.nav.trips}
+    alertsLabel={copy.nav.alerts}
+    rewardsHref={rewardsHref}
+  />;
 
   return <>
     <header className="siteHeader">
       <div className="desktopMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode} edge={marketEdge}/></div>
       <div className="shell siteHeaderInner">
         <SiteBrand />
-        {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{navLinks}</nav>}
+        {!minimal && <nav className="siteNav" aria-label={copy.nav.account}>{contextualNav}</nav>}
         <div className="siteActions">
-          {!minimal && <Link className="partnerEntry" href="/partner"><Building2 size={16}/>{copy.nav.partner}</Link>}
+          {!minimal && <CustomerContextPartnerLink locale={market.locale} staysLabel={copy.nav.partner}/>} 
           <div className="compactMarketSwitcher"><MarketSwitcher locale={market.locale} currency={market.currency} countryCode={market.countryCode}/></div>
           {user ? <>
             <Link className="accountButton" href="/account" title={`${copy.nav.account} · ${user.email}`}><UserRound size={16}/><span>{accountLabel}</span></Link>
@@ -43,8 +46,8 @@ export async function CustomerHeader({minimal = false}: CustomerHeaderProps) {
           {!minimal && <details className="mobileSiteNav">
             <summary aria-label={ui.header.menu}><Menu size={20}/><span>{ui.header.menu}</span></summary>
             <div className="mobileSiteNavPanel">
-              <nav aria-label={ui.header.menu}>{navLinks}</nav>
-              <Link className="mobilePartnerEntry" href="/partner"><Building2 size={17}/>{copy.nav.partner}</Link>
+              <nav aria-label={ui.header.menu}>{contextualNav}</nav>
+              <CustomerContextPartnerLink locale={market.locale} staysLabel={copy.nav.partner} mobile/>
               {user && <SignOutButton locale={market.baseLocale}/>} 
             </div>
           </details>}
