@@ -8,15 +8,25 @@ import type { GuestLocale } from "@/lib/guest-market";
 
 type Mode = "login" | "register";
 type Portal = "guest" | "partner";
+type Context = "default" | "cars";
 
-type Props = Readonly<{portal?: Portal;locale?:GuestLocale}>;
+type Props = Readonly<{portal?: Portal;locale?:GuestLocale;nextPath?:string;context?:Context}>;
 
-export default function AuthForm({portal = "guest",locale="en"}: Props) {
+export default function AuthForm({portal = "guest",locale="en",nextPath,context="default"}: Props) {
   const [mode,setMode]=useState<Mode>("login");
   const [error,setError]=useState<string|null>(null);
   const [submitting,setSubmitting]=useState(false);
   const partner=portal==="partner";
+  const cars=!partner&&context==="cars";
   const copy=authUiCopy(locale);
+  const ar=locale==="ar";
+  const safeNext=safeLocalPath(nextPath);
+  const guestBody=cars
+    ? (ar?"أكمل حجز سيارتك واحتفظ برقم الحجز والتفاصيل في حساب HandMeKey.":"Continue your car booking and keep the booking reference and rental details in your HandMeKey account.")
+    : copy.guestBody;
+  const guestFoot=cars
+    ? (ar?"بعد تسجيل الدخول ستعود مباشرة إلى خطوة حجز السيارة التي اخترتها.":"After signing in, you’ll return directly to the car booking step you selected.")
+    : copy.guestFoot;
 
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
@@ -31,7 +41,7 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
       const result=await response.json();
       if(!response.ok)throw new Error(result?.error?.message??copy.unable);
       if(partner) window.location.assign(mode==="register"?"/partner/onboarding":"/hotel-dashboard");
-      else window.location.assign("/trips");
+      else window.location.assign(safeNext||"/trips");
     }catch(cause){
       setError(cause instanceof Error?cause.message:copy.unable);
     }finally{setSubmitting(false);}
@@ -42,7 +52,7 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
       <button className={mode==="login"?"active":""} onClick={()=>setMode("login")} type="button">{copy.signIn}</button>
       <button className={mode==="register"?"active":""} onClick={()=>setMode("register")} type="button">{copy.createAccount}</button>
     </div>
-    <div className="authCardHeading"><span>{partner?copy.partnerAccess:copy.account}</span><h2>{mode==="login"?copy.welcome:copy.createTitle}</h2><p>{partner?copy.partnerBody:copy.guestBody}</p></div>
+    <div className="authCardHeading"><span>{partner?copy.partnerAccess:copy.account}</span><h2>{mode==="login"?copy.welcome:copy.createTitle}</h2><p>{partner?copy.partnerBody:guestBody}</p></div>
     <form onSubmit={submit}>
       {mode==="register"&&<label>{copy.fullName}<input name="displayName" autoComplete="name" minLength={2} placeholder={copy.namePlaceholder} required/></label>}
       <label>{copy.email}<input name="email" type="email" autoComplete="email" placeholder="name@example.com" required/></label>
@@ -51,6 +61,11 @@ export default function AuthForm({portal = "guest",locale="en"}: Props) {
       {error&&<p className="formError">{error}</p>}
       <button className="primaryButton authSubmit" disabled={submitting}>{submitting?copy.wait:mode==="login"?copy.signIn:copy.createButton}</button>
     </form>
-    <small>{partner?copy.partnerFoot:copy.guestFoot}</small>
+    <small>{partner?copy.partnerFoot:guestFoot}</small>
   </div>;
+}
+
+function safeLocalPath(value?:string){
+  if(!value||!value.startsWith("/")||value.startsWith("//"))return "";
+  return value;
 }
