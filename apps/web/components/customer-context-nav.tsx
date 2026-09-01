@@ -1,88 +1,81 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BookOpenText, Building2, CarFront, Sparkles } from "lucide-react";
+import { Bell, BookOpenText, Building2, Car, ChevronDown, Search, Sparkles } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { GuestLocale } from "@/lib/guest-market";
+import styles from "./customer-context-nav.module.css";
 
-type NavProps = Readonly<{
-  locale: GuestLocale;
+type Props = Readonly<{
+  locale: string;
+  staysSearchLabel: string;
+  rewardsLabel: string;
+  guideLabel: string;
+  tripsLabel: string;
+  alertsLabel: string;
   rewardsHref: string;
-  guideHref: string;
+  mobile?: boolean;
 }>;
 
-type PartnerProps = Readonly<{
-  locale: GuestLocale;
-  className: string;
-}>;
-
-function isCarsContext(pathname: string, service: string | null) {
-  return pathname.startsWith("/cars") || pathname.startsWith("/car-dashboard") || service === "cars";
-}
-
-function contextCopy(locale: GuestLocale, cars: boolean) {
-  const ar = locale === "ar";
-  if (cars) {
-    return ar
-      ? {
-          search: "ابحث عن سيارة",
-          rewards: "المكافآت",
-          guide: "دليل السيارات",
-          bookings: "حجوزاتي",
-          alerts: "تنبيهات أسعار السيارات",
-          partner: "أضف شركة تأجيرك",
-        }
-      : {
-          search: "Find a car",
-          rewards: "Rewards",
-          guide: "Car rental guide",
-          bookings: "My bookings",
-          alerts: "Car price alerts",
-          partner: "List your rental company",
-        };
-  }
-
-  return ar
-    ? {
-        search: "ابحث عن إقامة",
-        rewards: "المكافآت",
-        guide: "دليل السفر",
-        bookings: "حجوزاتي",
-        alerts: "تنبيهات الأسعار",
-        partner: "أضف منشأتك",
-      }
-    : {
-        search: "Find a stay",
-        rewards: "Rewards",
-        guide: "Travel guide",
-        bookings: "My bookings",
-        alerts: "Price alerts",
-        partner: "List your property",
-      };
-}
-
-export function CustomerContextNav({ locale, rewardsHref, guideHref }: NavProps) {
+function useCarsMode() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const cars = isCarsContext(pathname, searchParams.get("service"));
-  const copy = contextCopy(locale, cars);
+  return pathname.startsWith("/cars") || pathname.startsWith("/car-dashboard") || (pathname === "/" && searchParams.get("service") === "cars");
+}
+
+export function CustomerContextNav({
+  locale,
+  staysSearchLabel,
+  rewardsLabel,
+  guideLabel,
+  tripsLabel,
+  alertsLabel,
+  rewardsHref,
+  mobile = false,
+}: Props) {
+  const isCars = useCarsMode();
+  const ar = locale.startsWith("ar");
+
+  if (isCars) {
+    const searchCars = <Link href="/?service=cars#car-search"><Search size={15}/>{ar ? "ابحث عن سيارة" : "Search cars"}</Link>;
+    const carBookings = <Link href="/cars/bookings"><Car size={15}/>{ar ? "حجوزات السيارات" : "Car bookings"}</Link>;
+    const priceAlerts = <Link href="/account/alerts?service=cars"><Bell size={15}/>{ar ? "تنبيهات الأسعار" : "Price alerts"}</Link>;
+    const rentalCompanies = <Link href="/cars"><Building2 size={15}/>{ar ? "شركات التأجير" : "Rental companies"}</Link>;
+
+    if (mobile) return <>{searchCars}{carBookings}{priceAlerts}{rentalCompanies}</>;
+
+    return <>
+      {searchCars}
+      {carBookings}
+      <details className={styles.moreMenu}>
+        <summary><span>{ar ? "المزيد" : "More"}</span><ChevronDown size={15}/></summary>
+        <div className={styles.morePanel}>
+          <section>
+            <span className={styles.groupLabel}>{ar ? "لرحلتك" : "For your trip"}</span>
+            {priceAlerts}
+          </section>
+          <section>
+            <span className={styles.groupLabel}>{ar ? "استكشف" : "Explore"}</span>
+            {rentalCompanies}
+          </section>
+        </div>
+      </details>
+    </>;
+  }
 
   return <>
-    <Link href={cars ? "/?service=cars" : "/search"}>{cars && <CarFront size={15}/>} {copy.search}</Link>
-    <Link href={rewardsHref}><Sparkles size={15}/>{copy.rewards}</Link>
-    <Link href={cars ? `${guideHref}?topic=cars` : guideHref}><BookOpenText size={15}/>{copy.guide}</Link>
-    <Link href={cars ? "/cars/bookings" : "/trips"}>{copy.bookings}</Link>
-    <Link href={cars ? "/account/alerts?service=cars" : "/account/alerts"}><Bell size={16}/>{copy.alerts}</Link>
+    <Link href="/search">{staysSearchLabel}</Link>
+    <Link href={rewardsHref}><Sparkles size={15}/>{rewardsLabel}</Link>
+    <Link href={`/blog/${locale.startsWith("ar") ? "ar" : "en"}`}><BookOpenText size={15}/>{guideLabel}</Link>
+    <Link href="/trips">{tripsLabel}</Link>
+    <Link href="/account/alerts"><Bell size={16}/>{alertsLabel}</Link>
   </>;
 }
 
-export function ContextPartnerEntry({ locale, className }: PartnerProps) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const cars = isCarsContext(pathname, searchParams.get("service"));
-  const copy = contextCopy(locale, cars);
-
-  return <Link className={className} href={cars ? "/cars/partner" : "/partner"}>
-    {cars ? <CarFront size={17}/> : <Building2 size={17}/>} {copy.partner}
+export function CustomerContextPartnerLink({locale, staysLabel, mobile = false}: {locale:string;staysLabel:string;mobile?:boolean}) {
+  const isCars = useCarsMode();
+  const ar = locale.startsWith("ar");
+  return <Link className={mobile ? "mobilePartnerEntry" : "partnerEntry"} href={isCars ? "/cars/partner" : "/partner"}>
+    {isCars ? <Car size={mobile ? 17 : 16}/> : <Building2 size={mobile ? 17 : 16}/>}
+    {isCars ? (ar ? "أضف شركة تأجير" : "List rental company") : staysLabel}
   </Link>;
 }
