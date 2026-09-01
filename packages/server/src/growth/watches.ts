@@ -2,6 +2,7 @@ import type { CreatePriceWatchInput, SaveSearchInput } from "@platform/contracts
 import { database } from "@platform/database";
 import { badRequest, notFound } from "../errors";
 import { getPublicHotelDetails } from "../discovery/service";
+import { queuePriceWatchNotificationEmail } from "../communications/booking";
 
 export async function createSavedSearch(userId: string, input: SaveSearchInput) {
   return database().savedSearch.create({data: {
@@ -140,6 +141,7 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
       const shouldNotify = targetCrossed || meaningfulNewLow;
       const nextLow = Math.min(previousLow, snapshot.total);
       const now = new Date();
+      let notificationId: string | null = null;
       await db.$transaction(async (tx) => {
         await tx.priceWatch.update({where: {id: watch.id}, data: {
           hotelName: snapshot.hotelName,
@@ -159,7 +161,7 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
           const body = targetCrossed
             ? `Your ${stayLabel} is now ${snapshot.total.toFixed(2)} ${snapshot.currency}, at or below your target of ${target?.toFixed(2)} ${snapshot.currency}.`
             : `Your ${stayLabel} dropped to ${snapshot.total.toFixed(2)} ${snapshot.currency}. Last alerted price: ${previousNotified.toFixed(2)} ${snapshot.currency}.`;
-          await tx.userNotification.create({data: {
+          const notification = await tx.userNotification.create({data: {
             userId: watch.ownerUserId,
             kind,
             title,
@@ -167,9 +169,15 @@ export async function evaluateActivePriceWatches(limit = 100): Promise<{checked:
             link: hotelLink(watch.hotelId, watch.arrival, watch.departure, watch.adults, watch.children),
             data: {watchId: watch.id, hotelId: watch.hotelId, roomTypeId: watch.roomTypeId, roomTypeName: watch.roomTypeName, total: snapshot.total, currency: snapshot.currency},
           }});
+          notificationId = notification.id;
         }
       });
       if (shouldNotify) notified += 1;
+      if (notificationId) {
+        await queuePriceWatchNotificationEmail(notificationId).catch((error) => {
+          console.error(JSON.stringify({event: "price_watch_email_queue_failed", notificationId, message: error instanceof Error ? error.message : "unknown error"}));
+        });
+      }
     } catch (error) {
       console.error(`[price-watch] failed for ${watch.id}`, error);
       await db.priceWatch.update({where: {id: watch.id}, data: {lastCheckedAt: new Date()}}).catch(() => undefined);
