@@ -16,12 +16,14 @@ export async function generateMetadata({params}:Readonly<{params:Params}>):Promi
   const title = locale === "ar" ? `${hotel.name} في ${place} | HandMeKey` : `${hotel.name}, ${place} | HandMeKey`;
   const description = hotel.description?.trim().slice(0,300) || (locale === "ar" ? `شاهد غرف وأسعار ${hotel.name} المباشرة في ${place} مع السعر النهائي وشروط الإلغاء قبل الحجز.` : `See live rooms and rates for ${hotel.name} in ${place}, with the final stay price and cancellation terms before booking.`);
   const images = hotel.photos.slice(0,4).map((photo)=>({url:photo.url,alt:photo.alt??hotel.name}));
+  const isDemo = hotel.slug.startsWith("demo-");
   return {
     title: {absolute:title},
     description,
     alternates: {canonical},
     openGraph: {title,description,url:canonical,type:"website",...(images.length?{images}:{})},
     twitter: {card:"summary_large_image",title,description,...(images[0]?{images:[images[0].url]}:{})},
+    robots: isDemo ? {index:false,follow:false} : {index:true,follow:true},
   };
 }
 
