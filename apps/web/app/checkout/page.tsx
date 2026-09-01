@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { CustomerHeader } from "@/components/customer-header";
@@ -7,6 +8,9 @@ import { currentUser } from "@/lib/server-session";
 import { CheckoutFlow } from "./checkout-flow";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function CheckoutPage({searchParams}:{searchParams:Promise<{hotelId?:string;roomTypeId?:string;ratePlanId?:string;arrival?:string;departure?:string;adults?:string;children?:string}>}) {
   const [query,user,market]=await Promise.all([searchParams,currentUser(),requestGuestMarket()]);
