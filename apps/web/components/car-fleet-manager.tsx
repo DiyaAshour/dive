@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { BadgeDollarSign, CarFront, ImagePlus, MapPin, Plus, Settings2, ShieldCheck, X } from "lucide-react";
+import { BadgeDollarSign, Camera, CarFront, MapPin, Plus, Settings2, ShieldCheck, X } from "lucide-react";
 import styles from "./car-partner-shell.module.css";
 
 type Vehicle={id:string;make:string;model:string;year:number;category:string;transmission:string;fuel:string;seats:number;bags:number;doors:number;dailyPrice:number;deposit:number;freeCancellation:boolean;unlimitedMileage:boolean;airportPickup:boolean;imageUrl:string|null;imageAlt:string|null;status:string;homeLocation:{id:string;name:string;city:string}|null;createdAt:string;updatedAt:string};
@@ -15,13 +16,13 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
   const copy=ar?{
-    title:"الأسطول",body:"أضف السيارة بسرعة. اجعل البيانات الأساسية واضحة، ثم السعر والوديعة، وبعدها المزايا الاختيارية.",add:"إضافة سيارة",close:"إغلاق",save:"حفظ السيارة",saving:"جارٍ الحفظ...",
-    basicTitle:"بيانات السيارة",basicBody:"المعلومات التي تعرّف السيارة للعميل.",rentalTitle:"التأجير والسعر",rentalBody:"السعر والوديعة وموقع الاستلام الأساسي.",extrasTitle:"المزايا والصورة",extrasBody:"خيارات إضافية يمكن تعديلها حسب العرض.",
-    make:"الماركة",model:"الموديل",year:"السنة",category:"الفئة",transmission:"ناقل الحركة",fuel:"الوقود",seats:"المقاعد",bags:"الحقائب",price:"السعر اليومي",deposit:"الوديعة",location:"الفرع الأساسي",image:"رابط صورة السيارة",conditions:"مزايا العرض",freeCancel:"إلغاء مجاني",unlimited:"كيلومترات غير محدودة",airport:"استلام من المطار",automatic:"أوتوماتيك",manual:"عادي",empty:"لا توجد سيارات في الأسطول بعد",emptyBody:"أضف أول سيارة حتى تبدأ بتجهيز الأسعار والتوفر قبل نشر الشركة.",failed:"تعذر حفظ السيارة.",required:"إلزامي",depositHint:"يجب تحديد وديعة أكبر من صفر لكل سيارة ولكل شركة، بدون استثناء.",photoOptional:"صورة السيارة اختيارية",photoHint:"أضف رابط صورة واضحة للسيارة. يمكنك تركها فارغة الآن.",stored:"السيارة تحفظ فعليًا في قاعدة بيانات شركة التأجير ولن تظهر للعامة حتى يتم توثيق الشركة وتفعيلها.",depositMissing:"الوديعة مطلوبة"
+    title:"الأسطول",body:"أضف السيارة وبياناتها التشغيلية، ثم افتح استوديو الصور الخاص بها لرفع معرض حقيقي وتصنيفه.",add:"إضافة سيارة",close:"إغلاق",save:"حفظ السيارة",saving:"جارٍ الحفظ...",
+    basicTitle:"بيانات السيارة",basicBody:"المعلومات التي تعرّف السيارة للعميل.",rentalTitle:"التأجير والسعر",rentalBody:"السعر والوديعة وموقع الاستلام الأساسي.",extrasTitle:"مزايا العرض",extrasBody:"حدد ما يشمله العرض. بعد الحفظ أضف الصور من زر إدارة الصور.",
+    make:"الماركة",model:"الموديل",year:"السنة",category:"الفئة",transmission:"ناقل الحركة",fuel:"الوقود",seats:"المقاعد",bags:"الحقائب",price:"السعر اليومي",deposit:"الوديعة",location:"الفرع الأساسي",freeCancel:"إلغاء مجاني",unlimited:"كيلومترات غير محدودة",airport:"استلام من المطار",automatic:"أوتوماتيك",manual:"عادي",empty:"لا توجد سيارات في الأسطول بعد",emptyBody:"أضف أول سيارة حتى تبدأ بتجهيز الأسعار والتوفر والصور قبل نشر الشركة.",failed:"تعذر حفظ السيارة.",required:"إلزامي",depositHint:"يجب تحديد وديعة أكبر من صفر لكل سيارة ولكل شركة، بدون استثناء.",stored:"السيارة تحفظ فعليًا في قاعدة بيانات شركة التأجير. بعد الحفظ يمكنك رفع صورها الحقيقية وتصنيفها.",depositMissing:"الوديعة مطلوبة",photos:"إدارة الصور"
   }:{
-    title:"Fleet",body:"Add a vehicle quickly: essential details first, then pricing and deposit, then optional extras.",add:"Add vehicle",close:"Close",save:"Save vehicle",saving:"Saving...",
-    basicTitle:"Vehicle details",basicBody:"The core information customers use to identify the vehicle.",rentalTitle:"Rental & pricing",rentalBody:"Daily rate, mandatory deposit and primary pickup location.",extrasTitle:"Extras & photo",extrasBody:"Optional features that can vary by offer.",
-    make:"Make",model:"Model",year:"Year",category:"Category",transmission:"Transmission",fuel:"Fuel",seats:"Seats",bags:"Bags",price:"Daily price",deposit:"Deposit",location:"Home location",image:"Vehicle image URL",conditions:"Offer features",freeCancel:"Free cancellation",unlimited:"Unlimited mileage",airport:"Airport pickup",automatic:"Automatic",manual:"Manual",empty:"No vehicles in the fleet yet",emptyBody:"Add the first vehicle to prepare rates and availability before publishing the company.",failed:"Could not save the vehicle.",required:"Required",depositHint:"A deposit greater than zero is mandatory for every vehicle and every rental company, with no exceptions.",photoOptional:"Vehicle photo is optional",photoHint:"Add a clear vehicle image URL, or leave it empty for now.",stored:"The vehicle is stored in the rental-company database and will not be public until the company is verified and activated.",depositMissing:"Deposit required"
+    title:"Fleet",body:"Add the vehicle and operating details, then open its media studio to upload and categorize a real photo gallery.",add:"Add vehicle",close:"Close",save:"Save vehicle",saving:"Saving...",
+    basicTitle:"Vehicle details",basicBody:"The core information customers use to identify the vehicle.",rentalTitle:"Rental & pricing",rentalBody:"Daily rate, mandatory deposit and primary pickup location.",extrasTitle:"Offer features",extrasBody:"Choose what the offer includes. After saving, use Manage photos to build the gallery.",
+    make:"Make",model:"Model",year:"Year",category:"Category",transmission:"Transmission",fuel:"Fuel",seats:"Seats",bags:"Bags",price:"Daily price",deposit:"Deposit",location:"Home location",freeCancel:"Free cancellation",unlimited:"Unlimited mileage",airport:"Airport pickup",automatic:"Automatic",manual:"Manual",empty:"No vehicles in the fleet yet",emptyBody:"Add the first vehicle to prepare pricing, availability and photos before publishing the company.",failed:"Could not save the vehicle.",required:"Required",depositHint:"A deposit greater than zero is mandatory for every vehicle and every rental company, with no exceptions.",stored:"The vehicle is stored in the rental-company database. After saving, upload and categorize its real photos.",depositMissing:"Deposit required",photos:"Manage photos"
   };
 
   async function submit(event:React.FormEvent<HTMLFormElement>){
@@ -32,7 +33,7 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
       transmission:String(form.get("transmission")) as "AUTOMATIC"|"MANUAL",fuel:String(form.get("fuel")) as "PETROL"|"DIESEL"|"HYBRID"|"ELECTRIC",
       seats:Number(form.get("seats")),bags:Number(form.get("bags")),doors:4,dailyPrice:Number(form.get("dailyPrice")),deposit:Number(form.get("deposit")),
       freeCancellation:form.get("freeCancellation")==="on",unlimitedMileage:form.get("unlimitedMileage")==="on",airportPickup:form.get("airportPickup")==="on",
-      imageUrl:String(form.get("imageUrl")||"")||undefined,homeLocationId:String(form.get("homeLocationId")||"")||undefined,
+      homeLocationId:String(form.get("homeLocationId")||"")||undefined,
     };
     try{
       const response=await fetch("/api/v1/cars/partner/vehicles",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
@@ -78,10 +79,6 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
             <label className={styles.policyOption}><input type="checkbox" name="unlimitedMileage"/><span><Settings2 size={17}/><b>{copy.unlimited}</b></span></label>
             <label className={styles.policyOption}><input type="checkbox" name="airportPickup"/><span><MapPin size={17}/><b>{copy.airport}</b></span></label>
           </div>
-          <details className={styles.optionalVehicleDetails}>
-            <summary><ImagePlus size={16}/><span><b>{copy.photoOptional}</b><small>{copy.photoHint}</small></span></summary>
-            <div className={styles.optionalVehicleBody}><Field label={copy.image}><input name="imageUrl" type="url" placeholder="https://..."/></Field></div>
-          </details>
         </section>
 
         {error&&<div className={styles.error}>{error}</div>}
@@ -89,7 +86,7 @@ export function CarFleetManager({locale,initialVehicles,locations,currency}:Prop
       </form>
     </div>}
 
-    <section className={styles.panel} style={{marginTop:open?18:0}}>{vehicles.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{ar?"السيارة":"Vehicle"}</th><th>{ar?"الفئة":"Category"}</th><th>{ar?"المواصفات":"Specs"}</th><th>{ar?"الفرع":"Location"}</th><th>{ar?"السعر":"Price"}</th><th>{ar?"الوديعة":"Deposit"}</th><th>{ar?"الحالة":"Status"}</th></tr></thead><tbody>{vehicles.map((vehicle)=><tr key={vehicle.id}><td><strong>{vehicle.make} {vehicle.model}</strong><div>{vehicle.year}</div></td><td>{vehicle.category}</td><td>{vehicle.transmission} · {vehicle.fuel} · {vehicle.seats} {ar?"مقاعد":"seats"}</td><td>{vehicle.homeLocation?.name??"—"}</td><td><strong>{vehicle.dailyPrice.toFixed(2)} {currency}</strong></td><td>{vehicle.deposit>0?<strong>{vehicle.deposit.toFixed(2)} {currency}</strong>:<span className={styles.depositMissing}>{copy.depositMissing}</span>}</td><td><span className={`${styles.chip} ${vehicle.status==="ACTIVE"?styles.chipActive:vehicle.status==="MAINTENANCE"?styles.chipWarn:""}`}>{vehicle.status}</span></td></tr>)}</tbody></table></div>:<div className={styles.empty}><span className={styles.emptyIcon}><CarFront size={25}/></span><h3>{copy.empty}</h3><p>{copy.emptyBody}</p><button className={styles.primary} type="button" onClick={()=>setOpen(true)}><Plus size={16}/>{copy.add}</button></div>}</section>
+    <section className={styles.panel} style={{marginTop:open?18:0}}>{vehicles.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{ar?"السيارة":"Vehicle"}</th><th>{ar?"الفئة":"Category"}</th><th>{ar?"المواصفات":"Specs"}</th><th>{ar?"الفرع":"Location"}</th><th>{ar?"السعر":"Price"}</th><th>{ar?"الوديعة":"Deposit"}</th><th>{ar?"الحالة":"Status"}</th><th>{ar?"الصور":"Photos"}</th></tr></thead><tbody>{vehicles.map((vehicle)=><tr key={vehicle.id}><td><strong>{vehicle.make} {vehicle.model}</strong><div>{vehicle.year}</div></td><td>{vehicle.category}</td><td>{vehicle.transmission} · {vehicle.fuel} · {vehicle.seats} {ar?"مقاعد":"seats"}</td><td>{vehicle.homeLocation?.name??"—"}</td><td><strong>{vehicle.dailyPrice.toFixed(2)} {currency}</strong></td><td>{vehicle.deposit>0?<strong>{vehicle.deposit.toFixed(2)} {currency}</strong>:<span className={styles.depositMissing}>{copy.depositMissing}</span>}</td><td><span className={`${styles.chip} ${vehicle.status==="ACTIVE"?styles.chipActive:vehicle.status==="MAINTENANCE"?styles.chipWarn:""}`}>{vehicle.status}</span></td><td><Link className={styles.secondary} href={`/car-dashboard/fleet/${vehicle.id}/media`}><Camera size={14}/>{copy.photos}</Link></td></tr>)}</tbody></table></div>:<div className={styles.empty}><span className={styles.emptyIcon}><CarFront size={25}/></span><h3>{copy.empty}</h3><p>{copy.emptyBody}</p><button className={styles.primary} type="button" onClick={()=>setOpen(true)}><Plus size={16}/>{copy.add}</button></div>}</section>
   </>;
 }
 
