@@ -11,10 +11,10 @@ type BrandProps = Readonly<{
   lightLogoUrl?: string | null;
 }>;
 
-const DEFAULT_HEADER_LOGO = "/brand/handmekey-header-on-light.svg";
-const DEFAULT_HEADER_LOGO_INVERSE = "/brand/handmekey-header-on-dark.svg";
-const DEFAULT_MARK = "/brand/hmk-favicon-light.svg";
-const DEFAULT_MARK_INVERSE = "/brand/hmk-favicon-dark.svg";
+const DEFAULT_HEADER_LOGO = "/brand/hmk-2026-header-light.svg";
+const DEFAULT_HEADER_LOGO_INVERSE = "/brand/hmk-2026-header-dark.svg";
+const DEFAULT_MARK = "/brand/hmk-2026-favicon-light.svg";
+const DEFAULT_MARK_INVERSE = "/brand/hmk-2026-favicon-dark.svg";
 
 export function Brand({href = "/", inverse = false, compact = false, label, brandName = "HandMeKey", logoUrl = null, wordmarkUrl = null, lightLogoUrl = null}: BrandProps) {
   const accessibleLabel = label ?? `${brandName} home`;
@@ -23,7 +23,7 @@ export function Brand({href = "/", inverse = false, compact = false, label, bran
   const mark = logoUrl ?? (inverse ? DEFAULT_MARK_INVERSE : DEFAULT_MARK);
 
   return <Link href={href} className={`wordmark${inverse ? " inverse" : ""}${compact ? " compact" : ""}${logoUrl || uploadedWordmark ? " hasUploadedLogo" : ""}${fullLogo ? " hasFullWordmark" : ""}`} aria-label={accessibleLabel}>
-    {fullLogo ? <img className="wordmarkFullLogo" style={{height:compact ? 30 : 36,width:"auto",maxWidth:compact ? 178 : 215,objectFit:"contain"}} src={fullLogo} alt="" aria-hidden="true"/> : <>
+    {fullLogo ? <img className="wordmarkFullLogo" style={{height:compact ? 32 : 40,width:"auto",maxWidth:compact ? 190 : 235,objectFit:"contain"}} src={fullLogo} alt="" aria-hidden="true"/> : <>
       <img className="wordmarkUploadedLogo" src={mark} alt="" aria-hidden="true"/>
       <span className="wordmarkText">{brandName}</span>
     </>}
