@@ -14,6 +14,12 @@ type Props = Readonly<{
   rewardsHref: string;
 }>;
 
+function useCarsMode() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  return pathname.startsWith("/cars") || (pathname === "/" && searchParams.get("service") === "cars");
+}
+
 export function CustomerContextNav({
   locale,
   staysSearchLabel,
@@ -23,9 +29,7 @@ export function CustomerContextNav({
   alertsLabel,
   rewardsHref,
 }: Props) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const isCars = pathname.startsWith("/cars") || (pathname === "/" && searchParams.get("service") === "cars");
+  const isCars = useCarsMode();
   const ar = locale.startsWith("ar");
 
   if (isCars) {
@@ -44,4 +48,13 @@ export function CustomerContextNav({
     <Link href="/trips">{tripsLabel}</Link>
     <Link href="/account/alerts"><Bell size={16}/>{alertsLabel}</Link>
   </>;
+}
+
+export function CustomerContextPartnerLink({locale, staysLabel, mobile = false}: {locale:string;staysLabel:string;mobile?:boolean}) {
+  const isCars = useCarsMode();
+  const ar = locale.startsWith("ar");
+  return <Link className={mobile ? "mobilePartnerEntry" : "partnerEntry"} href="/partner">
+    <Building2 size={mobile ? 17 : 16}/>
+    {isCars ? (ar ? "أضف شركة تأجير" : "List rental company") : staysLabel}
+  </Link>;
 }
