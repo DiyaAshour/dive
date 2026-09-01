@@ -17,7 +17,7 @@ export type CreateCarReservationInput = Readonly<{
 
 export async function getPublicCarVehicle(vehicleId: string) {
   const row = await database().carVehicle.findFirst({
-    where: {id: vehicleId, status: "ACTIVE", company: {status: "ACTIVE", verified: true}},
+    where: {id: vehicleId, status: "ACTIVE", deposit: {gt: 0}, company: {status: "ACTIVE", verified: true}},
     include: {
       company: {include: {locations: {where: {active: true}, orderBy: {createdAt: "asc"}}}},
       homeLocation: true,
@@ -57,7 +57,7 @@ export async function createCarReservation(userId: string, input: CreateCarReser
 
   const db = database();
   const vehicle = await db.carVehicle.findFirst({
-    where: {id: input.vehicleId, status: "ACTIVE", company: {status: "ACTIVE", verified: true}},
+    where: {id: input.vehicleId, status: "ACTIVE", deposit: {gt: 0}, company: {status: "ACTIVE", verified: true}},
     include: {company: true, homeLocation: true},
   });
   if (!vehicle) notFound("Car vehicle");
