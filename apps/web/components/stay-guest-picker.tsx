@@ -26,7 +26,7 @@ export function StayGuestPicker({locale,adults,children,infants=0,pets=0,label,c
     adults:"البالغون",adultHint:"13 سنة فأكثر",
     children:"الأطفال",childHint:"من 2 إلى 12 سنة",
     infants:"الرضّع",infantHint:"أقل من سنتين",
-    pets:"الحيوانات الأليفة",petHint:"طلب حيوان أليف؛ سياسة الفندق تُراجع قبل الحجز",
+    pets:"الحيوانات الأليفة",petHint:"اختيار حيوان أليف؛ سياسة الفندق تُراجع قبل الحجز",
     guest:"ضيف",guests:"ضيوف",infant:"رضيع",infants:"رضّع",pet:"حيوان أليف",pets:"حيوانات أليفة",
     decrease:"إنقاص",increase:"زيادة",
   }:{
@@ -34,7 +34,7 @@ export function StayGuestPicker({locale,adults,children,infants=0,pets=0,label,c
     adults:"Adults",adultHint:"Ages 13 or above",
     children:"Children",childHint:"Ages 2–12",
     infants:"Infants",infantHint:"Under 2",
-    pets:"Pets",petHint:"Pet request; property policy is checked before booking",
+    pets:"Pets",petHint:"Pet selection; property policy is checked before booking",
     guest:"guest",guests:"guests",infant:"infant",infants:"infants",pet:"pet",pets:"pets",
     decrease:"Decrease",increase:"Increase",
   };
@@ -44,6 +44,10 @@ export function StayGuestPicker({locale,adults,children,infants=0,pets=0,label,c
     {key:"infants" as const,title:copy.infants,hint:copy.infantHint,min:0,max:5},
     {key:"pets" as const,title:copy.pets,hint:copy.petHint,min:0,max:5},
   ];
+
+  useEffect(()=>{
+    setCounts({adults,children,infants,pets});
+  },[adults,children,infants,pets]);
 
   useEffect(()=>{
     const onPointer=(event:MouseEvent)=>{if(!rootRef.current?.contains(event.target as Node))setOpen(false);};
