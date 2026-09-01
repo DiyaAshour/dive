@@ -20,9 +20,9 @@ export function CarGallery({photos,locale,verified,vehicleName}:Props){
   const active=filtered[activeIndex]??filtered[0]??null;
 
   function chooseFilter(value:string){setFilter(value);const next=value==="ALL"?photos[0]:photos.find((photo)=>photo.category===value);setActiveId(next?.id??"");}
-  function step(direction:-1|1){if(filtered.length<2)return;const current=Math.max(0,filtered.findIndex((photo)=>photo.id===activeId));const next=(current+direction+filtered.length)%filtered.length;setActiveId(filtered[next].id);}
-  function onTouchEnd(event:React.TouchEvent){if(touchStart.current===null)return;const delta=event.changedTouches[0]?.clientX-touchStart.current;touchStart.current=null;if(Math.abs(delta)>45)step(delta>0?-1:1);}
-  const copy=ar?{all:"كل الصور",verified:"شركة موثقة",count:"صورة",open:"عرض بالحجم الكامل",pending:"صور السيارة قيد التجهيز",pendingBody:"ستظهر الصور الحقيقية التي ترفعها شركة التأجير هنا.",close:"إغلاق معرض الصور"}:{all:"All photos",verified:"Verified company",count:"photos",open:"View fullscreen",pending:"Vehicle photos pending",pendingBody:"Real photos uploaded by the rental company will appear here.",close:"Close photo gallery"};
+  function step(direction:-1|1){if(filtered.length<2)return;const current=Math.max(0,filtered.findIndex((photo)=>photo.id===activeId));const nextIndex=(current+direction+filtered.length)%filtered.length;const nextPhoto=filtered[nextIndex];if(nextPhoto)setActiveId(nextPhoto.id);}
+  function onTouchEnd(event:React.TouchEvent){if(touchStart.current===null)return;const end=event.changedTouches[0]?.clientX;const start=touchStart.current;touchStart.current=null;if(end===undefined)return;const delta=end-start;if(Math.abs(delta)>45)step(delta>0?-1:1);}
+  const copy=ar?{all:"كل الصور",verified:"شركة موثقة",open:"عرض بالحجم الكامل",pending:"صور السيارة قيد التجهيز",pendingBody:"ستظهر الصور الحقيقية التي ترفعها شركة التأجير هنا.",close:"إغلاق معرض الصور"}:{all:"All photos",verified:"Verified company",open:"View fullscreen",pending:"Vehicle photos pending",pendingBody:"Real photos uploaded by the rental company will appear here.",close:"Close photo gallery"};
 
   return <div className={styles.gallery}>
     <div className={styles.stage} onTouchStart={(event)=>{touchStart.current=event.touches[0]?.clientX??null;}} onTouchEnd={onTouchEnd}>
