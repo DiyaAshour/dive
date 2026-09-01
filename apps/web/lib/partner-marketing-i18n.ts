@@ -1,6 +1,8 @@
 import type { Locale } from "./i18n";
 
 const en = {
+  metaTitle: "List Your Property | HandMeKey Partner Hub",
+  metaDescription: "List your hotel on HandMeKey, manage live rates and inventory, handle reservations, and track measurable guest demand from one partner workspace.",
   forTravelers: "For travelers",
   partnerSignIn: "Partner sign in",
   listProperty: "List your property",
@@ -10,8 +12,8 @@ const en = {
   startListing: "Start listing your property",
   verifiedMarketplace: "Verified-property marketplace",
   noSyntheticMetrics: "No synthetic demand metrics",
-  todayAtProperty: "Today at your property",
-  live: "LIVE",
+  todayAtProperty: "Example property performance",
+  live: "EXAMPLE DATA",
   bookings: "Bookings",
   bookingsTrend: "+18% vs. last week",
   bookedValue: "Booked value",
@@ -49,6 +51,8 @@ const en = {
 };
 
 const ar: typeof en = {
+  metaTitle: "أضف منشأتك | HandMeKey Partner Hub",
+  metaDescription: "أدرج فندقك على HandMeKey وتحكم بالأسعار والمخزون والحجوزات وراقب الطلب الحقيقي من مساحة شريك واحدة.",
   forTravelers: "للمسافرين",
   partnerSignIn: "دخول الشركاء",
   listProperty: "أضف منشأتك",
@@ -58,8 +62,8 @@ const ar: typeof en = {
   startListing: "ابدأ بإضافة منشأتك",
   verifiedMarketplace: "سوق لمنشآت موثقة",
   noSyntheticMetrics: "مؤشرات طلب مبنية على بيانات فعلية",
-  todayAtProperty: "اليوم في منشأتك",
-  live: "مباشر",
+  todayAtProperty: "مثال توضيحي لأداء المنشأة",
+  live: "بيانات تجريبية",
   bookings: "الحجوزات",
   bookingsTrend: "+18% مقارنة بالأسبوع الماضي",
   bookedValue: "قيمة الحجوزات",
