@@ -116,13 +116,16 @@ export async function syncBookingLifecycleEmails(limit = 500) {
 }
 
 export async function queuePriceWatchNotificationEmail(notificationId: string) {
-  const notification = await database().userNotification.findUnique({
-    where: {id: notificationId},
-    include: {user: {select: {id: true, email: true, displayName: true}}},
-  });
+  const db = database();
+  const notification = await db.userNotification.findUnique({where: {id: notificationId}});
   if (!notification || (notification.kind !== "PRICE_DROP" && notification.kind !== "PRICE_TARGET_REACHED")) {
     return {queued: false};
   }
+  const user = await db.user.findUnique({
+    where: {id: notification.userId},
+    select: {id: true, email: true, displayName: true},
+  });
+  if (!user) return {queued: false};
 
   const content = priceWatchEmail({
     title: notification.title,
@@ -131,13 +134,13 @@ export async function queuePriceWatchNotificationEmail(notificationId: string) {
   });
   await queueEmail({
     kind: "PRICE_WATCH",
-    toEmail: notification.user.email,
-    toName: notification.user.displayName,
+    toEmail: user.email,
+    toName: user.displayName,
     subject: content.subject,
     htmlBody: content.html,
     textBody: content.text,
     dedupeKey: `PRICE_WATCH:${notification.id}`,
-    userId: notification.user.id,
+    userId: user.id,
   });
   return {queued: true};
 }
