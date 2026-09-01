@@ -18,8 +18,12 @@ export default async function AdminCarFinancePage({searchParams}: {searchParams:
   const locale = await requestLocale();
   const ar = locale === "ar";
   const query = await searchParams;
+  const filters: {companyId?: string; from?: string; to?: string} = {};
+  if (query.companyId) filters.companyId = query.companyId;
+  if (query.from) filters.from = query.from;
+  if (query.to) filters.to = query.to;
   const [finance, counts] = await Promise.all([
-    getAdminCarFinance(principal.user.id, {companyId: query.companyId, from: query.from, to: query.to}),
+    getAdminCarFinance(principal.user.id, filters),
     getAdminNavigationCounts(principal.user.id),
   ]);
 
