@@ -8,7 +8,7 @@ import { requestGuestMarket } from "@/lib/request-guest-market";
 import styles from "./car-detail.module.css";
 
 export const dynamic = "force-dynamic";
-export const metadata = {robots:{index:false,follow:false}};
+export const metadata = {title:"Car details · HandMeKey Cars",description:"Review the vehicle, rental dates, pickup location, deposit and final rental price before booking with HandMeKey Cars.",robots:{index:false,follow:false}};
 
 type SearchParams = Promise<{pickup?:string;dropoff?:string;pickupDate?:string;pickupTime?:string;returnDate?:string;returnTime?:string;driverAge?:string}>;
 
