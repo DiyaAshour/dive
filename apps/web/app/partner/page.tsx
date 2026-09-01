@@ -1,9 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BarChart3, CalendarCheck2, CircleDollarSign, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { direction } from "@/lib/i18n";
 import { partnerMarketingDictionary } from "@/lib/partner-marketing-i18n";
 import { requestLocale } from "@/lib/request-locale";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await requestLocale();
+  const copy = partnerMarketingDictionary(locale);
+  return {
+    title: { absolute: copy.metaTitle },
+    description: copy.metaDescription,
+    robots: { index: true, follow: true },
+  };
+}
 
 export default async function PartnerLandingPage() {
   const locale = await requestLocale();
