@@ -23,7 +23,7 @@ export type CreateCarVehicleInput = Readonly<{
   bags?: number;
   doors?: number;
   dailyPrice: number;
-  deposit?: number;
+  deposit: number;
   freeCancellation?: boolean;
   unlimitedMileage?: boolean;
   airportPickup?: boolean;
@@ -164,6 +164,7 @@ export async function createCarVehicle(userId: string, input: CreateCarVehicleIn
   if (input.year < 1990 || input.year > new Date().getUTCFullYear() + 1) badRequest("CAR_YEAR_INVALID", "Vehicle year is invalid");
   if (input.seats < 1 || input.seats > 16) badRequest("CAR_SEATS_INVALID", "Vehicle seat count is invalid");
   if (input.dailyPrice <= 0) badRequest("CAR_PRICE_INVALID", "Daily price must be greater than zero");
+  if (!Number.isFinite(input.deposit) || input.deposit <= 0) badRequest("CAR_DEPOSIT_REQUIRED", "A deposit greater than zero is required for every vehicle");
 
   if (input.homeLocationId) {
     const location = await database().carRentalLocation.findFirst({where: {id: input.homeLocationId, companyId: membership.companyId}});
@@ -184,7 +185,7 @@ export async function createCarVehicle(userId: string, input: CreateCarVehicleIn
       bags: input.bags ?? 2,
       doors: input.doors ?? 4,
       dailyPrice: input.dailyPrice,
-      deposit: input.deposit ?? 0,
+      deposit: input.deposit,
       freeCancellation: input.freeCancellation ?? true,
       unlimitedMileage: input.unlimitedMileage ?? false,
       airportPickup: input.airportPickup ?? false,
