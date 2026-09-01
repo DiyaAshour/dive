@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CalendarDays, CreditCard, MapPin, Search, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, CreditCard, MapPin, Search, ShieldCheck } from "lucide-react";
 import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
-import { DestinationAutocomplete } from "@/components/destination-autocomplete";
+import { HomeBookingSearch } from "@/components/home-booking-search";
 import { HomeValueCarousel } from "@/components/home-value-carousel";
 import { demoDestinationsFallback, demoFeaturedHotelsFallback } from "@/lib/demo-catalog-fallback";
 import { guestDictionary } from "@/lib/guest-i18n";
@@ -64,13 +64,21 @@ export default async function HomePage() {
   return <main className="customerPage" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
     <section className="premiumHero"><div className="shell premiumHeroGrid"><div className="premiumHeroCopy"><span className="heroKicker">{copy.home.kicker}</span><h1>{copy.home.title}</h1><p>{copy.home.intro}</p><div className="heroConfidence"><span><BadgeCheck size={17}/>{copy.home.verified}</span><span><ShieldCheck size={17}/>{copy.home.cancellation}</span><span><CreditCard size={17}/>{copy.home.total}</span></div></div><div className="heroVisual" aria-label={copy.home.verified}>{visualHotels.length ? visualHotels.map((hotel,index)=><Link prefetch={false} href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} className={`heroPhoto heroPhoto${index+1}`} key={hotel.id}><img src={hotel.coverPhoto!.url} alt={hotel.coverPhoto!.alt ?? hotel.name}/><span><small>{hotel.city}</small><strong>{hotel.name}</strong></span></Link>) : <div className="heroPlaceholder"><Search size={34}/><strong>{copy.home.livePlaceholder}</strong><span>{copy.home.livePlaceholderSub}</span></div>}</div></div>
-      <div className="shell"><form className="premiumSearchDock homeSearchDock" action="/search" method="get">
-        <label className="homeSearchWhere"><span className="homeSearchFieldLabel"><MapPin size={13}/>{copy.home.where}</span><DestinationAutocomplete locale={market.baseLocale} defaultValue={locale==="ar"?"عمّان":"Amman"} required ariaLabel={copy.home.where}/><small>{copy.home.whereHint}</small></label>
-        <label className="homeSearchDate homeSearchCheckIn"><span className="homeSearchFieldLabel"><CalendarDays size={13}/>{copy.home.checkIn}</span><input name="arrival" type="date" defaultValue={stay.arrival} required/></label>
-        <label className="homeSearchDate homeSearchCheckOut"><span className="homeSearchFieldLabel"><CalendarDays size={13}/>{copy.home.checkOut}</span><input name="departure" type="date" defaultValue={stay.departure} required/></label>
-        <label className="homeSearchGuests"><span className="homeSearchFieldLabel"><Users size={13}/>{copy.home.guests}</span><input name="adults" type="number" min="1" max="20" defaultValue="2" required/><small>{copy.home.adults}</small></label>
-        <input type="hidden" name="children" value="0"/><button type="submit"><Search size={19}/>{copy.home.search}</button>
-      </form></div>
+      <div className="shell"><HomeBookingSearch
+        locale={market.baseLocale}
+        defaultDestination={locale==="ar"?"عمّان":"Amman"}
+        defaultArrival={stay.arrival}
+        defaultDeparture={stay.departure}
+        copy={{
+          where: copy.home.where,
+          whereHint: copy.home.whereHint,
+          checkIn: copy.home.checkIn,
+          checkOut: copy.home.checkOut,
+          guests: copy.home.guests,
+          adults: copy.home.adults,
+          search: copy.home.search,
+        }}
+      /></div>
     </section>
 
     <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">{copy.home.liveEyebrow}</span><h2>{copy.home.liveTitle}</h2><p>{copy.home.liveIntro}</p></div><Link href={`/search?destination=${locale==="ar"?encodeURIComponent("عمّان"):"Amman"}&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>{copy.home.explore} <ArrowRight size={16}/></Link></div>
