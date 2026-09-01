@@ -47,7 +47,27 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
 
   const filteredBrands=useMemo(()=>{const query=brandQuery.trim().toLowerCase();return query?CAR_BRANDS.filter((item)=>item.toLowerCase().includes(query)):CAR_BRANDS;},[brandQuery]);
 
-  useEffect(()=>{if(!picker)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape")setPicker(null);};document.addEventListener("keydown",onKeyDown);return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",onKeyDown);};},[picker]);
+  useEffect(()=>{
+    if(!picker)return;
+    const previous=document.body.style.overflow;
+    const appNavStates=Array.from(document.querySelectorAll<HTMLElement>(".mobileAppNav")).map((node)=>({
+      node,
+      display:node.style.display,
+      ariaHidden:node.getAttribute("aria-hidden"),
+    }));
+    document.body.style.overflow="hidden";
+    appNavStates.forEach(({node})=>{node.style.display="none";node.setAttribute("aria-hidden","true");});
+    const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape")setPicker(null);};
+    document.addEventListener("keydown",onKeyDown);
+    return()=>{
+      document.body.style.overflow=previous;
+      appNavStates.forEach(({node,display,ariaHidden})=>{
+        node.style.display=display;
+        if(ariaHidden===null)node.removeAttribute("aria-hidden");else node.setAttribute("aria-hidden",ariaHidden);
+      });
+      document.removeEventListener("keydown",onKeyDown);
+    };
+  },[picker]);
 
   function openDate(kind:"pickupDate"|"returnDate"){const value=kind==="pickupDate"?pickupDate:returnDate;setCalendarMonth(monthStart(value));setPicker(kind);}
   function chooseDate(value:string){if(picker==="pickupDate"){setPickupDate(value);if(returnDate<=value)setReturnDate(addDays(value,1));setPicker("pickupTime");}else if(picker==="returnDate"){if(value<=pickupDate)return;setReturnDate(value);setPicker("returnTime");}}
@@ -56,7 +76,7 @@ export function CarBookingSearch({locale, defaultPickupDate, defaultReturnDate}:
   return <div className={styles.root}>
     <form className={styles.dock} action="/cars" method="get">
       <label className={`${styles.field} ${styles.locationField}`}><span className={styles.label}><MapPin size={15}/>{copy.pickup}</span><input name="pickup" defaultValue={copy.pickupPlaceholder} required/></label>
-      <div className={`${styles.field} ${styles.dropoffField}`}><span className={styles.label}><MapPin size={15}/>{copy.dropoff}</span><label className={styles.switchRow}><button type="button" className={`${styles.switch} ${sameDropoff?styles.switchOn:""}`} role="switch" aria-checked={sameDropoff} aria-label={copy.sameDropoff} onClick={()=>setSameDropoff((value)=>!value)}><span/></button><strong>{copy.sameDropoff}</strong></label>{!sameDropoff&&<input className={styles.dropoffInput} name="dropoff" placeholder={copy.dropoff}/>} {sameDropoff&&<input type="hidden" name="dropoff" value="same"/>}</div>
+      <div className={`${styles.field} ${styles.dropoffField}`}><span className={styles.label}><MapPin size={15}/>{copy.dropoff}</span><label className={styles.switchRow}><strong>{copy.sameDropoff}</strong><button type="button" className={`${styles.switch} ${sameDropoff?styles.switchOn:""}`} role="switch" aria-checked={sameDropoff} aria-label={copy.sameDropoff} onClick={()=>setSameDropoff((value)=>!value)}><span/></button></label>{!sameDropoff&&<input className={styles.dropoffInput} name="dropoff" placeholder={copy.dropoff}/>} {sameDropoff&&<input type="hidden" name="dropoff" value="same"/>}</div>
       <PickerField icon={<CalendarDays size={15}/>} label={copy.pickupDate} value={formatDate(pickupDate)} onClick={()=>openDate("pickupDate")}/>
       <PickerField icon={<Clock size={15}/>} label={copy.pickupTime} value={pickupTime} onClick={()=>setPicker("pickupTime")}/>
       <PickerField icon={<CalendarDays size={15}/>} label={copy.returnDate} value={formatDate(returnDate)} onClick={()=>openDate("returnDate")}/>
