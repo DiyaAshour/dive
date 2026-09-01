@@ -1,0 +1,15 @@
+.workspaceSwitcher{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 2px 14px;padding:4px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(5,14,25,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+.workspaceLink{min-width:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 8px;border-radius:10px;color:#91a2b4;font-size:10px;font-weight:800;white-space:nowrap;transition:background .16s ease,color .16s ease,box-shadow .16s ease}
+.workspaceLink:hover{background:rgba(255,255,255,.055);color:#eef4f9}
+.workspaceLink svg{flex:0 0 auto;opacity:.82}
+.workspaceActive{background:linear-gradient(180deg,rgba(70,94,121,.42),rgba(49,70,94,.37));color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.06)}
+.workspaceActive svg{opacity:1;color:#f0c56d}
+.workspaceCaption{display:block;margin:0 9px 5px;color:#62758a;font-size:8px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.carContext{display:flex;align-items:center;gap:8px;margin:3px 6px 12px;padding:9px 10px;border-radius:11px;background:rgba(217,164,65,.075);border:1px solid rgba(217,164,65,.13);color:#d9e3ec}
+.carContext svg{color:#e1b653}
+.carContext span{min-width:0;display:block}
+.carContext strong,.carContext small{display:block}
+.carContext strong{font-size:10px;line-height:1.25}
+.carContext small{margin-top:2px;color:#7f92a5;font-size:8px;line-height:1.3}
+@media(max-width:900px){.workspaceSwitcher{margin:4px 0 12px;max-width:360px}.carContext{display:none}}
+@media(max-width:620px){.workspaceSwitcher{max-width:none}.workspaceLink{padding:10px 7px;font-size:10px}}
