@@ -73,7 +73,7 @@ export function EmailComposer({locale, mode = "compose", conversationId, initial
       {mode === "compose" && <label><span>{ar ? "الاسم (اختياري)" : "Name (optional)"}</span><input value={toName} onChange={(event) => setToName(event.target.value)} maxLength={120} placeholder={ar ? "اسم المستلم" : "Recipient name"}/></label>}
       <label className="emailComposeSubject"><span>{ar ? "الموضوع" : "Subject"}</span><input value={subject} onChange={(event) => setSubject(event.target.value)} disabled={mode === "reply"} maxLength={180} required/></label>
     </div>
-    <label className="emailComposeBody"><span>{ar ? "الرسالة" : "Message"}</span><textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={50000} required rows={mode === "reply" ? 7 : 16} placeholder={ar ? "اكتب رسالتك هنا…" : "Write your email…"}/></label>
+    <label className="emailComposeBody"><span>{ar ? "الرسالة" : "Message"}</span><textarea dir={holidayPreview ? "ltr" : "auto"} style={holidayPreview ? {textAlign:"left"} : undefined} value={body} onChange={(event) => setBody(event.target.value)} maxLength={50000} required rows={mode === "reply" ? 7 : 16} placeholder={ar ? "اكتب رسالتك هنا…" : "Write your email…"}/></label>
 
     {holidayPreview && <section className="holidayPreviewSection" aria-label={ar ? "معاينة البريد" : "Email preview"}>
       <div className="holidayPreviewHead">
@@ -87,7 +87,7 @@ export function EmailComposer({locale, mode = "compose", conversationId, initial
         </div>
       </div>
       <div className={`holidayPreviewStage ${previewMode}`}>
-        <div className="holidayEmailMock">
+        <div className="holidayEmailMock" dir="ltr">
           <div className="holidayEmailBrand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/hmk-2026-header-dark.svg" alt="HandMeKey"/>
@@ -99,7 +99,7 @@ export function EmailComposer({locale, mode = "compose", conversationId, initial
             <p>{ar ? "لا يوجد إجراء مطلوب — فقط نتمنى لك إجازة رائعة." : "No action needed — just wishing you a great break."}</p>
           </div>
           <div className="holidayEmailBody">
-            {previewParagraphs.length ? previewParagraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0,20)}`}>{paragraph}</p>) : <p>{ar ? "سيظهر نص الرسالة هنا." : "Your message will appear here."}</p>}
+            {previewParagraphs.length ? previewParagraphs.map((paragraph, index) => <p dir="auto" key={`${index}-${paragraph.slice(0,20)}`}>{paragraph}</p>) : <p>{ar ? "سيظهر نص الرسالة هنا." : "Your message will appear here."}</p>}
           </div>
           <div className="holidayEmailFooter"><span>HandMeKey</span><small>Hotels, clearly priced</small></div>
         </div>
@@ -119,10 +119,10 @@ export function EmailComposer({locale, mode = "compose", conversationId, initial
       .holidayPreviewHead>div:first-child{display:grid;gap:3px}.holidayPreviewEyebrow{font-size:.68rem;font-weight:900;letter-spacing:.12em;color:#8a6819}.holidayPreviewHead strong{font-size:.86rem;color:#25364a}
       .holidayPreviewToggle{display:inline-flex;gap:4px;padding:4px;border:1px solid #d8e0e8;border-radius:11px;background:#f5f7f9}.holidayPreviewToggle button{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:8px;padding:7px 9px;background:transparent;color:#5d6b7a;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}.holidayPreviewToggle button.active{background:#0f2747;color:#fff;box-shadow:0 2px 8px rgba(15,39,71,.14)}
       .holidayPreviewStage{padding:28px;overflow:auto;background:radial-gradient(circle at 10% 0%,rgba(212,165,46,.12),transparent 30%),#eef1f4}.holidayPreviewStage.desktop .holidayEmailMock{width:min(100%,640px)}.holidayPreviewStage.mobile .holidayEmailMock{width:min(100%,360px)}
-      .holidayEmailMock{margin:0 auto;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 18px 50px rgba(15,39,71,.12)}
+      .holidayEmailMock{direction:ltr;text-align:left;margin:0 auto;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 18px 50px rgba(15,39,71,.12)}
       .holidayEmailBrand{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 22px;background:#06182a}.holidayEmailBrand img{display:block;width:148px;max-width:48%;height:auto}.holidayEmailBrand span{font-size:.69rem;color:#cbd5e1;white-space:nowrap}
       .holidayEmailHero{position:relative;padding:34px 30px 30px;background:linear-gradient(145deg,#fffaf0,#fff 68%);border-bottom:1px solid #efe6d2}.holidayEmailHero:after{content:"";position:absolute;top:0;left:30px;width:54px;height:4px;border-radius:0 0 5px 5px;background:#d4a52e}.holidayEmailHero>span{display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;color:#8a6819;font-size:.68rem;font-weight:900;letter-spacing:.12em}.holidayEmailHero h2{margin:0;color:#06182a;font-size:clamp(1.65rem,4vw,2.35rem);letter-spacing:-.035em}.holidayEmailHero p{margin:10px 0 0;max-width:460px;color:#667085;font-size:.9rem;line-height:1.6}
-      .holidayEmailBody{padding:28px 30px 22px;color:#27384b}.holidayEmailBody p{margin:0 0 16px;white-space:pre-wrap;line-height:1.72;font-size:.92rem}.holidayEmailBody p:last-child{margin-bottom:0}
+      .holidayEmailBody{direction:ltr;text-align:left;padding:28px 30px 22px;color:#27384b}.holidayEmailBody p{margin:0 0 16px;white-space:pre-wrap;line-height:1.72;font-size:.92rem}.holidayEmailBody p:last-child{margin-bottom:0}
       .holidayEmailFooter{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 30px;border-top:1px solid #edf0f3;background:#fbfcfd}.holidayEmailFooter span{font-weight:900;color:#0f2747}.holidayEmailFooter small{color:#7a8592}
       .holidayPreviewStage.mobile{padding:18px 10px}.holidayPreviewStage.mobile .holidayEmailBrand{padding:15px 16px}.holidayPreviewStage.mobile .holidayEmailBrand span{display:none}.holidayPreviewStage.mobile .holidayEmailBrand img{max-width:none;width:128px}.holidayPreviewStage.mobile .holidayEmailHero{padding:28px 20px 24px}.holidayPreviewStage.mobile .holidayEmailHero:after{left:20px}.holidayPreviewStage.mobile .holidayEmailBody{padding:22px 20px 18px}.holidayPreviewStage.mobile .holidayEmailFooter{padding:14px 20px}.holidayPreviewStage.mobile .holidayEmailFooter small{font-size:.68rem}
       @media(max-width:760px){.holidayTemplateChip{margin-inline-start:0}.holidayPreviewSection{margin:14px 14px 0}.holidayPreviewHead{align-items:stretch;flex-direction:column}.holidayPreviewToggle{align-self:flex-start}.holidayPreviewStage{padding:18px 10px}.holidayPreviewStage.desktop .holidayEmailMock{width:100%}}
