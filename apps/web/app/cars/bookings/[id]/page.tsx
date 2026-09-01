@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CarFront, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CarFront, CheckCircle2, MapPin, ShieldCheck } from "lucide-react";
 import { getMyCarReservation } from "@platform/server";
 import { CarBookingActions } from "@/components/car-booking-actions";
 import { CustomerHeader } from "@/components/customer-header";
@@ -11,20 +11,24 @@ import styles from "../car-bookings.module.css";
 export const dynamic="force-dynamic";
 export const metadata={title:"Car Booking · HandMeKey Cars",description:"View your HandMeKey Cars reservation, rental dates, price and booking status.",robots:{index:false,follow:false}};
 
-export default async function CarBookingDetailPage({params}:{params:Promise<{id:string}>}){
-  const [{id},user,market]=await Promise.all([params,currentUser(),requestGuestMarket()]);
+type SearchParams=Promise<{booked?:string}>;
+
+export default async function CarBookingDetailPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:SearchParams}){
+  const [{id},query,user,market]=await Promise.all([params,searchParams,currentUser(),requestGuestMarket()]);
   if(!user)redirect(`/login?next=${encodeURIComponent(`/cars/bookings/${id}`)}`);
   const reservation=await getMyCarReservation(user.id,id);
   if(!reservation)notFound();
   const ar=market.baseLocale==="ar";
-  const copy=ar?{back:"العودة إلى حجوزات السيارات",eyebrow:"HANDMEKEY CARS BOOKING",title:"تفاصيل حجز السيارة",vehicle:"السيارة",company:"شركة التأجير",pickup:"الاستلام",return:"التسليم",driver:"عمر السائق",days:"مدة الإيجار",dayRate:"السعر اليومي",subtotal:"الإيجار",fees:"رسوم إضافية",deposit:"الوديعة",total:"الإجمالي",payment:"طريقة الدفع",counter:"الدفع عند مكتب التأجير",status:"حالة الحجز",reference:"رقم الحجز",verified:"شركة تأجير موثقة",cancelled:"تم إلغاء هذا الحجز. أصبحت السيارة متاحة من جديد لهذه التواريخ.",reason:"سبب الإلغاء"}:{back:"Back to car bookings",eyebrow:"HANDMEKEY CARS BOOKING",title:"Car booking details",vehicle:"Vehicle",company:"Rental company",pickup:"Pick-up",return:"Return",driver:"Driver age",days:"Rental length",dayRate:"Daily rate",subtotal:"Rental",fees:"Additional fees",deposit:"Deposit",total:"Total",payment:"Payment",counter:"Pay at rental counter",status:"Booking status",reference:"Booking reference",verified:"Verified rental company",cancelled:"This booking has been cancelled. The car is available again for these dates.",reason:"Cancellation reason"};
+  const copy=ar?{back:"العودة إلى حجوزات السيارات",eyebrow:"HANDMEKEY CARS BOOKING",title:"تفاصيل حجز السيارة",vehicle:"السيارة",company:"شركة التأجير",pickup:"الاستلام",return:"التسليم",driver:"عمر السائق",days:"مدة الإيجار",dayRate:"السعر اليومي",subtotal:"الإيجار",fees:"رسوم إضافية",deposit:"الوديعة",total:"الإجمالي",payment:"طريقة الدفع",counter:"الدفع عند مكتب التأجير",status:"حالة الحجز",reference:"رقم الحجز",verified:"شركة تأجير موثقة",cancelled:"تم إلغاء هذا الحجز. أصبحت السيارة متاحة من جديد لهذه التواريخ.",reason:"سبب الإلغاء",confirmedTitle:"تم تأكيد حجز سيارتك",confirmedBody:"حجزك محفوظ الآن في HandMeKey. احتفظ برقم الحجز وأظهره عند الحاجة، وكل تفاصيل الاستلام والتسليم موجودة هنا.",confirmedRef:"رقم الحجز"}:{back:"Back to car bookings",eyebrow:"HANDMEKEY CARS BOOKING",title:"Car booking details",vehicle:"Vehicle",company:"Rental company",pickup:"Pick-up",return:"Return",driver:"Driver age",days:"Rental length",dayRate:"Daily rate",subtotal:"Rental",fees:"Additional fees",deposit:"Deposit",total:"Total",payment:"Payment",counter:"Pay at rental counter",status:"Booking status",reference:"Booking reference",verified:"Verified rental company",cancelled:"This booking has been cancelled. The car is available again for these dates.",reason:"Cancellation reason",confirmedTitle:"Your car booking is confirmed",confirmedBody:"Your reservation is now saved in HandMeKey. Keep the booking reference handy; your pick-up and return details are all here.",confirmedRef:"Booking reference"};
   const canCancel=reservation.vehicle.freeCancellation&&["HOLD","CONFIRMED","MODIFIED"].includes(reservation.status)&&Date.now()<Date.parse(reservation.pickupAt);
   const status=statusLabel(reservation.status,ar);
+  const justBooked=query.booked==="1"&&reservation.status==="CONFIRMED";
 
   return <main className={styles.page} dir={market.direction} lang={market.intlLocale}>
     <CustomerHeader/>
     <div className="shell">
       <Link className={styles.back} href="/cars/bookings"><ArrowLeft size={15}/>{copy.back}</Link>
+      {justBooked&&<section className={styles.confirmedBanner} role="status"><span className={styles.confirmedIcon}><CheckCircle2 size={25}/></span><div><small>HANDMEKEY CARS</small><h1>{copy.confirmedTitle}</h1><p>{copy.confirmedBody}</p><strong>{copy.confirmedRef}: {reservation.reference}</strong></div></section>}
       <header className={styles.hero}><span>{copy.eyebrow}</span><h1>{copy.title}</h1><p>{reservation.reference} · {status}</p></header>
       <div className={styles.detailGrid}>
         <div className={styles.panel}>
