@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export const createCarCompanySchema = z.object({
   name: z.string().trim().min(2).max(120),
   city: z.string().trim().min(2).max(100),
@@ -38,6 +41,21 @@ export const createCarLocationSchema = z.object({
   airportCode: z.string().trim().length(3).optional(),
 });
 
+export const createCarReservationSchema = z.object({
+  vehicleId: z.string().trim().min(1),
+  pickupDate: z.string().regex(datePattern),
+  pickupTime: z.string().regex(timePattern),
+  returnDate: z.string().regex(datePattern),
+  returnTime: z.string().regex(timePattern),
+  driverAgeRange: z.string().trim().min(2).max(20),
+  guestName: z.string().trim().min(2).max(140),
+  guestEmail: z.string().trim().email().max(180),
+  guestPhone: z.string().trim().min(6).max(40).optional(),
+  pickupLocationId: z.string().trim().min(1).optional(),
+  returnLocationId: z.string().trim().min(1).optional(),
+});
+
 export type CreateCarCompanyInput = z.infer<typeof createCarCompanySchema>;
 export type CreateCarVehicleInput = z.infer<typeof createCarVehicleSchema>;
 export type CreateCarLocationInput = z.infer<typeof createCarLocationSchema>;
+export type CreateCarReservationInput = z.infer<typeof createCarReservationSchema>;
