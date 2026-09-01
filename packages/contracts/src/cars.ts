@@ -25,7 +25,7 @@ export const createCarVehicleSchema = z.object({
   bags: z.number().int().min(0).max(12).optional(),
   doors: z.number().int().min(2).max(6).optional(),
   dailyPrice: z.number().positive().max(10000),
-  deposit: z.number().min(0).max(100000).optional(),
+  deposit: z.number().positive().max(100000),
   freeCancellation: z.boolean().optional(),
   unlimitedMileage: z.boolean().optional(),
   airportPickup: z.boolean().optional(),
