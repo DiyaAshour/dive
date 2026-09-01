@@ -19,16 +19,17 @@ export function MobileAppNav({locale,rewardsHref}:Props){
   const BookingsIcon=carMode?CarFront:CalendarDays;
   const bookingsHref=carMode?"/cars/bookings":"/trips";
   const homeHref=carMode?"/?service=cars":"/";
+  const searchHref=carMode?"/?service=cars#car-search":"/search";
 
   const items=[
-    {href:homeHref,label:copy.home,icon:Home,active:pathname==="/"},
-    {href:carMode?"/?service=cars":"/search",label:copy.search,icon:Search,active:carMode?pathname==="/cars":pathname.startsWith("/search")},
-    {href:bookingsHref,label:bookingsLabel,icon:BookingsIcon,active:carMode?pathname.startsWith("/cars/bookings"):pathname.startsWith("/trips")},
-    {href:rewardsHref,label:copy.rewards,icon:Sparkles,active:pathname.startsWith("/rewards")},
-    {href:"/account",label:copy.account,icon:UserRound,active:pathname.startsWith("/account")},
+    {id:"home",href:homeHref,label:copy.home,icon:Home,active:pathname==="/"},
+    {id:"search",href:searchHref,label:copy.search,icon:Search,active:carMode?pathname==="/cars":pathname.startsWith("/search")},
+    {id:"bookings",href:bookingsHref,label:bookingsLabel,icon:BookingsIcon,active:carMode?pathname.startsWith("/cars/bookings"):pathname.startsWith("/trips")},
+    {id:"rewards",href:rewardsHref,label:copy.rewards,icon:Sparkles,active:pathname.startsWith("/rewards")},
+    {id:"account",href:"/account",label:copy.account,icon:UserRound,active:pathname.startsWith("/account")},
   ];
 
   return <nav className="mobileAppNav" aria-label={copy.home}>
-    {items.map(({href,label,icon:Icon,active})=><Link key={href} href={href} className={active?"active":""} aria-current={active?"page":undefined}><Icon size={20}/><span>{label}</span></Link>)}
+    {items.map(({id,href,label,icon:Icon,active})=><Link key={id} href={href} className={active?"active":""} aria-current={active?"page":undefined}><Icon size={20}/><span>{label}</span></Link>)}
   </nav>;
 }
