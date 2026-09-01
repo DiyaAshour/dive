@@ -1,0 +1,16 @@
+/* HandMeKey 2026 HMK identity sizing. Loaded last so the brand remains balanced on every viewport. */
+.wordmark.hasFullWordmark{flex:0 0 auto;min-width:0}
+.wordmarkFullLogo{display:block!important;height:36px!important;width:auto!important;max-width:215px!important;object-fit:contain}
+.wordmark.compact .wordmarkFullLogo{height:30px!important;max-width:178px!important}
+
+@media (max-width:780px){
+  .siteHeader .wordmarkFullLogo{height:30px!important;max-width:170px!important}
+}
+
+@media (max-width:420px){
+  .siteHeader .wordmarkFullLogo{height:27px!important;max-width:150px!important}
+}
+
+@media (max-width:360px){
+  .siteHeader .wordmarkFullLogo{height:25px!important;max-width:138px!important}
+}
