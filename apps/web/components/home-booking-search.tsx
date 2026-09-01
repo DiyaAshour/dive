@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, MapPin, Minus, Plus, Search, Users } from "lucide-react";
 import { DestinationAutocomplete } from "@/components/destination-autocomplete";
 import styles from "./home-booking-search.module.css";
@@ -130,9 +130,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
   const currentMonth = startOfMonth(new Date());
   const canGoPrevious = monthOne.getTime() > currentMonth.getTime();
   const guestTotal = guests.adults + guests.children;
-  const guestSummary = locale === "ar"
-    ? `${guestTotal} ${guestTotal === 1 ? dictionary.guest : dictionary.guests}${guests.pets ? ` · ${guests.pets} ${guests.pets === 1 ? dictionary.pet : dictionary.petsCount}` : ""}`
-    : `${guestTotal} ${guestTotal === 1 ? dictionary.guest : dictionary.guests}${guests.pets ? ` · ${guests.pets} ${guests.pets === 1 ? dictionary.pet : dictionary.petsCount}` : ""}`;
+  const guestSummary = `${guestTotal} ${guestTotal === 1 ? dictionary.guest : dictionary.guests}${guests.pets ? ` · ${guests.pets} ${guests.pets === 1 ? dictionary.pet : dictionary.petsCount}` : ""}`;
 
   function openDates(field: ActiveDate) {
     setActiveDate(field);
@@ -163,9 +161,9 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
 
   return <div className={styles.root} ref={rootRef}>
     <form className={styles.dock} action="/search" method="get">
-      <label className={`${styles.field} ${styles.whereField}`}>
+      <label className={`${styles.field} ${styles.whereField}`} onPointerDown={() => setOpenPanel(null)}>
         <span className={styles.fieldLabel}><MapPin size={14}/>{copy.where}</span>
-        <DestinationAutocomplete locale={locale} defaultValue={defaultDestination} required ariaLabel={copy.where} className={styles.destinationInput}/>
+        <DestinationAutocomplete locale={locale} defaultValue={defaultDestination} required ariaLabel={copy.where} className={styles.destinationInput ?? ""}/>
         <small>{copy.whereHint}</small>
       </label>
 
@@ -279,8 +277,8 @@ type MonthCalendarProps = Readonly<{
   departure: string;
   activeDate: ActiveDate;
   onSelect: (value: string) => void;
-  previousAction?: React.ReactNode;
-  nextAction?: React.ReactNode;
+  previousAction?: ReactNode;
+  nextAction?: ReactNode;
 }>;
 
 function MonthCalendar({month, locale, arrival, departure, activeDate, onSelect, previousAction, nextAction}: MonthCalendarProps) {
@@ -315,8 +313,8 @@ function MonthCalendar({month, locale, arrival, departure, activeDate, onSelect,
 }
 
 function parseDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day, 12);
+  const [year = "1970", month = "1", day = "1"] = value.split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day), 12);
 }
 
 function startOfMonth(date: Date) {
