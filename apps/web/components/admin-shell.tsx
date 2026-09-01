@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Activity, BookOpenText, Building2, FileCheck2, Gem, Globe2, LayoutDashboard, Mail, MessageSquareWarning, Rocket, Users, WalletCards} from "lucide-react";
+import {Activity, BookOpenText, Building2, CarFront, FileCheck2, Gem, Globe2, LayoutDashboard, Mail, MessageSquareWarning, Rocket, Users, WalletCards} from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 import {direction} from "@/lib/i18n";
 import {portalDictionary} from "@/lib/portal-i18n";
@@ -7,7 +7,7 @@ import {AdminSignOutButton} from "./admin-sign-out-button";
 import {LanguageSwitcher} from "./language-switcher";
 import {SiteBrand} from "./site-brand";
 
-type Active = "overview" | "verification" | "properties" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
+type Active = "overview" | "verification" | "properties" | "cars" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
 type Principal = Readonly<{
   user: {displayName: string; email: string};
 }>;
@@ -33,6 +33,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const rewardsLabel = locale === "ar" ? "المكافآت والعضويات" : "Rewards & memberships";
   const launchLabel = locale === "ar" ? "هوية البراند والإطلاق" : "Brand identity & launch";
   const accessLabel = locale === "ar" ? "المستخدمون والصلاحيات" : "Users & access";
+  const carsLabel = locale === "ar" ? "شركات السيارات" : "Cars marketplace";
   return <main className="adminApp" dir={direction(locale)}>
     <aside className="adminSidebar">
       <div className="adminBrand"><SiteBrand href="/admin" inverse/><span>{admin.name}</span></div>
@@ -41,6 +42,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <Link className={active === "overview" ? "active" : ""} href={dashboardHref("overview")}><LayoutDashboard size={17}/>{admin.overview}</Link>
         <Link className={active === "verification" ? "active" : ""} href={dashboardHref("verification")}><FileCheck2 size={17}/>{admin.verification}{counts.verification > 0 && <b>{counts.verification}</b>}</Link>
         <Link className={active === "properties" ? "active" : ""} href="/admin/properties"><Building2 size={17}/>{admin.properties}</Link>
+        <Link className={active === "cars" ? "active" : ""} href="/admin/cars"><CarFront size={17}/>{carsLabel}</Link>
         <Link className={active === "reviews" ? "active" : ""} href="/admin/reviews"><MessageSquareWarning size={17}/>{admin.reviews}{counts.hiddenReviews > 0 && <b>{counts.hiddenReviews}</b>}</Link>
         <Link className={active === "blog" ? "active" : ""} href="/admin/blog"><BookOpenText size={17}/>{blogLabel}</Link>
         <span>{communicationsLabel}</span>
