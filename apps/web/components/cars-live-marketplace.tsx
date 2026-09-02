@@ -31,6 +31,8 @@ export type LiveCar = Readonly<{
 type Props=Readonly<{locale:"ar"|"en";initialSearch:CarSearchValues;cars:LiveCar[]}>;
 type FilterOption=Readonly<{value:string;label:string}>;
 
+const STANDARD_FUELS = ["Petrol","Diesel","Electric","Hybrid","Plug-in Hybrid","LPG","CNG","Hydrogen"] as const;
+
 export function CarsLiveMarketplace({locale,initialSearch,cars}:Props){
   const ar=locale==="ar";
   const [brand,setBrand]=useState(initialSearch.brand??"");
@@ -48,7 +50,7 @@ export function CarsLiveMarketplace({locale,initialSearch,cars}:Props){
   };
   const brands=useMemo(()=>unique(cars.map((car)=>car.brand)),[cars]);
   const categories=useMemo(()=>unique(cars.map((car)=>car.category)),[cars]);
-  const fuels=useMemo(()=>unique(cars.map((car)=>car.fuel)),[cars]);
+  const fuels=useMemo(()=>unique([...STANDARD_FUELS,...cars.map((car)=>car.fuel)]),[cars]);
   const results=useMemo(()=>cars.filter((car)=>{
     if(brand&&car.brand!==brand)return false;
     if(category&&car.category!==category)return false;
@@ -103,7 +105,7 @@ function FilterSelect({value,onChange,empty,options,closeLabel}:{value:string;on
     </div>}
   </div>;
 }
-function unique(values:string[]){return [...new Set(values)].sort((a,b)=>a.localeCompare(b));}
+function unique(values:readonly string[]){return [...new Set(values)].sort((a,b)=>a.localeCompare(b));}
 function rentalDays(start:string,end:string){const diff=Date.parse(`${end}T12:00:00Z`)-Date.parse(`${start}T12:00:00Z`);return Math.max(1,Math.round(diff/86_400_000));}
-function fuelLabel(value:string,ar:boolean){if(!ar)return value;if(value==="Petrol")return"بنزين";if(value==="Diesel")return"ديزل";if(value==="Hybrid")return"هايبرد";if(value==="Electric")return"كهرباء";return value;}
+function fuelLabel(value:string,ar:boolean){if(!ar)return value;if(value==="Petrol")return"بنزين";if(value==="Diesel")return"ديزل";if(value==="Electric")return"كهرباء";if(value==="Hybrid")return"هايبرد";if(value==="Plug-in Hybrid")return"هايبرد قابل للشحن";if(value==="LPG")return"غاز بترولي مسال (LPG)";if(value==="CNG")return"غاز طبيعي مضغوط (CNG)";if(value==="Hydrogen")return"هيدروجين";return value;}
 function categoryLabel(value:string,ar:boolean){if(!ar)return value;if(value==="Economy")return"اقتصادية";if(value==="Compact")return"مدمجة";if(value==="Sedan")return"سيدان";if(value==="SUV")return"دفع رباعي SUV";if(value==="Luxury")return"فاخرة";if(value==="Van")return"فان";return value;}
