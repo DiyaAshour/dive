@@ -21,6 +21,11 @@ type Params = Promise<{
   returnTime?: string;
   driverAge?: string;
   brand?: string;
+  extras?: string|string[];
+  freeCancellation?: string;
+  unlimitedMileage?: string;
+  airportPickup?: string;
+  payAtPickup?: string;
 }>;
 
 export default async function CarsPage({searchParams}: {searchParams: Params}) {
@@ -41,12 +46,19 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
     driverAge: query.driverAge || "30-65",
     brand: query.brand?.trim() || "",
   };
+  const typedLiveCars=liveCars as LiveCar[];
+  const filteredLiveCars=typedLiveCars.filter((car)=>{
+    if(query.freeCancellation==="1"&&!car.freeCancellation)return false;
+    if(query.unlimitedMileage==="1"&&!car.unlimitedMileage)return false;
+    if(query.airportPickup==="1"&&!car.airportPickup)return false;
+    return true;
+  });
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
     <div className="shell">
-      {liveCars.length > 0
-        ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={liveCars as LiveCar[]}/>
+      {typedLiveCars.length > 0
+        ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={filteredLiveCars}/>
         : <CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/>} 
     </div>
   </main>;
