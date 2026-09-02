@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, BriefcaseBusiness, CarFront, Check, ChevronDown, Fuel, Gauge, MapPin, ShieldCheck, Users, X } from "lucide-react";
+import {CarBrandFilter} from "./car-brand-filter";
 import type { CarSearchValues } from "./cars-marketplace";
 import styles from "./cars-live-marketplace.module.css";
 
@@ -74,7 +75,7 @@ export function CarsLiveMarketplace({locale,initialSearch,cars}:Props){
     <section className={styles.summary}><div><span>{copy.pickup}</span><strong><MapPin size={12}/>{initialSearch.pickup}</strong></div><div><span>{copy.period}</span><strong>{initialSearch.pickupDate} {initialSearch.pickupTime} → {initialSearch.returnDate} {initialSearch.returnTime}</strong></div><div><span>{ar?"عمر السائق":"Driver age"}</span><strong>{initialSearch.driverAge}</strong></div><Link href="/?service=cars">{copy.change}</Link></section>
     <div className={styles.head}><div><h1>{copy.title}</h1><p><strong>{results.length}</strong> {copy.found}</p></div></div>
     <div className={styles.filters}>
-      <FilterSelect value={brand} onChange={setBrand} empty={copy.allBrands} options={brands.map((value)=>({value,label:value}))} closeLabel={copy.close}/>
+      <CarBrandFilter value={brand} onChange={setBrand} empty={copy.allBrands} brands={brands} closeLabel={copy.close}/>
       <FilterSelect value={category} onChange={setCategory} empty={copy.allTypes} options={categories.map((value)=>({value,label:categoryLabel(value,ar)}))} closeLabel={copy.close}/>
       <FilterSelect value={transmission} onChange={setTransmission} empty={copy.allTrans} options={[{value:"Automatic",label:copy.automatic},{value:"Manual",label:copy.manual}]} closeLabel={copy.close}/>
       <FilterSelect value={fuel} onChange={setFuel} empty={copy.allFuel} options={fuels.map((value)=>({value,label:fuelLabel(value,ar)}))} closeLabel={copy.close}/>
