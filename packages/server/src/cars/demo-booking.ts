@@ -26,12 +26,13 @@ export type BookableDemoCarInput = Readonly<{
  * Materializes one of the trusted web demo catalog entries into the Cars
  * reservation tables. The caller must pass a record selected from the
  * server-side demo catalog, never arbitrary client supplied pricing.
+ *
+ * Older demo rows may predate current booking requirements. Always repair
+ * the trusted demo company, location and vehicle instead of returning an
+ * existing row unchanged so stale test inventory remains bookable.
  */
 export async function ensureBookableDemoCar(input: BookableDemoCarInput) {
   const db = database();
-  const existing = await db.carVehicle.findUnique({where: {id: input.id}, select: {id: true, companyId: true, homeLocationId: true}});
-  if (existing) return existing;
-
   const supplierKey = slugify(input.supplier) || "handmekey-rentals";
   const companySlug = `demo-${supplierKey}`;
   const locationId = `demo-${supplierKey}-qaia`;
@@ -40,6 +41,7 @@ export async function ensureBookableDemoCar(input: BookableDemoCarInput) {
     const company = await tx.carRentalCompany.upsert({
       where: {slug: companySlug},
       update: {
+        name: input.supplier,
         status: "ACTIVE",
         verified: true,
         city: "Amman",
@@ -86,36 +88,35 @@ export async function ensureBookableDemoCar(input: BookableDemoCarInput) {
       },
     });
 
-    const vehicle = await tx.carVehicle.upsert({
+    const vehicleData = {
+      companyId: company.id,
+      homeLocationId: location.id,
+      make: input.brand,
+      model: input.model,
+      year: input.year,
+      category: input.category,
+      transmission: input.transmission === "Automatic" ? "AUTOMATIC" as const : "MANUAL" as const,
+      fuel: fuelValue(input.fuel),
+      seats: input.seats,
+      bags: input.bags,
+      doors: input.doors,
+      airConditioning: input.airConditioning,
+      dailyPrice: input.dailyPrice,
+      deposit: input.deposit,
+      freeCancellation: input.freeCancellation,
+      unlimitedMileage: input.unlimitedMileage,
+      airportPickup: input.airportPickup,
+      imageUrl: input.image,
+      imageAlt: input.imageAlt,
+      status: "ACTIVE" as const,
+    };
+
+    return tx.carVehicle.upsert({
       where: {id: input.id},
-      update: {},
-      create: {
-        id: input.id,
-        companyId: company.id,
-        homeLocationId: location.id,
-        make: input.brand,
-        model: input.model,
-        year: input.year,
-        category: input.category,
-        transmission: input.transmission === "Automatic" ? "AUTOMATIC" : "MANUAL",
-        fuel: fuelValue(input.fuel),
-        seats: input.seats,
-        bags: input.bags,
-        doors: input.doors,
-        airConditioning: input.airConditioning,
-        dailyPrice: input.dailyPrice,
-        deposit: input.deposit,
-        freeCancellation: input.freeCancellation,
-        unlimitedMileage: input.unlimitedMileage,
-        airportPickup: input.airportPickup,
-        imageUrl: input.image,
-        imageAlt: input.imageAlt,
-        status: "ACTIVE",
-      },
+      update: vehicleData,
+      create: {id: input.id, ...vehicleData},
       select: {id: true, companyId: true, homeLocationId: true},
     });
-
-    return vehicle;
   });
 }
 
