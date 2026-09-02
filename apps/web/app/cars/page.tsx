@@ -21,11 +21,6 @@ type Params = Promise<{
   returnTime?: string;
   driverAge?: string;
   brand?: string;
-  extras?: string|string[];
-  freeCancellation?: string;
-  unlimitedMileage?: string;
-  airportPickup?: string;
-  payAtPickup?: string;
 }>;
 
 export default async function CarsPage({searchParams}: {searchParams: Params}) {
@@ -36,30 +31,35 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
   ]);
   const dates = defaultStayDates();
   const ar = market.locale === "ar";
+  const pickupDate = query.pickupDate || dates.arrival;
+  const returnDate = ensureMinReturnDate(pickupDate, query.returnDate || dates.departure);
   const initialSearch: CarSearchValues = {
     pickup: query.pickup?.trim() || (ar ? "عمّان - مطار الملكة علياء" : "Amman - Queen Alia Airport"),
     dropoff: query.dropoff?.trim() || "same",
-    pickupDate: query.pickupDate || dates.arrival,
+    pickupDate,
     pickupTime: query.pickupTime || "10:00",
-    returnDate: query.returnDate || dates.departure,
+    returnDate,
     returnTime: query.returnTime || "10:00",
     driverAge: query.driverAge || "30-65",
     brand: query.brand?.trim() || "",
   };
-  const typedLiveCars=liveCars as LiveCar[];
-  const filteredLiveCars=typedLiveCars.filter((car)=>{
-    if(query.freeCancellation==="1"&&!car.freeCancellation)return false;
-    if(query.unlimitedMileage==="1"&&!car.unlimitedMileage)return false;
-    if(query.airportPickup==="1"&&!car.airportPickup)return false;
-    return true;
-  });
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
     <div className="shell">
-      {typedLiveCars.length > 0
-        ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={filteredLiveCars}/>
+      {liveCars.length > 0
+        ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={liveCars as LiveCar[]}/>
         : <CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/>} 
     </div>
   </main>;
+}
+
+function ensureMinReturnDate(pickupDate:string,requestedReturnDate:string){
+  const minimum=addDays(pickupDate,3);
+  return requestedReturnDate>=minimum?requestedReturnDate:minimum;
+}
+function addDays(value:string,days:number){
+  const [year,month,day]=value.split("-").map(Number);
+  const date=new Date(Date.UTC(year||1970,(month||1)-1,(day||1)+days));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,"0")}-${String(date.getUTCDate()).padStart(2,"0")}`;
 }

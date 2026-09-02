@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const carExtraSchema = z.enum(["child-seat","infant-seat","booster-seat","gps","additional-driver"]);
 
 export const createCarCompanySchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -48,6 +49,7 @@ export const createCarReservationSchema = z.object({
   returnDate: z.string().regex(datePattern),
   returnTime: z.string().regex(timePattern),
   driverAgeRange: z.string().trim().min(2).max(20),
+  extras: z.array(carExtraSchema).max(5).default([]),
   guestName: z.string().trim().min(2).max(140),
   guestEmail: z.string().trim().email().max(180),
   guestPhone: z.string().trim().min(6).max(40).optional(),

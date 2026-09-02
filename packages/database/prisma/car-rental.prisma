@@ -201,6 +201,7 @@ model CarReservation {
   guestEmail       String
   guestPhone       String?
   driverAgeRange   String
+  requestedExtras  String[]             @default([])
   pickupAt         DateTime
   returnAt         DateTime
   status           CarReservationStatus @default(HOLD)
