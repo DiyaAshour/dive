@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import styles from "@/app/cars/[id]/book/car-booking-checkout.module.css";
 
 type Location={id:string;name:string;city:string;address:string;airportCode:string|null};
+type ExtraKey="child-seat"|"infant-seat"|"booster-seat"|"gps"|"additional-driver";
 type Props=Readonly<{
   locale:"ar"|"en";
   vehicleId:string;
@@ -14,6 +15,7 @@ type Props=Readonly<{
   returnDate:string;
   returnTime:string;
   driverAgeRange:string;
+  extras:ExtraKey[];
   defaultName:string;
   defaultEmail:string;
   locations:Location[];
@@ -38,7 +40,7 @@ export function CarReservationForm(props:Props){
   async function submit(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();setLoading(true);setError("");const form=new FormData(event.currentTarget);
     const payload={
-      vehicleId:props.vehicleId,pickupDate:props.pickupDate,pickupTime:props.pickupTime,returnDate:props.returnDate,returnTime:props.returnTime,driverAgeRange:props.driverAgeRange,
+      vehicleId:props.vehicleId,pickupDate:props.pickupDate,pickupTime:props.pickupTime,returnDate:props.returnDate,returnTime:props.returnTime,driverAgeRange:props.driverAgeRange,extras:props.extras,
       guestName:String(form.get("guestName")||""),guestEmail:String(form.get("guestEmail")||""),guestPhone:String(form.get("guestPhone")||"")||undefined,
       pickupLocationId:String(form.get("pickupLocationId")||"")||undefined,returnLocationId:String(form.get("returnLocationId")||"")||undefined,
     };
