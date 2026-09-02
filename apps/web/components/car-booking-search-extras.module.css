@@ -1,0 +1,21 @@
+:global(body.carSearchOverlayOpen .mobileAppNav){display:none!important}
+
+.actions{display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px;min-width:0}
+.searchAction{min-width:0!important;min-height:88px!important;height:100%;padding-inline:12px!important}
+.filterTrigger{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:88px;padding:8px 6px;border:1px solid #e0e6ec;border-radius:18px;background:#fff;color:#17304b;font:inherit;font-size:9px;font-weight:850;cursor:pointer;box-shadow:0 8px 20px rgba(16,40,64,.07)}
+.filterTrigger svg{flex:0 0 auto}.filterTrigger span{white-space:nowrap}.filterTrigger b{position:absolute;top:8px;inset-inline-end:8px;display:grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--navy);color:#fff;font-size:9px;line-height:1}
+.fullOverlay{z-index:20000!important;background:rgba(8,24,40,.62)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}
+.filterSheet{max-height:min(86vh,760px)!important}
+.filterBody{display:flex;flex-direction:column;gap:20px;padding-bottom:2px}
+.filterBody section{display:flex;flex-direction:column;gap:10px}
+.sectionHead{display:flex;flex-direction:column;gap:4px}.sectionHead strong{color:#17304b;font-size:14px}.sectionHead span{color:#7b8794;font-size:10.5px;line-height:1.55}
+.optionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.optionGrid button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:54px;padding:11px 13px;border:1px solid #e0e5ea;border-radius:15px;background:#fff;color:#20364d;font:inherit;font-size:12px;font-weight:800;text-align:start;cursor:pointer;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease}
+.optionGrid button:hover{border-color:#cbd3dc;background:#fafbfc}.optionGrid .optionActive{border-color:rgba(201,156,59,.66);background:#fffaf0;box-shadow:inset 0 0 0 1px rgba(201,156,59,.12)}
+.checkBox{display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border:1px solid #d7dee5;border-radius:7px;background:#f7f9fa;color:#9a7223}.optionActive .checkBox{border-color:#c99c3b;background:#fff;color:#9a7223}
+.filterFooter{position:sticky;bottom:-2px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;padding-top:13px;background:linear-gradient(to bottom,rgba(255,255,255,0),#fff 24%)}
+.filterFooter button{min-height:48px;border-radius:14px;font:inherit;font-size:12px;font-weight:850;cursor:pointer}.filterFooter button:first-child{padding:0 16px;border:1px solid #dfe5eb;background:#fff;color:#596879}.filterFooter button:last-child{display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:var(--navy);color:#fff}.filterFooter button:last-child span{display:grid;place-items:center;min-width:20px;height:20px;border-radius:999px;background:#fff;color:var(--navy);font-size:9px}
+
+@media (max-width:1120px){.searchAction{min-height:82px!important}.filterTrigger{min-height:82px}}
+@media (max-width:900px){.actions{grid-column:1/-1;grid-template-columns:54px minmax(0,1fr)}.searchAction{min-height:56px!important}.filterTrigger{min-height:56px;border-radius:15px;background:#f7f9fb;box-shadow:none}.filterTrigger span{display:none}.filterTrigger b{top:5px;inset-inline-end:5px}.filterSheet{padding-bottom:max(18px,env(safe-area-inset-bottom))!important}}
+@media (max-width:560px){.actions{gap:6px}.searchAction{min-height:54px!important}.filterTrigger{min-height:54px}.optionGrid{grid-template-columns:1fr}.filterSheet{max-height:92vh!important}.filterBody{gap:16px}.filterFooter{grid-template-columns:1fr 1.45fr}}
