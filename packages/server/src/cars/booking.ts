@@ -8,6 +8,7 @@ export type CreateCarReservationInput = Readonly<{
   returnDate: string;
   returnTime: string;
   driverAgeRange: string;
+  extras?: string[];
   guestName: string;
   guestEmail: string;
   guestPhone?: string;
@@ -54,6 +55,8 @@ export async function createCarReservation(userId: string, input: CreateCarReser
   const pickupAt = parseRentalDateTime(input.pickupDate, input.pickupTime);
   const returnAt = parseRentalDateTime(input.returnDate, input.returnTime);
   if (returnAt.getTime() <= pickupAt.getTime()) badRequest("CAR_RENTAL_PERIOD_INVALID", "Return must be after pick-up");
+  const rentalDays = Math.max(1, Math.ceil((returnAt.getTime()-pickupAt.getTime())/86_400_000));
+  if (rentalDays < 3) badRequest("CAR_MIN_RENTAL_DAYS", "Minimum car rental period is 3 days");
 
   const db = database();
   const vehicle = await db.carVehicle.findFirst({
@@ -90,7 +93,6 @@ export async function createCarReservation(userId: string, input: CreateCarReser
   });
   if (blockedDay) badRequest("CAR_NOT_AVAILABLE", "This vehicle is unavailable on one or more selected dates");
 
-  const rentalDays = Math.max(1, Math.ceil((returnAt.getTime()-pickupAt.getTime())/86_400_000));
   const dayRate = Number(vehicle.dailyPrice);
   const subtotal = roundMoney(dayRate * rentalDays);
   const fees = 0;
@@ -111,6 +113,7 @@ export async function createCarReservation(userId: string, input: CreateCarReser
       guestEmail: input.guestEmail.trim().toLowerCase(),
       guestPhone: input.guestPhone?.trim() || null,
       driverAgeRange: input.driverAgeRange.trim(),
+      requestedExtras: input.extras ?? [],
       pickupAt,
       returnAt,
       status: "CONFIRMED",
@@ -189,6 +192,7 @@ function serializeReservation(row: any) {
     guestEmail: row.guestEmail,
     guestPhone: row.guestPhone,
     driverAgeRange: row.driverAgeRange,
+    requestedExtras: row.requestedExtras ?? [],
     pickupAt: row.pickupAt.toISOString(),
     returnAt: row.returnAt.toISOString(),
     rentalDays: row.rentalDays,
