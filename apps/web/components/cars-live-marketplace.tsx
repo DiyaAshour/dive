@@ -31,6 +31,14 @@ export type LiveCar = Readonly<{
 type Props=Readonly<{locale:"ar"|"en";initialSearch:CarSearchValues;cars:LiveCar[]}>;
 type FilterOption=Readonly<{value:string;label:string}>;
 
+const STANDARD_BRANDS = [
+  "Toyota","Hyundai","Kia","Nissan","Honda","Mazda","Mitsubishi","Suzuki",
+  "Ford","Chevrolet","GMC","Jeep","Dodge","Chrysler",
+  "Volkswagen","Skoda","SEAT","Peugeot","Renault","Citroen","Opel","Fiat",
+  "BMW","Mercedes-Benz","Audi","Lexus","Volvo","Land Rover","Porsche",
+  "Tesla","BYD","MG","Geely","Changan","Chery","Haval","GAC","JAC","Jetour",
+  "Dongfeng","Great Wall","Zeekr","Hongqi"
+] as const;
 const STANDARD_FUELS = ["Petrol","Diesel","Electric","Hybrid","Plug-in Hybrid","LPG","CNG","Hydrogen"] as const;
 
 export function CarsLiveMarketplace({locale,initialSearch,cars}:Props){
@@ -48,7 +56,7 @@ export function CarsLiveMarketplace({locale,initialSearch,cars}:Props){
     title:"Cars available now",found:"cars available",allBrands:"All brands",allTypes:"All categories",allTrans:"All transmissions",allFuel:"All fuel types",
     automatic:"Automatic",manual:"Manual",pickup:"Pick-up",period:"Period",change:"Change search",perDay:"per day",view:"View details",verified:"Verified company",seats:"seats",bags:"bags",free:"Free cancellation",unlimited:"Unlimited mileage",airport:"Airport pickup",noResults:"No matching cars",noResultsBody:"Change the filters or adjust your pick-up location and dates.",close:"Close"
   };
-  const brands=useMemo(()=>unique(cars.map((car)=>car.brand)),[cars]);
+  const brands=useMemo(()=>unique([...STANDARD_BRANDS,...cars.map((car)=>car.brand)]),[cars]);
   const categories=useMemo(()=>unique(cars.map((car)=>car.category)),[cars]);
   const fuels=useMemo(()=>unique([...STANDARD_FUELS,...cars.map((car)=>car.fuel)]),[cars]);
   const results=useMemo(()=>cars.filter((car)=>{
