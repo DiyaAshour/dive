@@ -1,4 +1,5 @@
 import { listPublicCarVehicles } from "@platform/server";
+import { CarBookingSearch } from "@/components/car-booking-search";
 import { CustomerHeader } from "@/components/customer-header";
 import { CarsLiveMarketplace, type LiveCar } from "@/components/cars-live-marketplace";
 import { CarsMarketplace, type CarSearchValues } from "@/components/cars-marketplace";
@@ -47,10 +48,29 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
     <div className="shell">
-      {liveCars.length > 0
-        ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={liveCars as LiveCar[]}/>
-        : <CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/>} 
+      <div className="carsInlineSearch">
+        <CarBookingSearch
+          locale={market.baseLocale}
+          defaultPickupDate={initialSearch.pickupDate}
+          defaultReturnDate={initialSearch.returnDate}
+        />
+      </div>
+      <div className="carsInlineResults">
+        {liveCars.length > 0
+          ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={liveCars as LiveCar[]}/>
+          : <CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/>} 
+      </div>
     </div>
+    <style>{`
+      .carsInlineSearch { padding-top: 28px; }
+      .carsInlineSearch #car-search { margin-top: 0; }
+      .carsInlineResults > div > section:first-of-type,
+      .carsInlineResults > section:first-of-type { display: none !important; }
+      @media (max-width: 620px) {
+        .carsInlineSearch { padding-top: 18px; }
+        .carsInlineResults > div { padding-top: 14px; }
+      }
+    `}</style>
   </main>;
 }
 
