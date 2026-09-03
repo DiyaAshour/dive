@@ -53,6 +53,8 @@ export function CarCompanyPublishingManager({initialReadiness, locale, role}:{in
     finally{setBusy(false);}
   }
 
+  const submitDisabled=!readiness.ready||!canSubmit||busy;
+
   return <section className={styles.panel} style={{marginTop:18,maxWidth:820}}>
     <div className={styles.panelHead}><div><span style={{display:"block",fontSize:10,fontWeight:900,letterSpacing:".12em",textTransform:"uppercase",color:"#9a7426"}}>{ar?"بوابة النشر":"Publishing gate"}</span><h2 style={{marginTop:5}}>{ar?"جاهزية واعتماد الشركة":"Company readiness & verification"}</h2></div><StatusIcon active={active} pending={pending} suspended={suspended}/></div>
     <div className={styles.panelBody}>
@@ -67,7 +69,7 @@ export function CarCompanyPublishingManager({initialReadiness, locale, role}:{in
 
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",marginTop:18,paddingTop:16,borderTop:"1px solid #edf0f3"}}>
         <div><strong style={{fontSize:13}}>{readiness.ready?(ar?"جاهزة للإرسال":"Ready to submit"):(ar?"أكمل المتطلبات أعلاه":"Complete the requirements above")}</strong><div style={{marginTop:4,color:"#7b8998",fontSize:11}}>{ar?`Revision ${readiness.publishRevision} · ${readiness.counts.publishableVehicles} سيارة جاهزة للنشر`:`Revision ${readiness.publishRevision} · ${readiness.counts.publishableVehicles} publishable vehicle(s)`}</div></div>
-        {readiness.status==="DRAFT"&&<button className={styles.primary} type="button" disabled={!readiness.ready||!canSubmit||busy} onClick={submit} style={{opacity:(!readiness.ready||!canSubmit||busy)?.55:1,cursor:!readiness.ready||!canSubmit?"not-allowed":"pointer"}}><Send size={16}/>{busy?(ar?"جارٍ الإرسال…":"Submitting..."):(ar?"إرسال للمراجعة":"Submit for review")}</button>}
+        {readiness.status==="DRAFT"&&<button className={styles.primary} type="button" disabled={submitDisabled} onClick={submit} style={{opacity:submitDisabled?.55:1,cursor:submitDisabled?"not-allowed":"pointer"}}><Send size={16}/>{busy?(ar?"جارٍ الإرسال…":"Submitting..."):(ar?"إرسال للمراجعة":"Submit for review")}</button>}
       </div>
       {!canSubmit&&readiness.status==="DRAFT"&&<p className={styles.error}>{ar?"فقط Owner أو Manager يستطيع إرسال الشركة للمراجعة.":"Only an Owner or Manager can submit the company for review."}</p>}
       {message&&<p className={message.includes("submitted")||message.includes("تم إرسال")?styles.success:styles.error}>{message}</p>}
