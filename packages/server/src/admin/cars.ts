@@ -28,9 +28,10 @@ export async function listAdminCarCompanies(adminUserId: string, filters: {query
 
 export async function updateAdminCarCompany(adminUserId:string,companyId:string,input:CarCompanyDecisionInput){
   await requirePlatformAdmin(adminUserId);
-  if(input.status==="ACTIVE"&&!input.verified)badRequest("CAR_COMPANY_VERIFICATION_REQUIRED","An active car rental company must be verified");
+  if(input.status==="ACTIVE"||input.status==="PENDING_REVIEW")badRequest("CAR_COMPANY_REVIEW_REQUIRED","Use the company review queue to activate a car rental company");
+  if(input.verified)badRequest("CAR_COMPANY_REVIEW_REQUIRED","Verification is granted only by an approved company review");
   const existing=await database().carRentalCompany.findUnique({where:{id:companyId},select:{id:true}});
   if(!existing)notFound("Car rental company");
-  const row=await database().carRentalCompany.update({where:{id:companyId},data:{status:input.status,verified:input.verified}});
+  const row=await database().carRentalCompany.update({where:{id:companyId},data:{status:input.status,verified:false}});
   return {id:row.id,name:row.name,status:row.status,verified:row.verified,updatedAt:row.updatedAt.toISOString()};
 }
