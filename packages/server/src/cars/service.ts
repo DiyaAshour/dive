@@ -39,6 +39,9 @@ export type CreateCarLocationInput = Readonly<{
   airportCode?: string;
 }>;
 
+type CarCompanyRole = "OWNER" | "MANAGER" | "FLEET" | "RESERVATIONS" | "FINANCE" | "VIEWER";
+const FLEET_WRITE_ROLES = new Set<CarCompanyRole>(["OWNER", "MANAGER", "FLEET"]);
+
 async function membershipForUser(userId: string) {
   const membership = await database().carCompanyMembership.findFirst({
     where: {userId, status: "ACTIVE"},
@@ -48,9 +51,10 @@ async function membershipForUser(userId: string) {
   return membership;
 }
 
-async function requireCompany(userId: string) {
+async function requireCompany(userId: string, allowedRoles?: ReadonlySet<CarCompanyRole>) {
   const membership = await membershipForUser(userId);
   if (!membership) forbidden("Car rental company access required");
+  if (allowedRoles && !allowedRoles.has(membership.role as CarCompanyRole)) forbidden("You do not have permission to change the car rental company fleet");
   return membership;
 }
 
@@ -104,6 +108,15 @@ export async function createCarCompany(userId: string, input: CreateCarCompanyIn
         address,
         pickupEnabled: true,
         returnEnabled: true,
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorUserId: userId,
+        action: "CAR_COMPANY_CREATED",
+        entityType: "CarRentalCompany",
+        entityId: company.id,
+        after: {name: company.name, city: company.city, countryCode: company.countryCode, status: company.status},
       },
     });
     return {company, location};
@@ -160,7 +173,7 @@ export async function listCarCompanyVehicles(userId: string) {
 }
 
 export async function createCarVehicle(userId: string, input: CreateCarVehicleInput) {
-  const membership = await requireCompany(userId);
+  const membership = await requireCompany(userId, FLEET_WRITE_ROLES);
   if (input.year < 1990 || input.year > new Date().getUTCFullYear() + 1) badRequest("CAR_YEAR_INVALID", "Vehicle year is invalid");
   if (input.seats < 1 || input.seats > 16) badRequest("CAR_SEATS_INVALID", "Vehicle seat count is invalid");
   if (input.dailyPrice <= 0) badRequest("CAR_PRICE_INVALID", "Daily price must be greater than zero");
@@ -170,29 +183,33 @@ export async function createCarVehicle(userId: string, input: CreateCarVehicleIn
     if (!location) notFound("Car rental location");
   }
 
-  const row = await database().carVehicle.create({
-    data: {
-      companyId: membership.companyId,
-      homeLocationId: input.homeLocationId || null,
-      make: input.make.trim(),
-      model: input.model.trim(),
-      year: input.year,
-      category: input.category.trim(),
-      transmission: input.transmission,
-      fuel: input.fuel,
-      seats: input.seats,
-      bags: input.bags ?? 2,
-      doors: input.doors ?? 4,
-      dailyPrice: input.dailyPrice,
-      deposit: input.deposit ?? 0,
-      freeCancellation: input.freeCancellation ?? true,
-      unlimitedMileage: input.unlimitedMileage ?? false,
-      airportPickup: input.airportPickup ?? false,
-      imageUrl: input.imageUrl?.trim() || null,
-      imageAlt: input.imageAlt?.trim() || null,
-      status: "ACTIVE",
-    },
-    include: {homeLocation: true},
+  const row = await database().$transaction(async (tx) => {
+    const created = await tx.carVehicle.create({
+      data: {
+        companyId: membership.companyId,
+        homeLocationId: input.homeLocationId || null,
+        make: input.make.trim(),
+        model: input.model.trim(),
+        year: input.year,
+        category: input.category.trim(),
+        transmission: input.transmission,
+        fuel: input.fuel,
+        seats: input.seats,
+        bags: input.bags ?? 2,
+        doors: input.doors ?? 4,
+        dailyPrice: input.dailyPrice,
+        deposit: input.deposit ?? 0,
+        freeCancellation: input.freeCancellation ?? true,
+        unlimitedMileage: input.unlimitedMileage ?? false,
+        airportPickup: input.airportPickup ?? false,
+        imageUrl: input.imageUrl?.trim() || null,
+        imageAlt: input.imageAlt?.trim() || null,
+        status: "ACTIVE",
+      },
+      include: {homeLocation: true},
+    });
+    await markCarCompanyPublishingChanged(tx, membership.companyId, membership.company.status, userId, "CAR_VEHICLE_CREATED", created.id);
+    return created;
   });
   return serializeVehicle(row);
 }
@@ -207,15 +224,24 @@ export async function listCarCompanyLocations(userId: string) {
 }
 
 export async function createCarRentalLocation(userId: string, input: CreateCarLocationInput) {
-  const membership = await requireCompany(userId);
-  const row = await database().carRentalLocation.create({
-    data: {
-      companyId: membership.companyId,
-      name: input.name.trim(),
-      city: input.city.trim(),
-      address: input.address.trim(),
-      airportCode: input.airportCode?.trim().toUpperCase().slice(0, 3) || null,
-    },
+  const membership = await requireCompany(userId, FLEET_WRITE_ROLES);
+  const name = input.name.trim();
+  const city = input.city.trim();
+  const address = input.address.trim();
+  if (!name || !city || !address) badRequest("CAR_LOCATION_FIELDS_REQUIRED", "Location name, city and address are required");
+
+  const row = await database().$transaction(async (tx) => {
+    const created = await tx.carRentalLocation.create({
+      data: {
+        companyId: membership.companyId,
+        name,
+        city,
+        address,
+        airportCode: input.airportCode?.trim().toUpperCase().slice(0, 3) || null,
+      },
+    });
+    await markCarCompanyPublishingChanged(tx, membership.companyId, membership.company.status, userId, "CAR_LOCATION_CREATED", created.id);
+    return created;
   });
   return serializeLocation(row);
 }
@@ -275,8 +301,33 @@ export async function listPublicCarVehicles() {
   }));
 }
 
+async function markCarCompanyPublishingChanged(tx: any, companyId: string, currentStatus: string, actorUserId: string, action: string, entityId: string) {
+  await tx.carRentalCompany.update({
+    where: {id: companyId},
+    data: {
+      publishRevision: {increment: 1},
+      ...(currentStatus === "PENDING_REVIEW" ? {status: "DRAFT", verified: false} : {}),
+    },
+  });
+  if (currentStatus === "PENDING_REVIEW") {
+    await tx.carCompanyReview.updateMany({
+      where: {companyId, status: "PENDING"},
+      data: {status: "STALE", reviewedAt: new Date(), decisionReason: "Company changed after submission"},
+    });
+  }
+  await tx.auditLog.create({
+    data: {
+      actorUserId,
+      action,
+      entityType: action === "CAR_VEHICLE_CREATED" ? "CarVehicle" : "CarRentalLocation",
+      entityId,
+      after: {companyId, publishingRevisionIncremented: true, pendingReviewInvalidated: currentStatus === "PENDING_REVIEW"},
+    },
+  });
+}
+
 function serializeCompany(company: {
-  id:string;name:string;slug:string;city:string;countryCode:string;address:string;timezone:string;currency:string;status:string;verified:boolean;supportEmail:string|null;supportPhone:string|null;commissionRate:unknown;createdAt:Date;updatedAt:Date;
+  id:string;name:string;slug:string;city:string;countryCode:string;address:string;timezone:string;currency:string;status:string;verified:boolean;publishRevision:number;publishedRevision:number|null;lastPublishedAt:Date|null;supportEmail:string|null;supportPhone:string|null;commissionRate:unknown;createdAt:Date;updatedAt:Date;
 }) {
   return {
     id: company.id,
@@ -289,6 +340,9 @@ function serializeCompany(company: {
     currency: company.currency,
     status: company.status,
     verified: company.verified,
+    publishRevision: company.publishRevision,
+    publishedRevision: company.publishedRevision,
+    lastPublishedAt: company.lastPublishedAt?.toISOString() ?? null,
     supportEmail: company.supportEmail,
     supportPhone: company.supportPhone,
     commissionRate: Number(company.commissionRate),
