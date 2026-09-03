@@ -11,7 +11,10 @@ export async function POST(request: NextRequest, {params}: {params: Promise<{rev
     if (!user) return Response.json({data:null,error:{code:"UNAUTHORIZED",message:"Authentication required"}},{status:401});
     const parsed = propertyReviewDecisionSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return validationError(parsed.error);
-    return ok(await reviewCarCompanySubmission(user.id, reviewId, parsed.data));
+    const decision = parsed.data.reason === undefined
+      ? {decision: parsed.data.decision}
+      : {decision: parsed.data.decision, reason: parsed.data.reason};
+    return ok(await reviewCarCompanySubmission(user.id, reviewId, decision));
   } catch (error) {
     return handleApiError(error);
   }
