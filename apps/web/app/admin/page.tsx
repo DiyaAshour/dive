@@ -1,13 +1,14 @@
 import type {Metadata} from "next";
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {BadgeCheck, Building2, CircleCheck, FileCheck2, ShieldCheck, Users} from "lucide-react";
-import {getAdminNavigationCounts, getPlatformAccessOverview, listPendingHotelDocuments, listPlatformAuditActivity, listPlatformAuditActors, listPlatformHotels, listPropertyReviewQueue} from "@platform/server";
+import {BadgeCheck, Building2, CarFront, CircleCheck, FileCheck2, ShieldCheck, Users} from "lucide-react";
+import {getAdminNavigationCounts, getPlatformAccessOverview, listCarCompanyReviewQueue, listPendingHotelDocuments, listPlatformAuditActivity, listPlatformAuditActors, listPlatformHotels, listPropertyReviewQueue} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import {portalDictionary} from "@/lib/portal-i18n";
 import AuditActivityExplorer from "./audit-activity-explorer";
+import CarCompanyReviewQueue from "./car-company-review-queue";
 import DocumentReviewQueue from "./document-review-queue";
 import ReviewQueue from "./review-queue";
 
@@ -21,9 +22,10 @@ export default async function AdminPage() {
   const copy = portalDictionary(locale);
   const admin = copy.admin;
 
-  const [hotels, reviews, documents, access, auditActivity, auditActors, counts] = await Promise.all([
+  const [hotels, reviews, carReviews, documents, access, auditActivity, auditActors, counts] = await Promise.all([
     listPlatformHotels(principal.user.id),
     listPropertyReviewQueue(principal.user.id),
+    listCarCompanyReviewQueue(principal.user.id),
     listPendingHotelDocuments(principal.user.id),
     getPlatformAccessOverview(principal.user.id),
     listPlatformAuditActivity(principal.user.id, 300),
@@ -36,7 +38,7 @@ export default async function AdminPage() {
   const reviewProps = reviews.map((item) => ({...item, submittedAt: item.submittedAt.toISOString()}));
   const documentProps = documents.map((item) => ({...item, submittedAt: item.submittedAt.toISOString(), mediaObject: {...item.mediaObject, uploadedAt: item.mediaObject.uploadedAt?.toISOString() ?? null}}));
   const auditProps = auditActivity.map((entry) => ({...entry, createdAt: entry.createdAt.toISOString()}));
-  const pending = reviews.length + documents.length;
+  const pending = reviews.length + carReviews.length + documents.length;
 
   return <AdminShell locale={locale} principal={principal} active="overview" counts={counts}>
     <header className="adminTopbar">
@@ -50,6 +52,7 @@ export default async function AdminPage() {
         <article><span><Building2 size={16}/>{admin.properties}</span><strong>{hotels.length}</strong><small>{admin.allProperties}</small></article>
         <article><span><CircleCheck size={16}/>{admin.live}</span><strong>{active}</strong><small>{admin.activeDiscoverable}</small></article>
         <article><span><BadgeCheck size={16}/>{admin.propertyReviews}</span><strong>{reviews.length}</strong><small>{admin.waitingDecision}</small></article>
+        <article><span><CarFront size={16}/>{locale === "ar" ? "شركات السيارات" : "Car companies"}</span><strong>{carReviews.length}</strong><small>{locale === "ar" ? "بانتظار قرار الاعتماد" : "Waiting for verification"}</small></article>
         <article><span><FileCheck2 size={16}/>{admin.documents}</span><strong>{documents.length}</strong><small>{admin.privatePending}</small></article>
         <article><span><ShieldCheck size={16}/>{admin.suspended}</span><strong>{suspended}</strong><small>{admin.removedDiscovery}</small></article>
         <article><span><Users size={16}/>{admin.accounts}</span><strong>{access.totalUsers}</strong><small>{access.hotelUsers} {admin.hotelUsers}</small></article>
@@ -58,6 +61,7 @@ export default async function AdminPage() {
 
     <section id="verification" className="adminSection adminVerificationSection">
       <div className="adminSectionTitle"><div><span className="eyebrow">{admin.publishingGate}</span><h2>{admin.verificationQueues}</h2><p>{admin.verificationIntro}</p></div></div>
+      <CarCompanyReviewQueue reviews={carReviews} locale={locale}/>
       <ReviewQueue reviews={reviewProps} locale={locale}/>
       <DocumentReviewQueue documents={documentProps} locale={locale}/>
     </section>
