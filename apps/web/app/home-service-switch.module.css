@@ -499,3 +499,456 @@
     font-size: 26px;
   }
 }
+
+/* 2026 premium cars-home treatment. The stays experience remains untouched. */
+.modeTabs {
+  margin-inline: auto;
+  width: min(460px, 100%);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(207, 217, 227, 0.92);
+  box-shadow: 0 10px 32px rgba(16, 40, 64, 0.09);
+}
+
+.modeActive {
+  position: relative;
+  background: linear-gradient(135deg, #0e2943, #123958);
+  box-shadow: 0 10px 24px rgba(16, 40, 64, 0.22);
+}
+
+.modeActive::after {
+  content: "";
+  position: absolute;
+  inset-inline: 30%;
+  inset-block-end: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(217, 164, 65, 0.92);
+}
+
+.heroGrid:has(.carHeroVisual) {
+  min-height: 500px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
+  gap: 34px;
+  align-items: center;
+  margin-top: 28px;
+  margin-bottom: 0;
+  padding: 54px 56px 148px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 36px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 28px 72px rgba(16, 40, 64, 0.16);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+:global([dir="rtl"]) .heroGrid:has(.carHeroVisual) {
+  background-image:
+    linear-gradient(270deg, rgba(250, 248, 243, 0.99) 2%, rgba(250, 248, 243, 0.94) 37%, rgba(250, 248, 243, 0.63) 58%, rgba(16, 40, 64, 0.12) 100%),
+    url("https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1800&q=88");
+}
+
+:global([dir="ltr"]) .heroGrid:has(.carHeroVisual) {
+  background-image:
+    linear-gradient(90deg, rgba(250, 248, 243, 0.99) 2%, rgba(250, 248, 243, 0.94) 37%, rgba(250, 248, 243, 0.63) 58%, rgba(16, 40, 64, 0.12) 100%),
+    url("https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1800&q=88");
+}
+
+.heroGrid:has(.carHeroVisual)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 250px;
+  height: 250px;
+  inset-inline-start: -84px;
+  inset-block-end: -122px;
+  border: 42px solid rgba(217, 164, 65, 0.12);
+  border-radius: 50%;
+}
+
+.heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) {
+  position: relative;
+  z-index: 3;
+  max-width: 570px;
+  padding: 8px 0;
+}
+
+.heroGrid:has(.carHeroVisual) :global(.heroKicker) {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(205, 173, 104, 0.42);
+  color: #a67821;
+  box-shadow: 0 8px 20px rgba(16, 40, 64, 0.05);
+  backdrop-filter: blur(8px);
+}
+
+.heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) h1 {
+  max-width: 620px;
+  margin: 18px 0 17px;
+  color: #102840;
+  font-size: clamp(44px, 4.55vw, 66px);
+  line-height: 1.04;
+  letter-spacing: -0.052em;
+}
+
+.heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) > p {
+  max-width: 550px;
+  margin-bottom: 0;
+  color: #43566b;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.heroGrid:has(.carHeroVisual) :global(.heroConfidence) {
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.heroGrid:has(.carHeroVisual) :global(.heroConfidence) span {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid rgba(208, 217, 226, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #344a60;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 7px 18px rgba(16, 40, 64, 0.05);
+  backdrop-filter: blur(8px);
+}
+
+.carHeroVisual {
+  min-height: 340px;
+  align-self: stretch;
+  padding: 22px;
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.carHeroVisual::before {
+  z-index: 0;
+  inline-size: 310px;
+  block-size: 310px;
+  inset-inline-end: -42px;
+  inset-block-start: -48px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 68%);
+  filter: blur(2px);
+}
+
+.carHeroVisual::after {
+  z-index: 0;
+  inset-inline: 4%;
+  inset-block-end: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(7, 28, 47, 0.26), rgba(7, 28, 47, 0) 70%);
+  filter: blur(10px);
+}
+
+.carStage {
+  align-self: end;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr);
+  gap: 22px;
+  height: auto;
+  min-height: 196px;
+  margin-top: 35px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(11, 39, 64, 0.84), rgba(16, 40, 64, 0.68));
+  box-shadow: 0 24px 50px rgba(8, 29, 48, 0.25);
+  backdrop-filter: blur(15px);
+}
+
+.carIconWrap {
+  width: 178px;
+  height: 122px;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 16px 32px rgba(5, 22, 37, 0.18);
+}
+
+.carIconWrap svg {
+  width: 82px;
+  height: 82px;
+  stroke-width: 1.55;
+}
+
+.carIconWrap::after {
+  background: linear-gradient(90deg, #d9a441, #f0c86d);
+}
+
+.carStageCopy small {
+  color: #f0cb79;
+}
+
+.carStageCopy strong {
+  max-width: 300px;
+  color: #fff;
+  font-size: clamp(23px, 2.05vw, 31px);
+  text-shadow: 0 3px 18px rgba(4, 18, 31, 0.18);
+}
+
+.carStageCopy > span:last-child {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.floatChip {
+  min-height: 42px;
+  border-color: rgba(255, 255, 255, 0.64);
+  background: rgba(255, 255, 255, 0.9);
+  color: #253e57;
+  box-shadow: 0 12px 25px rgba(8, 28, 47, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.floatChip svg {
+  color: #a97c27;
+}
+
+.heroGrid:has(.carHeroVisual) + :global(.shell) {
+  position: relative;
+  z-index: 8;
+  margin-top: -92px;
+}
+
+.heroGrid:has(.carHeroVisual) + :global(.shell) :global(#car-search) {
+  margin-top: 0;
+}
+
+.heroGrid:has(.carHeroVisual) + :global(.shell) .carTrustStrip {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.heroGrid:has(.carHeroVisual) + :global(.shell) .carTrustStrip span {
+  border-color: rgba(215, 223, 231, 0.94);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 20px rgba(16, 40, 64, 0.055);
+}
+
+.carsIntro {
+  padding-top: 86px;
+}
+
+.carsIntroCopy {
+  position: relative;
+  overflow: hidden;
+  border-color: #e8dfcd;
+  background: linear-gradient(145deg, #fffdf8, #f8f3e8);
+  box-shadow: 0 18px 45px rgba(16, 40, 64, 0.06);
+}
+
+.carsIntroCopy::after {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  inset-inline-end: -95px;
+  inset-block-end: -125px;
+  border: 36px solid rgba(217, 164, 65, 0.09);
+  border-radius: 50%;
+}
+
+.carsIntroList article {
+  border-color: #e1e7ed;
+  box-shadow: 0 10px 28px rgba(16, 40, 64, 0.045);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.carsIntroList article:hover {
+  transform: translateY(-2px);
+  border-color: #d4dde6;
+  box-shadow: 0 16px 34px rgba(16, 40, 64, 0.07);
+}
+
+@media (max-width: 1100px) {
+  .heroGrid:has(.carHeroVisual) {
+    grid-template-columns: minmax(0, 0.95fr) minmax(390px, 1.05fr);
+    padding-inline: 38px;
+    gap: 24px;
+  }
+
+  .carStage {
+    grid-template-columns: 128px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .carIconWrap {
+    width: 132px;
+    height: 102px;
+  }
+}
+
+@media (max-width: 900px) {
+  .modeTabs {
+    width: min(460px, 100%);
+  }
+
+  .heroGrid:has(.carHeroVisual) {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 34px 28px 116px !important;
+    border-radius: 30px;
+    background-position: center;
+  }
+
+  :global([dir="rtl"]) .heroGrid:has(.carHeroVisual),
+  :global([dir="ltr"]) .heroGrid:has(.carHeroVisual) {
+    background-image:
+      linear-gradient(180deg, rgba(250, 248, 243, 0.98) 0%, rgba(250, 248, 243, 0.9) 46%, rgba(250, 248, 243, 0.48) 72%, rgba(16, 40, 64, 0.18) 100%),
+      url("https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1400&q=86");
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) {
+    max-width: 680px;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) h1 {
+    font-size: clamp(38px, 8vw, 54px);
+  }
+
+  .carHeroVisual {
+    min-height: 245px;
+    padding: 0;
+  }
+
+  .carStage {
+    min-height: 172px;
+    margin-top: 42px;
+    padding: 18px;
+  }
+
+  .heroGrid:has(.carHeroVisual) + :global(.shell) {
+    margin-top: -72px;
+  }
+
+  .carsIntro {
+    padding-top: 70px;
+  }
+}
+
+@media (max-width: 640px) {
+  .modeShell {
+    padding-top: 12px;
+  }
+
+  .modeTabs {
+    width: 100%;
+    padding: 3px;
+  }
+
+  .modeTab {
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .heroGrid:has(.carHeroVisual) {
+    margin-top: 14px;
+    padding: 26px 18px 92px !important;
+    border-radius: 24px;
+  }
+
+  .heroGrid:has(.carHeroVisual)::before {
+    display: none;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) {
+    padding-top: 0;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.heroKicker) {
+    padding: 7px 10px;
+    font-size: 10px;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) h1 {
+    margin: 14px 0 13px;
+    font-size: 35px;
+    line-height: 1.08;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.premiumHeroCopy) > p {
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.heroConfidence) {
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .heroGrid:has(.carHeroVisual) :global(.heroConfidence) span {
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 9.5px;
+  }
+
+  .carHeroVisual {
+    min-height: 195px;
+  }
+
+  .carStage {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 11px;
+    min-height: 124px;
+    margin-top: 28px;
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .carIconWrap {
+    width: 78px;
+    height: 68px;
+    border-radius: 17px;
+  }
+
+  .carIconWrap svg {
+    width: 44px;
+    height: 44px;
+  }
+
+  .carStageCopy strong {
+    font-size: 17px;
+  }
+
+  .floatChip {
+    min-height: 34px;
+    padding: 5px 4px;
+    font-size: 8.5px;
+  }
+
+  .heroGrid:has(.carHeroVisual) + :global(.shell) {
+    margin-top: -56px;
+  }
+
+  .heroGrid:has(.carHeroVisual) + :global(.shell) .carTrustStrip {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 3px;
+    scrollbar-width: none;
+  }
+
+  .heroGrid:has(.carHeroVisual) + :global(.shell) .carTrustStrip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .heroGrid:has(.carHeroVisual) + :global(.shell) .carTrustStrip span {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .carsIntro {
+    padding-top: 58px;
+  }
+}
