@@ -89,6 +89,7 @@ export function BlogAiStudio({locale,categories}:{locale:Locale;categories:strin
   }
 
   const hasDraft=Boolean(result?.article?.body.trim());
+  const ideas=result?.ideas??[];
 
   return <div className="blogAiStudio">
     <header className="adminTopbar blogAiTopbar">
@@ -117,9 +118,9 @@ export function BlogAiStudio({locale,categories}:{locale:Locale;categories:strin
 
     {busy&&(busy==="IDEAS"||busy==="DRAFT")&&<section className="adminPanel blogAiLoading"><LoaderCircle className="blogAiSpinner" size={24}/><div><strong>{busy==="IDEAS"?(ar?"نبحث عن زوايا مفيدة…":"Finding useful search angles…"):(ar?"نبحث ونكتب المسودة…":"Researching and writing the draft…")}</strong><span>{ar?"النتيجة لن تنشر تلقائيًا. ستبقى تحت مراجعتك.":"Nothing will be published automatically. You stay in control."}</span></div></section>}
 
-    {result?.ideas?.length>0&&<section className="adminPanel blogAiIdeas">
+    {ideas.length>0&&<section className="adminPanel blogAiIdeas">
       <div className="blogAdminSectionHead"><div><span className="eyebrow"><Search size={15}/>{ar?"فرص محتوى":"Content opportunities"}</span><h2>{ar?"اختر فكرة للمقال":"Choose an article idea"}</h2></div></div>
-      <div className="blogAiIdeaGrid">{result.ideas.map((idea,index)=><article key={`${idea.title}-${index}`}><div><span>{idea.intent}</span><strong>{idea.title}</strong><small>{idea.keyword}</small><p>{idea.angle}</p></div><button className="secondaryButton" type="button" onClick={()=>chooseIdea(idea)}>{ar?"استخدم هذه الفكرة":"Use this idea"}</button></article>)}</div>
+      <div className="blogAiIdeaGrid">{ideas.map((idea,index)=><article key={`${idea.title}-${index}`}><div><span>{idea.intent}</span><strong>{idea.title}</strong><small>{idea.keyword}</small><p>{idea.angle}</p></div><button className="secondaryButton" type="button" onClick={()=>chooseIdea(idea)}>{ar?"استخدم هذه الفكرة":"Use this idea"}</button></article>)}</div>
     </section>}
 
     {hasDraft&&result&&<div className="blogAiResultGrid">
