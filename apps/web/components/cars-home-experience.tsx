@@ -60,7 +60,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
     style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
   >
     <div className={`${styles.heroInner} ${polish.heroInner}`}>
-      <div className={`${styles.heroCopy} ${polish.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
+      <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
         <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
         <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
         <p>{copy.intro}</p>
@@ -76,7 +76,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
       </div>
     </div>
 
-    <div className={`${styles.searchShell} ${polish.searchShell}`}>
+    <div className={`${styles.searchShell} ${polish.searchShell} ${backgroundFix.searchShell}`}>
       <div className={`${styles.searchModes} ${polish.searchModes}`} aria-label={ar ? "نوع خدمة السيارات" : "Car service type"}>
         <span className={`${styles.searchModeActive} ${polish.searchModeActive}`}><Car size={17}/>{copy.rental}</span>
         <span className={styles.searchModeDisabled} aria-disabled="true"><BadgeCheck size={16}/>{copy.transfer}<small>{copy.comingSoon}</small></span>
