@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BookOpenText, Building2, Car, ChevronDown, Search, Sparkles } from "lucide-react";
+import { BedDouble, Bell, BookOpenText, Building2, Car, ChevronDown, Search, Sparkles } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import styles from "./customer-context-nav.module.css";
 
@@ -36,14 +36,16 @@ export function CustomerContextNav({
   const ar = locale.startsWith("ar");
 
   if (isCars) {
+    const staysHome = <Link href="/?service=stays"><BedDouble size={15}/>{ar ? "الإقامات" : "Stays"}</Link>;
     const searchCars = <Link href="/?service=cars#car-search"><Search size={15}/>{ar ? "ابحث عن سيارة" : "Search cars"}</Link>;
     const carBookings = <Link href="/cars/bookings"><Car size={15}/>{ar ? "حجوزات السيارات" : "Car bookings"}</Link>;
     const priceAlerts = <Link href="/account/alerts?service=cars"><Bell size={15}/>{ar ? "تنبيهات الأسعار" : "Price alerts"}</Link>;
     const rentalCompanies = <Link href="/cars"><Building2 size={15}/>{ar ? "شركات التأجير" : "Rental companies"}</Link>;
 
-    if (mobile) return <>{searchCars}{carBookings}{priceAlerts}{rentalCompanies}</>;
+    if (mobile) return <>{staysHome}{searchCars}{carBookings}{priceAlerts}{rentalCompanies}</>;
 
     return <>
+      {staysHome}
       {searchCars}
       {carBookings}
       <details className={styles.moreMenu}>
