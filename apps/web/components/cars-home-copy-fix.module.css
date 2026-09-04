@@ -1,13 +1,14 @@
 .heroCopy {
-  max-width: 560px !important;
-  padding-top: 4px !important;
+  max-width: 520px !important;
+  padding-top: 0 !important;
+  transform: translateY(-16px) !important;
 }
 
 .heroCopy h1 {
-  max-width: 540px !important;
+  max-width: 500px !important;
   margin: 0 !important;
-  font-size: clamp(54px, 4vw, 64px) !important;
-  line-height: .94 !important;
+  font-size: clamp(50px, 3.55vw, 56px) !important;
+  line-height: .95 !important;
   letter-spacing: -.05em !important;
   text-wrap: balance;
 }
@@ -18,23 +19,23 @@
 }
 
 .heroCopy h1 strong {
-  margin-top: 5px !important;
+  margin-top: 2px !important;
 }
 
 .heroCopy > p {
-  max-width: 500px !important;
-  margin-top: 17px !important;
-  font-size: 15px !important;
-  line-height: 1.55 !important;
+  max-width: 455px !important;
+  margin-top: 12px !important;
+  font-size: 13.5px !important;
+  line-height: 1.48 !important;
   font-weight: 680 !important;
 }
 
 .kicker {
   display: block !important;
-  margin-bottom: 16px !important;
-  font-size: 10px !important;
+  margin-bottom: 12px !important;
+  font-size: 9.5px !important;
   font-weight: 900 !important;
-  letter-spacing: .22em !important;
+  letter-spacing: .2em !important;
   line-height: 1.2 !important;
 }
 
@@ -45,10 +46,10 @@
 .trustRow {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  gap: 8px !important;
   width: 100% !important;
-  max-width: 570px !important;
-  margin-top: 22px !important;
+  max-width: 510px !important;
+  margin-top: 14px !important;
   overflow: visible !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -58,26 +59,31 @@
 .trustRow > div {
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
+  gap: 8px !important;
   min-width: 0 !important;
-  min-height: 62px !important;
-  padding: 10px 12px !important;
+  min-height: 50px !important;
+  padding: 8px 10px !important;
   border: 1px solid rgba(214,222,230,.96) !important;
-  border-radius: 14px !important;
-  background: rgba(255,255,255,.92) !important;
-  box-shadow: 0 8px 22px rgba(16,40,64,.055) !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.94) !important;
+  box-shadow: 0 7px 18px rgba(16,40,64,.05) !important;
   backdrop-filter: blur(8px) !important;
 }
 
 .trustRow > div > span {
   display: grid !important;
   place-items: center !important;
-  flex: 0 0 36px !important;
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 11px !important;
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
   background: rgba(215,164,61,.12) !important;
   color: #b68121 !important;
+}
+
+.trustRow > div > span svg {
+  width: 18px !important;
+  height: 18px !important;
 }
 
 .trustRow p {
@@ -93,17 +99,17 @@
 
 .trustRow strong {
   color: #17324d !important;
-  font-size: 11.5px !important;
+  font-size: 10.5px !important;
   font-weight: 900 !important;
-  line-height: 1.2 !important;
+  line-height: 1.15 !important;
 }
 
 .trustRow small {
-  margin-top: 3px !important;
+  margin-top: 2px !important;
   color: #6f7d8c !important;
-  font-size: 9px !important;
+  font-size: 8.5px !important;
   font-weight: 700 !important;
-  line-height: 1.2 !important;
+  line-height: 1.15 !important;
 }
 
 :global([dir="rtl"]) .heroCopy,
@@ -119,12 +125,20 @@
 }
 
 @media (max-width: 1180px) {
+  .heroCopy {
+    transform: none !important;
+  }
+
   .heroCopy h1 {
-    font-size: clamp(46px, 5vw, 58px) !important;
+    font-size: clamp(44px, 5vw, 54px) !important;
+  }
+
+  .heroCopy > p {
+    font-size: 13px !important;
   }
 
   .trustRow {
-    max-width: 520px !important;
+    max-width: 480px !important;
   }
 }
 
@@ -135,7 +149,7 @@
 
   .heroCopy h1 {
     max-width: 100% !important;
-    font-size: clamp(42px, 8.5vw, 56px) !important;
+    font-size: clamp(42px, 8.5vw, 54px) !important;
   }
 
   .heroCopy > p {
@@ -163,6 +177,6 @@
   }
 
   .trustRow > div {
-    min-height: 56px !important;
+    min-height: 54px !important;
   }
 }
