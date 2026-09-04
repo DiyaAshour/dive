@@ -20,6 +20,8 @@ export const createCarVehicleSchema = z.object({
   make: z.string().trim().min(1).max(80),
   model: z.string().trim().min(1).max(100),
   year: z.number().int().min(1990).max(new Date().getUTCFullYear() + 1),
+  trim: z.string().trim().max(100).optional(),
+  bodyType: z.string().trim().max(80).optional(),
   category: z.string().trim().min(2).max(60),
   transmission: z.enum(["AUTOMATIC", "MANUAL"]),
   fuel: z.enum(["PETROL", "DIESEL", "HYBRID", "ELECTRIC"]),
