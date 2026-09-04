@@ -3,7 +3,9 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { HOTEL_AMENITY_CATALOG, HOTEL_AMENITY_MINIMUM, type HotelAmenityCode } from "@platform/contracts";
 import type {Locale} from "@/lib/i18n";
+import AmenityPicker from "./amenity-picker";
 
 type Translation = {locale:string;name:string|null;description:string|null};
 type Content = {
@@ -26,9 +28,14 @@ const CONTENT_LOCALES=[
   {code:"ko",label:"한국어"},{code:"hi",label:"हिन्दी"},{code:"pt",label:"Português"},{code:"id",label:"Bahasa Indonesia"},{code:"th",label:"ไทย"},
 ] as const;
 
+const AMENITY_CODE_SET=new Set<string>(HOTEL_AMENITY_CATALOG.map((item)=>item.code));
+
 export default function PublicContentManager({hotelId, content, locale}: {hotelId: string; content: Content; locale: Locale}) {
   const ar=locale==="ar";
   const router=useRouter();
+  const initialAmenityCodes=content.amenities.flatMap((amenity)=>isHotelAmenityCode(amenity.code)?[amenity.code]:[]);
+  const ignoredLegacyCount=content.amenities.length-initialAmenityCodes.length;
+  const [amenityCodes,setAmenityCodes]=useState<HotelAmenityCode[]>(initialAmenityCodes);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [descriptionLength,setDescriptionLength]=useState(content.description?.length??0);
@@ -38,6 +45,7 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
     return [code,{name:existing?.name??"",description:existing?.description??""}];
   })));
   const activeTranslation=translations[translationLocale]??{name:"",description:""};
+  const amenitiesReady=amenityCodes.length>=HOTEL_AMENITY_MINIMUM;
 
   function updateTranslation(field:keyof TranslationDraft,value:string){
     setTranslations((current)=>({...current,[translationLocale]:{...(current[translationLocale]??{name:"",description:""}),[field]:value}}));
@@ -45,8 +53,12 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
     setMessage(null);
+    if(!amenitiesReady){
+      setMessage(ar?`اختر ${HOTEL_AMENITY_MINIMUM} مرافق وخدمات على الأقل قبل حفظ هذه الخطوة.`:`Choose at least ${HOTEL_AMENITY_MINIMUM} property facilities and services before saving this step.`);
+      return;
+    }
+    setSaving(true);
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch(`/api/v1/hotels/${hotelId}/content`, {
@@ -60,13 +72,17 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
           longitude: nullableNumber(form.get("longitude")),
           checkInTime: nullable(form.get("checkInTime")),
           checkOutTime: nullable(form.get("checkOutTime")),
-          amenities: parseAmenities(String(form.get("amenities") ?? ""),content.amenities),
+          amenities: amenityCodes.map((code)=>{
+            const item=HOTEL_AMENITY_CATALOG.find((amenity)=>amenity.code===code);
+            if(!item)throw new Error(ar?"يوجد مرفق غير صالح في الاختيار":"An invalid amenity was selected");
+            return {code:item.code,name:item.name,category:item.category};
+          }),
           translations: CONTENT_LOCALES.map(({code})=>({locale:code,name:nullableText(translations[code]?.name),description:nullableText(translations[code]?.description)})),
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result?.error?.message ?? (ar?"تعذر حفظ المعلومات":"Unable to save property details"));
-      setMessage(ar?"تم الحفظ بنجاح. ستظهر الترجمة للضيف حسب لغة الموقع، وأي لغة فارغة ستستخدم الوصف الأساسي تلقائيًا.":"Saved successfully. Guests will see the matching language, while empty translations automatically fall back to the default description.");
+      setMessage(ar?"تم الحفظ بنجاح. المرافق المختارة مرتبطة الآن مباشرة بصفحة الفندق، والترجمة تظهر حسب لغة الضيف.":"Saved successfully. The selected facilities are now connected directly to the public hotel page, with labels localized for the guest language.");
       router.refresh();
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : (ar?"تعذر حفظ المعلومات":"Unable to save property details"));
@@ -102,7 +118,7 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
         <label>{ar?"وقت تسجيل المغادرة":"Guest check-out time"}<span className="fieldHelp">{ar?"حتى أي ساعة يجب على الضيف مغادرة الغرفة؟":"By what time should guests leave the room?"}</span><input name="checkOutTime" type="time" defaultValue={content.checkOutTime ?? ""}/></label>
       </div>
 
-      <label className="partnerTextareaField partnerAmenitiesField">{ar?"مرافق وخدمات الفندق":"Property facilities & services"}<span className="fieldHelp">{ar?"اكتب اسم كل مرفق في سطر مستقل. تحتاج 3 مرافق على الأقل للنشر. لا تكتب أي أكواد.":"Enter one facility per line. At least 3 are required to publish. Do not enter technical codes."}</span><textarea name="amenities" rows={6} defaultValue={content.amenities.map((amenity)=>amenity.name).join("\n")} placeholder={ar?"واي فاي مجاني\nموقف سيارات\nمسبح\nمطعم\nنادي رياضي":"Free Wi-Fi\nParking\nSwimming pool\nRestaurant\nGym"}/></label>
+      <AmenityPicker locale={locale} selectedCodes={amenityCodes} onChange={setAmenityCodes} ignoredLegacyCount={ignoredLegacyCount}/>
 
       <details className="advancedLocation">
         <summary>{ar?"تحديد الموقع بدقة على الخريطة (اختياري الآن)":"Precise map location (optional for now)"}</summary>
@@ -110,11 +126,13 @@ export default function PublicContentManager({hotelId, content, locale}: {hotelI
         <div className="formGrid"><label>{ar?"خط العرض (Latitude)":"Latitude"}<input name="latitude" type="number" min="-90" max="90" step="0.000001" defaultValue={content.latitude ?? ""} placeholder="31.9539"/></label><label>{ar?"خط الطول (Longitude)":"Longitude"}<input name="longitude" type="number" min="-180" max="180" step="0.000001" defaultValue={content.longitude ?? ""} placeholder="35.9106"/></label></div>
       </details>
 
-      <button className="primaryButton" disabled={saving}>{saving ? (ar?"جارٍ الحفظ…":"Saving…") : (ar?"حفظ هذه الخطوة":"Save this step")}</button>
+      <button className="primaryButton" disabled={saving||!amenitiesReady}>{saving ? (ar?"جارٍ الحفظ…":"Saving…") : !amenitiesReady ? (ar?`اختر ${HOTEL_AMENITY_MINIMUM} مرافق للمتابعة`:`Choose ${HOTEL_AMENITY_MINIMUM} facilities to continue`) : (ar?"حفظ هذه الخطوة":"Save this step")}</button>
     </form>
     {message && <div className="setupMessage">{message}</div>}
   </section>;
 }
+
+function isHotelAmenityCode(value:string):value is HotelAmenityCode{return AMENITY_CODE_SET.has(value);}
 
 function nullable(value: FormDataEntryValue | null): string | null {
   const text = typeof value === "string" ? value.trim() : "";
@@ -132,27 +150,4 @@ function nullableNumber(value: FormDataEntryValue | null): number | null {
   const number = Number(text);
   if (!Number.isFinite(number)) throw new Error("Location and star rating fields must be valid numbers");
   return number;
-}
-
-function parseAmenities(value:string,existing:Content["amenities"]) {
-  const existingByName=new Map(existing.map((amenity)=>[amenity.name.trim().toLocaleLowerCase(),amenity]));
-  return lines(value).map((line,index)=>{
-    if(line.includes("|")){
-      const [code,name,category]=line.split("|").map((part)=>part.trim());
-      if(!code||!name)throw new Error(`Amenity line ${index+1} is incomplete`);
-      return {code,name,category:category||null};
-    }
-    const previous=existingByName.get(line.toLocaleLowerCase());
-    return previous?{code:previous.code,name:line,category:previous.category}:{code:`CUSTOM_${stableCode(line)}`,name:line,category:null};
-  });
-}
-
-function stableCode(value:string){
-  let hash=2166136261;
-  for(let index=0;index<value.length;index++){hash^=value.charCodeAt(index);hash=Math.imul(hash,16777619);}
-  return (hash>>>0).toString(36).toUpperCase();
-}
-
-function lines(value: string): string[] {
-  return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
