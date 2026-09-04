@@ -31,12 +31,29 @@ export async function getAdminCarFinancePeriods(adminUserId: string, filters: Fi
     };
   }
 
-  const rows = finance.reservations.filter((row) => {
-    const accountingDate = row.collectedBy === "HANDMEKEY" || row.paymentMode === "PAY_NOW"
-      ? row.createdAt.slice(0, 10)
-      : row.returnAt.slice(0, 10);
-    return accountingDate >= finance.period.from && accountingDate <= finance.period.to;
-  });
+  const rows = finance.reservations
+    .map((row) => {
+      const bookingDate = row.createdAt.slice(0, 10);
+      const bookedInPeriod = bookingDate >= finance.period.from && bookingDate <= finance.period.to;
+      const accountingDate = row.collectedBy === "HANDMEKEY" || row.paymentMode === "PAY_NOW"
+        ? bookingDate
+        : row.returnAt.slice(0, 10);
+      const financeRecognizedInPeriod = accountingDate >= finance.period.from && accountingDate <= finance.period.to;
+
+      return {
+        ...row,
+        bookedInPeriod,
+        financeRecognizedInPeriod,
+        financeRecognitionDate: accountingDate,
+        financeEligible: row.financeEligible && financeRecognizedInPeriod,
+        periodRole: bookedInPeriod
+          ? financeRecognizedInPeriod
+            ? "BOOKED_AND_RECOGNIZED"
+            : "BOOKED_PENDING"
+          : "RECOGNIZED_CARRYOVER",
+      };
+    })
+    .filter((row) => row.bookedInPeriod || row.financeRecognizedInPeriod);
 
   const eligible = rows.filter((row) => row.financeEligible);
   const unsettled = eligible.filter((row) => !row.settlementId);
