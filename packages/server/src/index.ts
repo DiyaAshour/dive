@@ -13,6 +13,7 @@ export * from "./admin/site-identity";
 export * from "./admin/site-assets";
 export * from "./admin/cars";
 export * from "./admin/car-finance";
+export * from "./admin/car-catalog";
 export * from "./hotels/authorization";
 export * from "./hotels/service";
 export * from "./hotels/rate-management";
