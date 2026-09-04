@@ -1,32 +1,35 @@
 .form {
+  direction: inherit;
   display: grid;
-  grid-template-columns: minmax(300px, 1.45fr) minmax(210px, 1fr) minmax(210px, 1fr) minmax(150px, .72fr) 190px;
-  gap: 0;
-  align-items: stretch;
+  grid-template-columns: minmax(260px, 1.35fr) minmax(235px, 1.08fr) minmax(235px, 1.08fr) minmax(150px, .7fr) minmax(205px, .95fr);
+  gap: 12px;
+  align-items: start;
+  min-height: 140px;
   overflow: visible;
-  padding: 10px;
-  border: 1px solid rgba(214, 221, 229, .96);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, .98);
-  box-shadow: 0 26px 62px rgba(16, 40, 64, .16);
+  padding: 46px 20px 16px;
+  border: 1px solid rgba(218, 225, 232, .96);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .985);
+  box-shadow: 0 18px 48px rgba(16, 40, 64, .13);
   backdrop-filter: blur(18px);
 }
 
 .field {
   position: relative;
   min-width: 0;
-  min-height: 82px;
+  min-height: 58px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 11px 18px;
-  border-inline-start: 1px solid #e5eaf0;
-  background: #fff;
+  padding: 8px 12px;
+  border: 1px solid #dbe3ea;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 2px 7px rgba(16, 40, 64, .025);
 }
 
 .locationField {
-  border-inline-start: 0;
-  border-radius: 16px;
+  overflow: visible;
 }
 
 .field label {
@@ -38,10 +41,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 7px;
-  color: #758294;
-  font-size: 10px;
-  font-weight: 850;
+  margin-bottom: 6px;
+  color: #778596;
+  font-size: 9px;
+  font-weight: 800;
   letter-spacing: .01em;
 }
 
@@ -54,26 +57,29 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: #17304b;
+  color: #102f4c;
   font: inherit;
-  font-weight: 800;
+  font-weight: 850;
 }
 
 .locationField > label > input {
   min-width: 0;
-  font-size: 12px;
+  font-size: 11.5px;
   text-overflow: ellipsis;
 }
 
 .sameLine {
+  position: absolute;
+  inset-inline-start: 10px;
+  bottom: -28px;
   display: flex !important;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  margin-top: 9px;
-  color: #7a8796;
-  font-size: 9px;
-  font-weight: 700;
+  gap: 7px;
+  color: #6d7b8a;
+  font-size: 8.5px;
+  font-weight: 750;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -85,9 +91,9 @@
 
 .switchTrack {
   position: relative;
-  flex: 0 0 30px;
-  width: 30px;
-  height: 17px;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 15px;
   border-radius: 999px;
   background: #c9d1da;
   transition: background .18s ease;
@@ -97,8 +103,8 @@
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 4px rgba(16, 40, 64, .22);
@@ -110,7 +116,7 @@
 }
 
 .switchInput:checked + .switchTrack > span {
-  transform: translateX(13px);
+  transform: translateX(11px);
 }
 
 :global([dir="rtl"]) .switchTrack > span {
@@ -119,12 +125,12 @@
 }
 
 :global([dir="rtl"]) .switchInput:checked + .switchTrack > span {
-  transform: translateX(-13px);
+  transform: translateX(-11px);
 }
 
 .dropoffReveal {
-  margin-top: 9px;
-  padding-top: 8px;
+  margin-top: 8px;
+  padding-top: 7px;
   border-top: 1px solid #edf0f3;
 }
 
@@ -132,89 +138,108 @@
   display: block;
   margin-bottom: 4px;
   color: #8b96a4;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
 }
 
 .dropoffReveal input {
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .momentRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 74px;
+  gap: 8px;
   align-items: center;
 }
 
 .momentRow > input,
 .timeBox {
   min-width: 0;
-  height: 34px;
-  border-radius: 10px;
-  background: #f8fafb;
+  height: 26px;
+  background: transparent;
 }
 
 .momentRow > input {
-  padding: 0 8px;
-  font-size: 11px;
+  padding: 0;
+  font-size: 10px;
 }
 
 .momentRow > input::-webkit-calendar-picker-indicator,
 .timeBox input::-webkit-calendar-picker-indicator {
-  opacity: .65;
+  opacity: .6;
 }
 
 .timeBox {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding-inline: 8px;
+  gap: 4px;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid #e3e8ee;
   color: #647386;
 }
 
 .timeBox input {
   min-width: 0;
   padding: 0;
-  font-size: 10.5px;
+  font-size: 9.5px;
 }
 
 .ageField select {
-  height: 34px;
-  padding-inline: 8px;
-  border-radius: 10px;
-  background: #f8fafb;
-  font-size: 11px;
+  height: 26px;
+  padding: 0;
+  font-size: 10px;
   appearance: auto;
 }
 
 .searchButton {
-  min-height: 82px;
+  position: relative;
+  min-height: 58px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 8px;
+  margin-bottom: 22px;
   border: 0;
-  border-radius: 17px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #0f2b47, #153b5d);
   color: #fff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
-  box-shadow: 0 12px 26px rgba(16, 40, 64, .16);
+  box-shadow: 0 9px 22px rgba(16, 40, 64, .16);
   transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.searchButton::after {
+  content: "400+ cars available";
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  transform: translateX(-50%);
+  color: #7d8996;
+  font-size: 8px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+:global([dir="rtl"]) .searchButton::after {
+  content: "400+ سيارة متوفرة";
 }
 
 .searchButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(16, 40, 64, .2);
+  box-shadow: 0 13px 28px rgba(16, 40, 64, .2);
 }
 
 @media (max-width: 1180px) {
   .form {
-    grid-template-columns: 1.4fr 1fr 1fr .72fr 165px;
+    grid-template-columns: 1.3fr 1fr 1fr .7fr 175px;
+    gap: 9px;
+    padding-inline: 14px;
   }
   .field {
-    padding-inline: 13px;
+    padding-inline: 10px;
   }
 }
 
@@ -222,46 +247,57 @@
   .form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    border-radius: 22px;
+    min-height: 0;
+    padding: 42px 10px 12px;
+    border-radius: 20px;
   }
   .field {
-    border: 1px solid #e5eaf0;
-    border-radius: 14px;
+    min-height: 64px;
+    border-radius: 13px;
   }
   .locationField,
   .searchButton {
     grid-column: 1 / -1;
   }
+  .sameLine {
+    position: static;
+    margin-top: 7px;
+  }
   .searchButton {
-    min-height: 56px;
+    min-height: 54px;
+    margin-bottom: 18px;
   }
 }
 
 @media (max-width: 560px) {
   .form {
     grid-template-columns: 1fr 1fr;
-    padding: 8px;
+    padding: 40px 8px 10px;
     gap: 7px;
   }
   .locationField {
-    min-height: 92px;
+    min-height: 88px;
   }
   .field {
-    min-height: 68px;
-    padding: 9px 10px;
+    min-height: 66px;
+    padding: 8px 9px;
   }
   .momentRow {
     grid-template-columns: 1fr;
-    gap: 5px;
+    gap: 4px;
   }
   .momentRow > input,
   .timeBox {
-    height: 30px;
+    height: 24px;
+  }
+  .timeBox {
+    padding-inline-start: 0;
+    border-inline-start: 0;
   }
   .ageField {
     grid-column: 1 / -1;
   }
   .searchButton {
-    min-height: 52px;
+    min-height: 50px;
   }
 }
