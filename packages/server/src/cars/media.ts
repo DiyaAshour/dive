@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { database } from "@platform/database";
 import { ApplicationError, badRequest, forbidden, notFound } from "../errors";
 import { objectStorage } from "../storage/registry";
+import { syncCarVehicleVisual } from "./auto-visuals";
 
 const UPLOAD_EXPIRY_SECONDS = 10 * 60;
 const SIGNATURE_READ_BYTES = 16;
@@ -47,7 +48,16 @@ export async function listCarVehicleMedia(userId: string, vehicleId: string) {
 
 export async function getCarVehicleMediaManager(userId: string, vehicleId: string) {
   const access = await requireVehicleAccess(userId, vehicleId);
-  const photos = await listVehiclePhotos(vehicleId, false);
+  const [photos, visualSync] = await Promise.all([
+    listVehiclePhotos(vehicleId, false),
+    syncCarVehicleVisual(vehicleId).catch((error) => {
+      console.error("[cars:media] Existing fleet visual sync failed", error);
+      return null;
+    }),
+  ]);
+  const modelVisuals = visualSync?.status === "LINKED"
+    ? visualSync.assets.map((asset, index) => catalogAssetView(visualSync.catalog, asset, index, vehicleId))
+    : [];
   return {
     vehicle: {
       id: access.vehicle.id,
@@ -63,6 +73,18 @@ export async function getCarVehicleMediaManager(userId: string, vehicleId: strin
       currency: access.company.currency,
     },
     photos,
+    modelVisuals,
+    catalog: visualSync?.catalog ? {
+      id: visualSync.catalog.id,
+      make: visualSync.catalog.make,
+      model: visualSync.catalog.model,
+      trim: visualSync.catalog.trim,
+      year: visualSync.catalog.year,
+      provider: visualSync.catalog.provider,
+      exterior360Available: visualSync.catalog.exterior360Available,
+      interior360Available: visualSync.catalog.interior360Available,
+    } : null,
+    visualSyncStatus: visualSync?.status ?? "UNMATCHED",
   };
 }
 
@@ -199,7 +221,7 @@ export async function listPublicCarVehiclePhotos(vehicleId: string) {
 
   if (!link) return supplierPhotos;
   const catalog = link.catalogVehicle;
-  const catalogPhotos = catalog.assets.map((asset, index) => catalogAssetView(catalog, asset, index));
+  const catalogPhotos = catalog.assets.map((asset, index) => catalogAssetView(catalog, asset, index, vehicleId));
   if (catalog.primaryImageUrl && !catalog.assets.some((asset) => asset.type === "HERO")) {
     catalogPhotos.unshift({
       id: `catalog-primary-${catalog.id}`,
@@ -293,10 +315,10 @@ function photoView(photo: {
   };
 }
 
-function catalogAssetView(catalog: any, asset: any, index: number) {
+function catalogAssetView(catalog: any, asset: any, index: number, vehicleId = "catalog") {
   return {
     id: `catalog-${asset.id}`,
-    vehicleId: "catalog",
+    vehicleId,
     category: asset.type,
     url: asset.url,
     originalFileName: `catalog-${asset.type.toLowerCase()}`,

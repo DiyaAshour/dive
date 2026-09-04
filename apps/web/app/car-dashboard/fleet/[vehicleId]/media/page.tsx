@@ -16,6 +16,6 @@ export default async function CarVehicleMediaPage({params}: {params: Promise<{ve
   if (!company) redirect("/cars/partner");
   const manager = await getCarVehicleMediaManager(user.id, vehicleId);
   return <CarPartnerShell companyName={company.company.name} status={company.company.status} verified={company.company.verified} locale={market.baseLocale}>
-    <CarVehicleMediaManager locale={market.baseLocale} vehicle={manager.vehicle} initialPhotos={manager.photos}/>
+    <CarVehicleMediaManager locale={market.baseLocale} vehicle={manager.vehicle} initialPhotos={manager.photos} modelVisuals={manager.modelVisuals} catalog={manager.catalog} visualSyncStatus={manager.visualSyncStatus}/>
   </CarPartnerShell>;
 }

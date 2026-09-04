@@ -23,6 +23,13 @@ export type AutomaticCarVisualMatch = Readonly<{
   generated: boolean;
 }>;
 
+export type CarVehicleVisualSync = Readonly<{
+  status: "LINKED" | "UNMATCHED";
+  matchedBy: string | null;
+  catalog: any | null;
+  assets: readonly any[];
+}>;
+
 /**
  * Resolves a fleet vehicle to one exact shared visual record. When the exact
  * catalog entry exists but has no artwork yet, the configured automotive
@@ -76,6 +83,93 @@ export function automaticCarVisualsConfigured() {
   return imaginConfigured();
 }
 
+/**
+ * Hydrates one existing fleet row with its shared catalog visual. This is
+ * intentionally idempotent and never falls back to a different make, model,
+ * year, or trim. It is called when a partner opens that vehicle's media page,
+ * so old fleet rows receive the same automatic behavior as new rows.
+ */
+export async function syncCarVehicleVisual(vehicleId: string): Promise<CarVehicleVisualSync | null> {
+  const db = database();
+  const vehicle = await db.carVehicle.findUnique({
+    where: {id: vehicleId},
+    select: {
+      id: true,
+      make: true,
+      model: true,
+      year: true,
+      category: true,
+      transmission: true,
+      fuel: true,
+      seats: true,
+      bags: true,
+      doors: true,
+      imageUrl: true,
+    },
+  });
+  if (!vehicle) return null;
+
+  const existing = await db.carVehicleCatalogLink.findUnique({
+    where: {vehicleId},
+    include: {
+      catalogVehicle: {
+        include: {assets: {where: {active: true}, orderBy: [{sortOrder: "asc"}, {createdAt: "asc"}] }},
+      },
+    },
+  });
+
+  const automatic = await resolveAutomaticCarVisual({
+    make: vehicle.make,
+    model: vehicle.model,
+    year: vehicle.year,
+    category: vehicle.category,
+    transmission: vehicle.transmission,
+    fuel: vehicle.fuel,
+    seats: vehicle.seats,
+    bags: vehicle.bags,
+    doors: vehicle.doors,
+  });
+
+  let catalog = automatic?.catalog ?? null;
+  if (!catalog && existing && exactCatalogIdentity(vehicle, existing.catalogVehicle)) {
+    catalog = existing.catalogVehicle;
+  }
+
+  if (!catalog || !exactCatalogIdentity(vehicle, catalog)) {
+    if (existing && !exactCatalogIdentity(vehicle, existing.catalogVehicle)) {
+      await db.carVehicleCatalogLink.delete({where: {vehicleId}}).catch(() => undefined);
+    }
+    return {status: "UNMATCHED", matchedBy: null, catalog: null, assets: []};
+  }
+
+  const fullCatalog = await db.carCatalogVehicle.findFirst({
+    where: {id: catalog.id, active: true},
+    include: {assets: {where: {active: true}, orderBy: [{sortOrder: "asc"}, {createdAt: "asc"}] }},
+  });
+  if (!fullCatalog || !exactCatalogIdentity(vehicle, fullCatalog)) {
+    return {status: "UNMATCHED", matchedBy: null, catalog: null, assets: []};
+  }
+
+  const matchedBy = existing?.catalogVehicleId === fullCatalog.id
+    ? existing.matchedBy
+    : automatic?.matchedBy ?? "AUTO_BACKFILL";
+  await db.$transaction(async (tx) => {
+    await tx.carVehicleCatalogLink.upsert({
+      where: {vehicleId},
+      create: {vehicleId, catalogVehicleId: fullCatalog.id, matchedBy},
+      update: {catalogVehicleId: fullCatalog.id, matchedBy, updatedAt: new Date()},
+    });
+    if (!vehicle.imageUrl && fullCatalog.primaryImageUrl) {
+      await tx.carVehicle.update({
+        where: {id: vehicleId},
+        data: {imageUrl: fullCatalog.primaryImageUrl, imageAlt: `${fullCatalog.make} ${fullCatalog.model}${fullCatalog.trim ? ` ${fullCatalog.trim}` : ""} ${fullCatalog.year}`},
+      });
+    }
+  });
+
+  return {status: "LINKED", matchedBy, catalog: fullCatalog, assets: fullCatalog.assets};
+}
+
 async function findPreferredCandidate(id: string) {
   return database().carCatalogVehicle.findFirst({
     where: {id, active: true},
@@ -91,13 +185,25 @@ async function findExactCandidate(input: AutomaticCarVisualInput) {
     take: 100,
   });
   const requestedMake = normalizeMake(input.make);
-  const requestedModel = normalize([input.model, input.trim].filter(Boolean).join(" "));
+  const requestedModels = new Set([
+    normalize(input.model),
+    input.trim ? normalize([input.model, input.trim].filter(Boolean).join(" ")) : "",
+  ].filter(Boolean));
   return candidates.find((candidate) => {
     if (normalizeMake(candidate.make) !== requestedMake) return false;
-    const exactModel = normalize(candidate.model);
-    const exactVariant = normalize([candidate.model, candidate.trim].filter(Boolean).join(" "));
-    return requestedModel === exactModel || requestedModel === exactVariant;
+    const exactIdentity = candidate.trim
+      ? normalize([candidate.model, candidate.trim].filter(Boolean).join(" "))
+      : normalize(candidate.model);
+    return requestedModels.has(exactIdentity);
   }) ?? null;
+}
+
+function exactCatalogIdentity(vehicle: {make: string; model: string; year: number}, catalog: {make: string; model: string; trim?: string | null; year: number}) {
+  if (vehicle.year !== catalog.year || normalizeMake(vehicle.make) !== normalizeMake(catalog.make)) return false;
+  const identity = catalog.trim
+    ? normalize([catalog.model, catalog.trim].filter(Boolean).join(" "))
+    : normalize(catalog.model);
+  return normalize(vehicle.model) === identity;
 }
 
 function fromCandidate(input: AutomaticCarVisualInput, candidate: any) {

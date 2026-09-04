@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, ArrowUp, Camera, CheckCircle2, ImagePlus, LoaderCircle, Star, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BadgeCheck, Camera, CheckCircle2, ImagePlus, LoaderCircle, Rotate3D, Sparkles, Star, Trash2 } from "lucide-react";
 import styles from "./car-vehicle-media-manager.module.css";
 
 type Category = "EXTERIOR_FRONT"|"EXTERIOR_REAR"|"EXTERIOR_LEFT"|"EXTERIOR_RIGHT"|"INTERIOR_DASHBOARD"|"INTERIOR_FRONT_SEATS"|"INTERIOR_REAR_SEATS"|"TRUNK"|"INFOTAINMENT"|"STEERING_WHEEL"|"ODOMETER"|"KEYS_ACCESSORIES"|"OTHER";
 type Photo = {id:string;vehicleId:string;category:Category;url:string|null;originalFileName:string;contentType:string;sizeBytes:number;alt:string|null;sortOrder:number;isPrimary:boolean;state:string;uploadExpiresAt:string;uploadedAt:string|null;createdAt:string};
+type ModelVisual = {id:string;vehicleId:string;category:string;url:string|null;originalFileName:string;contentType:string;sizeBytes:number;alt:string|null;sortOrder:number;isPrimary:boolean;state:string;uploadExpiresAt:string;uploadedAt:string|null;createdAt:string};
 type Vehicle = {id:string;make:string;model:string;year:number;category:string;status:string};
-type Props = Readonly<{locale:"ar"|"en";vehicle:Vehicle;initialPhotos:Photo[]}>;
+type Catalog = {id:string;make:string;model:string;trim:string|null;year:number;provider:string;exterior360Available:boolean;interior360Available:boolean};
+type Props = Readonly<{locale:"ar"|"en";vehicle:Vehicle;initialPhotos:Photo[];modelVisuals:ModelVisual[];catalog:Catalog|null;visualSyncStatus:string}>;
 type UploadInit = {photo:Photo;upload:{url:string;method:"PUT";headers:Record<string,string>}};
 
 const CATEGORIES:Category[]=["EXTERIOR_FRONT","EXTERIOR_REAR","EXTERIOR_LEFT","EXTERIOR_RIGHT","INTERIOR_DASHBOARD","INTERIOR_FRONT_SEATS","INTERIOR_REAR_SEATS","TRUNK","INFOTAINMENT","STEERING_WHEEL","ODOMETER","KEYS_ACCESSORIES","OTHER"];
 
-export function CarVehicleMediaManager({locale,vehicle,initialPhotos}:Props){
+export function CarVehicleMediaManager({locale,vehicle,initialPhotos,modelVisuals,catalog,visualSyncStatus}:Props){
   const ar=locale==="ar";
   const [photos,setPhotos]=useState(initialPhotos);
   const [category,setCategory]=useState<Category>("EXTERIOR_FRONT");
@@ -22,12 +24,14 @@ export function CarVehicleMediaManager({locale,vehicle,initialPhotos}:Props){
   const [error,setError]=useState("");
   const inputRef=useRef<HTMLInputElement|null>(null);
   const copy=ar?{
-    back:"العودة للأسطول",title:"صور السيارة",subtitle:"ارفع صورًا حقيقية للسيارة ورتبها وصنّفها. الصورة الرئيسية تظهر أولًا في صفحة الحجز والنتائج.",uploadTitle:"إضافة صور",uploadBody:"يمكنك اختيار عدة صور دفعة واحدة. JPEG أو PNG أو WebP، حتى 15 MB للصورة.",category:"تصنيف الصور الجديدة",choose:"اضغط لاختيار الصور",chooseSub:"أو اسحب الصور إلى هذه المنطقة من جهازك",safe:"الصور ترفع مباشرة إلى التخزين الآمن وتُفحص قبل نشرها للمستخدمين.",uploading:"جارٍ رفع الصور",gallery:"معرض السيارة",photos:"صور",empty:"لا توجد صور منشورة بعد",emptyBody:"ابدأ بصورة أمامية واضحة، ثم أضف الخلفية والجوانب والمقصورة والمقاعد والشنطة.",primary:"الصورة الرئيسية",makePrimary:"اجعلها رئيسية",delete:"حذف",alt:"وصف الصورة",failed:"تعذر تنفيذ العملية.",pending:"بانتظار اكتمال الرفع",moveUp:"للأعلى",moveDown:"للأسفل",saved:"تم الحفظ"
+    back:"العودة للأسطول",title:"صور السيارة",subtitle:"مجسّم الموديل المطابق تتم مزامنته تلقائيًا. صور السيارة الفعلية من الشركة اختيارية فقط.",modelTitle:"مجسّم الموديل المطابق",modelBody:"هذا المجسّم مرتبط تلقائيًا بهوية السيارة نفسها: الماركة والموديل والسنة، بدون تخمين.",modelReady:"تمت المزامنة تلقائيًا",modelPending:"بانتظار مجسّم مطابق",modelEmpty:"لا يوجد مجسّم مطابق بعد",modelEmptyBody:"لن نعرض صورة لموديل قريب أو سنة مختلفة. سيظهر المجسّم عند توفر المطابقة الدقيقة.",studio:"استوديو HandMeKey",spin:"360° خارجي متوفر",uploadTitle:"صور فعلية إضافية (اختياري)",uploadBody:"لا تحتاج لرفع أي صورة للموديل. أضف صور السيارة الفعلية فقط إذا أردت إظهارها أيضًا.",category:"تصنيف الصور الجديدة",choose:"اضغط لاختيار الصور",chooseSub:"أو اسحب الصور إلى هذه المنطقة من جهازك",safe:"الصور ترفع مباشرة إلى التخزين الآمن وتُفحص قبل نشرها للمستخدمين.",uploading:"جارٍ رفع الصور",gallery:"صور الشركة",photos:"صور فعلية",empty:"لا توجد صور فعلية منشورة",emptyBody:"هذا اختياري؛ مجسّم الموديل أعلاه يُستخدم تلقائيًا في الحجز والنتائج.",primary:"الصورة الرئيسية",makePrimary:"اجعلها رئيسية",delete:"حذف",alt:"وصف الصورة",failed:"تعذر تنفيذ العملية.",pending:"بانتظار اكتمال الرفع",moveUp:"للأعلى",moveDown:"للأسفل",saved:"تم الحفظ"
   }:{
-    back:"Back to fleet",title:"Vehicle photos",subtitle:"Upload real vehicle photos, categorize them and control their order. The primary image appears first on the booking page and search results.",uploadTitle:"Add photos",uploadBody:"Choose multiple photos at once. JPEG, PNG or WebP, up to 15 MB each.",category:"Category for new photos",choose:"Choose vehicle photos",chooseSub:"or drag image files into this area",safe:"Images upload directly to secure object storage and are verified before publication.",uploading:"Uploading photos",gallery:"Vehicle gallery",photos:"photos",empty:"No published photos yet",emptyBody:"Start with a clear front exterior photo, then add rear, sides, cabin, seats and trunk.",primary:"Primary image",makePrimary:"Make primary",delete:"Delete",alt:"Image description",failed:"The operation could not be completed.",pending:"Upload pending",moveUp:"Move up",moveDown:"Move down",saved:"Saved"
+    back:"Back to fleet",title:"Vehicle photos",subtitle:"The exact model visual syncs automatically. Real company vehicle photos are optional.",modelTitle:"Exact model visual",modelBody:"This visual is linked to the same vehicle identity: make, model and year—without guessing.",modelReady:"Synced automatically",modelPending:"Exact visual pending",modelEmpty:"No exact model visual yet",modelEmptyBody:"We will never show a close or different-year model. The visual appears when an exact match is available.",studio:"HandMeKey studio",spin:"Exterior 360° available",uploadTitle:"Extra real photos (optional)",uploadBody:"You do not need to upload a model image. Add real photos of this vehicle only if you want to show them too.",category:"Category for new photos",choose:"Choose vehicle photos",chooseSub:"or drag image files into this area",safe:"Images upload directly to secure object storage and are verified before publication.",uploading:"Uploading photos",gallery:"Company photos",photos:"real photos",empty:"No real photos published",emptyBody:"This is optional; the exact model visual above is used automatically in booking and search.",primary:"Primary image",makePrimary:"Make primary",delete:"Delete",alt:"Image description",failed:"The operation could not be completed.",pending:"Upload pending",moveUp:"Move up",moveDown:"Move down",saved:"Saved"
   };
   const labels=useMemo(()=>categoryLabels(ar),[ar]);
   const readyPhotos=photos.filter((photo)=>photo.state==="READY");
+  const staticModelVisuals=modelVisuals.filter((visual)=>visual.category!=="SPIN_FRAME"&&visual.url).slice(0,12);
+  const has360=Boolean(catalog?.exterior360Available||modelVisuals.some((visual)=>visual.category==="SPIN_FRAME"));
 
   async function uploadFiles(files:FileList|File[]){
     const selected=Array.from(files).filter((file)=>["image/jpeg","image/png","image/webp"].includes(file.type));
@@ -97,6 +101,11 @@ export function CarVehicleMediaManager({locale,vehicle,initialPhotos}:Props){
   return <>
     <Link className={styles.back} href="/car-dashboard/fleet"><ArrowLeft size={15}/>{copy.back}</Link>
     <div className={styles.pageHead}><div><span className={styles.vehicleTag}><Camera size={14}/>{vehicle.make} {vehicle.model} · {vehicle.year}</span><h1>{copy.title}</h1><p>{copy.subtitle}</p></div></div>
+
+    <section className={styles.catalogCard}>
+      <div className={styles.catalogHead}><div><span className="eyebrow">{copy.studio}</span><h2>{copy.modelTitle}</h2><p>{catalog?`${catalog.make} ${catalog.model}${catalog.trim?` ${catalog.trim}`:""} · ${catalog.year}`:copy.modelBody}</p></div><span className={`${styles.syncBadge} ${catalog&&staticModelVisuals.length?styles.syncReady:styles.syncPending}`}>{catalog&&staticModelVisuals.length?<><BadgeCheck size={14}/>{copy.modelReady}</>:<><Sparkles size={14}/>{copy.modelPending}</>}</span></div>
+      {staticModelVisuals.length?<><div className={styles.catalogGrid}>{staticModelVisuals.map((visual)=><article className={styles.catalogPhoto} key={visual.id}><div className={styles.catalogMedia}><img src={visual.url!} alt={visual.alt||`${vehicle.make} ${vehicle.model} ${vehicle.year}`}/><span>{visual.category.replaceAll("_"," ")}</span></div></article>)}</div><div className={styles.catalogNotice}><CheckCircle2 size={15}/><span>{copy.modelBody}{has360?<><span className={styles.noticeDivider}>·</span><Rotate3D size={14}/>{copy.spin}</>:null}</span></div></>:<div className={styles.catalogEmpty}><Sparkles size={24}/><h3>{copy.modelEmpty}</h3><p>{copy.modelEmptyBody}</p><small>{visualSyncStatus}</small></div>}
+    </section>
 
     <section className={styles.uploadCard}>
       <div className={styles.uploadTop}><div><span className="eyebrow">Media studio</span><h2>{copy.uploadTitle}</h2><p>{copy.uploadBody}</p></div><label className={styles.categoryPicker}><span>{copy.category}</span><select value={category} onChange={(event)=>setCategory(event.target.value as Category)}>{CATEGORIES.map((item)=><option key={item} value={item}>{labels[item]}</option>)}</select></label></div>
