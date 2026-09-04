@@ -2,7 +2,7 @@ import { database } from "@platform/database";
 import { badRequest } from "../errors";
 import { requirePlatformAdmin } from "./authorization";
 
-export type CarCatalogProvider = "MANUAL" | "IMAGIN" | "EVOX" | "OEM";
+export type CarCatalogProvider = "MANUAL" | "HANDMEKEY" | "IMAGIN" | "EVOX" | "OEM";
 export type CarCatalogAssetKind =
   | "HERO"
   | "EXTERIOR_FRONT"

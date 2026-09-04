@@ -27,7 +27,7 @@ export type JordanRentalMarketModel = Readonly<{
  *
  * Sources reviewed on 2026-09-04 include Avis Jordan, Dunya Car Rental,
  * National/Enterprise Jordan, Hertz Jordan, Monte Carlo Rent a Car, Rushmore,
- * Masafat Rental and Fox Rent A Car Jordan.
+ * Masafat Rental, Fox Rent A Car Jordan, Carwiz Jordan and Eras Car Rental.
  */
 export const JORDAN_RENTAL_MARKET_MODELS: readonly JordanRentalMarketModel[] = [
   m("kia-picanto", "Kia", "Picanto", "Economy", "Hatchback", 5, 2, "AUTOMATIC", "PETROL", ["Avis Jordan", "Dunya", "National/Enterprise", "Rushmore", "Fox"]),
@@ -105,6 +105,13 @@ export const JORDAN_RENTAL_MARKET_MODELS: readonly JordanRentalMarketModel[] = [
   m("mahindra-kuv100", "Mahindra", "KUV100", "Economy", "Hatchback", 5, 2, "MANUAL", "PETROL", ["Hertz Jordan"]),
   m("mercedes-e-class", "Mercedes-Benz", "E-Class", "Luxury", "Sedan", 5, 4, "AUTOMATIC", "PETROL", ["Hertz Jordan"], ["Mercedes E200", "E200"]),
   m("citroen-c2", "Citroen", "C2", "Economy", "Hatchback", 4, 2, "MANUAL", "PETROL", ["National/Enterprise"]),
+
+  m("mg-rx5", "MG", "RX5", "SUV", "SUV", 5, 3, "AUTOMATIC", "PETROL", ["Carwiz Jordan"]),
+  m("hyundai-i10", "Hyundai", "i10", "Economy", "Hatchback", 5, 2, "AUTOMATIC", "PETROL", ["Carwiz Jordan"]),
+  m("peugeot-208", "Peugeot", "208", "Compact", "Hatchback", 5, 2, "AUTOMATIC", "PETROL", ["Carwiz Jordan"]),
+  m("mg-5", "MG", "5", "Sedan", "Sedan", 5, 3, "AUTOMATIC", "PETROL", ["Carwiz Jordan"], ["MG5"]),
+  m("kia-pegas", "Kia", "Pegas", "Compact", "Sedan", 5, 2, "AUTOMATIC", "PETROL", ["Carwiz Jordan"]),
+  m("hyundai-santa-fe", "Hyundai", "Santa Fe", "SUV", "7-seat SUV", 7, 4, "AUTOMATIC", "PETROL", ["Eras Car Rental"]),
 ];
 
 export function searchJordanRentalMarket(input: {q?: string | undefined; make?: string | undefined; category?: string | undefined; limit?: number | undefined} = {}) {

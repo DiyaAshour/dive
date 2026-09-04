@@ -1,0 +1,1 @@
+ALTER TYPE "CarCatalogAssetProvider" ADD VALUE IF NOT EXISTS 'HANDMEKEY';

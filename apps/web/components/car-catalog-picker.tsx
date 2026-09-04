@@ -67,7 +67,7 @@ export function CarCatalogPicker({locale}:Props){
         const encoded=encodeURIComponent(query);
         const [catalogResponse,marketResponse]=await Promise.all([
           fetch(`/api/v1/cars/catalog?q=${encoded}&limit=24`,{signal:controller.signal}),
-          fetch(`/api/v1/cars/jordan-market?q=${encoded}&limit=36`,{signal:controller.signal}),
+          fetch(`/api/v1/cars/jordan-market?q=${encoded}&limit=100`,{signal:controller.signal}),
         ]);
         const [catalogPayload,marketPayload]=await Promise.all([catalogResponse.json(),marketResponse.json()]);
         if(!catalogResponse.ok)throw new Error(catalogPayload?.error?.message||"Catalog request failed");
