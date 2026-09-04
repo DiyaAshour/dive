@@ -1,0 +1,141 @@
+@media (max-width: 640px) {
+  .heroScene {
+    height: 560px !important;
+    min-height: 560px !important;
+    padding: 26px 0 72px !important;
+    overflow: hidden !important;
+  }
+
+  :global([dir="ltr"]) .heroScene {
+    background-size: auto 100% !important;
+    background-position: 66% center !important;
+  }
+
+  :global([dir="rtl"]) .heroScene {
+    background-size: auto 100% !important;
+    background-position: 34% center !important;
+  }
+
+  .heroInner {
+    width: calc(100% - 26px) !important;
+    min-height: 0 !important;
+    display: block !important;
+    margin-inline: auto !important;
+  }
+
+  .heroCopy {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  .heroCopy > span:first-child {
+    margin-bottom: 8px !important;
+    font-size: 8.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .heroCopy h1 {
+    max-width: 290px !important;
+    font-size: 36px !important;
+    line-height: .93 !important;
+    letter-spacing: -.045em !important;
+  }
+
+  :global([dir="rtl"]) .heroCopy h1 {
+    max-width: 292px !important;
+    margin-inline-start: auto !important;
+    font-size: 35px !important;
+    line-height: 1 !important;
+    letter-spacing: -.02em !important;
+  }
+
+  .heroCopy h1 strong {
+    margin-top: 1px !important;
+  }
+
+  .heroCopy > p {
+    max-width: 290px !important;
+    margin-top: 8px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+  }
+
+  :global([dir="rtl"]) .heroCopy > p {
+    margin-inline-start: auto !important;
+  }
+
+  .trustRow {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 12px !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .trustRow > div {
+    min-width: 0 !important;
+    min-height: 62px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 6px 4px !important;
+    border: 1px solid rgba(218,225,232,.92) !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.91) !important;
+    box-shadow: 0 5px 15px rgba(16,40,64,.06) !important;
+    backdrop-filter: blur(7px) !important;
+    text-align: center !important;
+  }
+
+  .trustRow > div > span {
+    flex: 0 0 25px !important;
+    width: 25px !important;
+    height: 25px !important;
+    border-radius: 8px !important;
+  }
+
+  .trustRow > div > span svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .trustRow strong {
+    font-size: 8.5px !important;
+    line-height: 1.08 !important;
+    text-align: center !important;
+  }
+
+  .trustRow small {
+    display: none !important;
+  }
+
+  .heroVisual {
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .searchShell {
+    width: calc(100% - 12px) !important;
+    margin: -28px auto 0 !important;
+    z-index: 40 !important;
+  }
+
+  .searchShell > :first-child {
+    width: min(258px, 82%) !important;
+    min-height: 34px !important;
+    margin-bottom: -34px !important;
+  }
+}
