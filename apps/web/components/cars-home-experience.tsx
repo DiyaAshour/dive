@@ -5,13 +5,11 @@ import { demoCars } from "@/lib/demo-cars";
 import styles from "./cars-home-experience.module.css";
 import polish from "./cars-home-polish.module.css";
 import backgroundFix from "./cars-home-background-fix.module.css";
+import { CARS_HERO_BACKGROUND_DATA_URI } from "./cars-hero-bg/data";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
 type ShowcaseProps = Readonly<{locale: Locale}>;
-
-const HERO_CAR_IMAGE = "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=1800";
-const HERO_CITY_IMAGE = "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=2400&q=92";
 
 const categoryConfig = [
   {id: "kia-picanto", ar: "سيارات صغيرة", en: "Small cars"},
@@ -57,7 +55,11 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
     comingSoon: "Soon",
   };
 
-  return <div className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`} data-cars-reference="true" style={{"--hero-city": `url(${HERO_CITY_IMAGE})`} as React.CSSProperties}>
+  return <div
+    className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`}
+    data-cars-reference="true"
+    style={{"--hero-full-bg": `url("${CARS_HERO_BACKGROUND_DATA_URI}")`} as React.CSSProperties}
+  >
     <div className={`${styles.heroInner} ${polish.heroInner}`}>
       <div className={`${styles.heroCopy} ${polish.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
         <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
@@ -72,7 +74,6 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
 
       <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual}`}>
         <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark}`}>{copy.explore}</div>
-        <img src={HERO_CAR_IMAGE} alt={ar ? "سيارة دفع رباعي في مشهد سفر" : "SUV in a travel scene"}/>
       </div>
     </div>
 

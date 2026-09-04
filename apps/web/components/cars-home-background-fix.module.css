@@ -1,125 +1,103 @@
 .heroScene {
-  min-height: 628px;
+  height: clamp(585px, 42.85vw, 821px);
+  min-height: 0 !important;
+  padding-top: clamp(38px, 3vw, 58px) !important;
+  padding-bottom: 128px !important;
   background-image:
-    linear-gradient(90deg, rgba(255, 252, 246, .99) 0%, rgba(255, 252, 246, .96) 22%, rgba(255, 252, 246, .82) 38%, rgba(255, 252, 246, .34) 56%, rgba(255, 252, 246, .08) 74%, rgba(255, 252, 246, 0) 100%),
-    var(--hero-city) !important;
-  background-size: cover !important;
-  background-position: 60% 48% !important;
+    linear-gradient(90deg, rgba(255,252,246,.30) 0%, rgba(255,252,246,.16) 23%, rgba(255,252,246,.03) 44%, rgba(255,252,246,0) 60%),
+    var(--hero-full-bg) !important;
+  background-size: 100% 100% !important;
+  background-position: center center !important;
   background-repeat: no-repeat !important;
+  background-color: #f5efe3 !important;
+  overflow: visible !important;
 }
 
 .heroScene::before {
-  background:
-    radial-gradient(circle at 9% 34%, rgba(255,255,255,.68), rgba(255,255,255,0) 36%),
-    linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 48%, rgba(12,34,54,.035)) !important;
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0) 72%, rgba(16,40,64,.025)) !important;
 }
 
 .heroVisual {
-  min-height: 448px;
+  min-height: clamp(370px, 27vw, 500px);
   overflow: visible !important;
   background: transparent !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
 
-.heroVisual::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: 6% -2% 0 4%;
-  background: radial-gradient(ellipse at 56% 58%, rgba(255,255,255,.24) 0%, rgba(255,255,255,.10) 42%, rgba(255,255,255,0) 72%);
-  filter: blur(10px);
-  pointer-events: none;
-}
-
-.heroVisual::after {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(255,252,246,.72) 0%, rgba(255,252,246,.28) 12%, rgba(255,252,246,0) 28%),
-    linear-gradient(180deg, rgba(255,255,255,0) 62%, rgba(255,252,246,.08) 82%, rgba(255,252,246,.22) 100%);
-}
-
+.heroVisual::before,
+.heroVisual::after,
 .heroVisual img {
-  position: absolute !important;
-  z-index: 1 !important;
-  right: -2% !important;
-  bottom: -3% !important;
-  width: 106% !important;
-  height: 466px !important;
-  object-fit: cover !important;
-  object-position: 58% 55% !important;
-  transform: scale(1.08) !important;
-  border-radius: 0 !important;
-  filter: saturate(.62) sepia(.06) contrast(1.05) brightness(1.10) !important;
-  -webkit-mask-image: radial-gradient(ellipse 53% 53% at 58% 57%, #000 0%, #000 49%, rgba(0,0,0,.94) 57%, rgba(0,0,0,.60) 66%, rgba(0,0,0,.22) 72%, transparent 79%) !important;
-  mask-image: radial-gradient(ellipse 53% 53% at 58% 57%, #000 0%, #000 49%, rgba(0,0,0,.94) 57%, rgba(0,0,0,.60) 66%, rgba(0,0,0,.22) 72%, transparent 79%) !important;
+  display: none !important;
 }
 
 .exploreMark {
-  top: 40px !important;
-  right: 4px !important;
+  top: 44px !important;
+  right: 3% !important;
   z-index: 4 !important;
-  font-size: clamp(31px, 2.8vw, 46px) !important;
+  font-size: clamp(34px, 3vw, 52px) !important;
   transform: rotate(-6deg) !important;
+  text-shadow: 0 4px 18px rgba(9,27,43,.24) !important;
 }
 
 @media (max-width: 1180px) {
   .heroScene {
-    background-position: 57% 50% !important;
+    height: clamp(585px, 51vw, 650px);
   }
 
-  .heroVisual img {
-    right: -5% !important;
-    width: 112% !important;
+  .heroVisual {
+    min-height: 370px;
+  }
+
+  .exploreMark {
+    right: 2% !important;
   }
 }
 
 @media (max-width: 900px) {
   .heroScene {
+    height: 760px;
+    min-height: 760px !important;
+    padding-top: 28px !important;
+    padding-bottom: 118px !important;
     background-image:
-      linear-gradient(180deg, rgba(255,252,246,.99) 0%, rgba(255,252,246,.93) 40%, rgba(255,252,246,.56) 62%, rgba(255,252,246,.20) 78%, rgba(16,40,64,.06) 100%),
-      var(--hero-city) !important;
-    background-position: 58% 50% !important;
+      linear-gradient(180deg, rgba(255,252,246,.94) 0%, rgba(255,252,246,.78) 32%, rgba(255,252,246,.22) 55%, rgba(255,252,246,0) 72%),
+      var(--hero-full-bg) !important;
+    background-size: auto 100% !important;
+    background-position: 58% center !important;
   }
 
   .heroVisual {
-    min-height: 300px;
+    min-height: 292px;
   }
 
-  .heroVisual img {
-    right: -1% !important;
-    bottom: -2% !important;
-    width: 102% !important;
-    height: 335px !important;
-    transform: scale(1.04) !important;
-    -webkit-mask-image: radial-gradient(ellipse 56% 55% at 58% 57%, #000 0%, #000 50%, rgba(0,0,0,.88) 62%, rgba(0,0,0,.35) 72%, transparent 82%) !important;
-    mask-image: radial-gradient(ellipse 56% 55% at 58% 57%, #000 0%, #000 50%, rgba(0,0,0,.88) 62%, rgba(0,0,0,.35) 72%, transparent 82%) !important;
+  .exploreMark {
+    top: 22px !important;
+    right: 4% !important;
+    font-size: 36px !important;
   }
 }
 
 @media (max-width: 640px) {
   .heroScene {
-    background-position: 61% 48% !important;
+    height: 680px;
+    min-height: 680px !important;
+    padding-top: 22px !important;
+    padding-bottom: 108px !important;
+    background-position: 61% center !important;
   }
 
   .heroVisual {
-    min-height: 236px;
-  }
-
-  .heroVisual img {
-    right: -10% !important;
-    width: 120% !important;
-    height: 268px !important;
-    transform: scale(1.01) !important;
+    min-height: 228px;
   }
 
   .exploreMark {
-    top: 17px !important;
-    right: 0 !important;
-    font-size: 27px !important;
+    top: 16px !important;
+    right: 2% !important;
+    font-size: 28px !important;
   }
 }
