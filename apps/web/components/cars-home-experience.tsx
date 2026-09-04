@@ -23,29 +23,29 @@ const popularIds = ["toyota-corolla", "kia-sportage", "hyundai-elantra", "nissan
 export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: HeroProps) {
   const ar = locale === "ar";
   const copy = ar ? {
-    kicker: "DRIVE MORE. WORRY LESS.",
-    lineOne: "سيارتك القادمة",
-    lineTwo: "بانتظارك",
-    intro: "اكتشف أفضل أسعار تأجير السيارات في الأردن من شركات موثوقة بخطوات سهلة وسريعة.",
-    clear: "أسعار شفافة",
+    kicker: "انطلق بثقة. واستمتع بالطريق.",
+    lineOne: "رحلتك تبدأ",
+    lineTwo: "من هنا",
+    intro: "قارن بين شركات تأجير موثوقة، وشاهد الأسعار بوضوح، واحجز سيارتك بخطوات بسيطة.",
+    clear: "أسعار واضحة",
     clearSub: "بدون رسوم مخفية",
     trusted: "شركات موثوقة",
-    trustedSub: "ومعتمدة",
-    support: "دعم على مدار الساعة",
-    supportSub: "لمساعدتك دائمًا",
+    trustedSub: "شركات معتمدة",
+    support: "دعم 24/7",
+    supportSub: "معك وقتما تحتاجنا",
     explore: "Explore Jordan",
     rental: "تأجير السيارات",
     transfer: "نقل من المطار",
     comingSoon: "قريبًا",
   } : {
-    kicker: "DRIVE MORE. WORRY LESS.",
-    lineOne: "Your next car",
-    lineTwo: "is waiting",
-    intro: "Discover clear car-rental prices in Jordan from trusted companies, with a fast and simple booking flow.",
-    clear: "Transparent prices",
+    kicker: "DRIVE WITH CONFIDENCE.",
+    lineOne: "Your journey",
+    lineTwo: "starts here.",
+    intro: "Compare trusted rental companies, see clear prices, and book your car in just a few steps.",
+    clear: "Clear pricing",
     clearSub: "No hidden fees",
-    trusted: "Trusted companies",
-    trustedSub: "Verified partners",
+    trusted: "Trusted rentals",
+    trustedSub: "Verified companies",
     support: "24/7 support",
     supportSub: "Here when you need us",
     explore: "Explore Jordan",
@@ -62,7 +62,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
     >
       <div className={`${styles.heroInner} ${polish.heroInner}`}>
         <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
-          <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
+          <span className={`${styles.kicker} ${polish.kicker} ${backgroundFix.kicker}`}>{copy.kicker}</span>
           <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
           <p>{copy.intro}</p>
           <div className={`${styles.trustRow} ${polish.trustRow}`}>
