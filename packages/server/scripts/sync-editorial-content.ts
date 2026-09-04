@@ -76,19 +76,20 @@ async function resolveActorUserId(){
     return user.id;
   }
 
-  // Safe zero-config fallback for installations that still have exactly one platform admin.
-  // Never guess between multiple admins because all blog writes are audit-attributed.
-  const admins=await database().user.findMany({
-    where:{platformRole:"PLATFORM_ADMIN"},
-    select:{id:true,email:true},
+  // Match the platform bootstrap security model: an interactive admin has a password credential.
+  // Non-interactive PLATFORM_ADMIN identities are ignored for editorial audit attribution.
+  // If more than one interactive admin exists, never guess between them.
+  const interactiveAdmins=await database().user.findMany({
+    where:{platformRole:"PLATFORM_ADMIN",credential:{isNot:null}},
+    select:{id:true},
     orderBy:{createdAt:"asc"},
     take:2,
   });
-  if(admins.length===1){
-    console.log(`[editorial-sync] using sole PLATFORM_ADMIN actor ${admins[0]!.email}`);
-    return admins[0]!.id;
+  if(interactiveAdmins.length===1){
+    console.log("[editorial-sync] using sole interactive PLATFORM_ADMIN audit actor");
+    return interactiveAdmins[0]!.id;
   }
-  if(admins.length>1)console.log("[editorial-sync] multiple PLATFORM_ADMIN users found; set PLATFORM_OWNER_USER_ID to choose audit actor");
+  if(interactiveAdmins.length>1)console.log("[editorial-sync] multiple interactive PLATFORM_ADMIN users found; set PLATFORM_OWNER_USER_ID to choose audit actor");
   return null;
 }
 
