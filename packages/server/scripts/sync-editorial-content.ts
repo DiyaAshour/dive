@@ -76,9 +76,25 @@ async function resolveActorUserId(){
     return user.id;
   }
 
-  // Match the platform bootstrap security model: an interactive admin has a password credential.
-  // Non-interactive PLATFORM_ADMIN identities are ignored for editorial audit attribution.
-  // If more than one interactive admin exists, never guess between them.
+  // The first interactive platform owner is recorded authoritatively when admin
+  // bootstrap succeeds. Prefer that audit identity over guessing among later admins.
+  const bootstrap=await database().auditLog.findFirst({
+    where:{action:"PLATFORM_ADMIN_BOOTSTRAPPED",entityType:"User",actorUserId:{not:null}},
+    select:{actorUserId:true},
+    orderBy:{createdAt:"asc"},
+  });
+  if(bootstrap?.actorUserId){
+    const owner=await database().user.findUnique({
+      where:{id:bootstrap.actorUserId},
+      select:{id:true,platformRole:true},
+    });
+    if(owner?.platformRole==="PLATFORM_ADMIN"){
+      console.log("[editorial-sync] using bootstrap PLATFORM_ADMIN audit actor");
+      return owner.id;
+    }
+  }
+
+  // Last safe fallback: exactly one interactive platform admin.
   const interactiveAdmins=await database().user.findMany({
     where:{platformRole:"PLATFORM_ADMIN",credential:{isNot:null}},
     select:{id:true},
@@ -89,7 +105,7 @@ async function resolveActorUserId(){
     console.log("[editorial-sync] using sole interactive PLATFORM_ADMIN audit actor");
     return interactiveAdmins[0]!.id;
   }
-  if(interactiveAdmins.length>1)console.log("[editorial-sync] multiple interactive PLATFORM_ADMIN users found; set PLATFORM_OWNER_USER_ID to choose audit actor");
+  if(interactiveAdmins.length>1)console.log("[editorial-sync] multiple interactive PLATFORM_ADMIN users found and no bootstrap owner could be resolved; set PLATFORM_OWNER_USER_ID");
   return null;
 }
 
