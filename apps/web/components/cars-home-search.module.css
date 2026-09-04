@@ -27,6 +27,7 @@
 .ageField select{display:block;width:100%;min-width:0;margin:0;padding:2px 24px 2px 0;border:0;outline:0;background:transparent;color:#12263d;font:inherit;font-size:14px;font-weight:820;appearance:none;cursor:pointer}
 :global([dir="rtl"]) .ageField select{padding:2px 0 2px 24px}
 .searchButton{white-space:nowrap}
+.searchButton span{display:inline!important}
 
 @media (max-width:1050px){
   .dateButton strong,.ageField select{font-size:13px}
