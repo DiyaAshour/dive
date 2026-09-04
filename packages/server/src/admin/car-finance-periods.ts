@@ -16,6 +16,8 @@ type CloseMonthInput = Readonly<{
   notes?: string;
 }>;
 
+const PLATFORM_ELIGIBLE_STATUSES = ["CONFIRMED", "MODIFIED", "COMPLETED"] as const;
+
 export async function getAdminCarFinancePeriods(adminUserId: string, filters: FinanceFilters = {}) {
   const finance = await getAdminCarFinance(adminUserId, filters);
   const selectedCompany = finance.selectedCompany;
@@ -31,29 +33,63 @@ export async function getAdminCarFinancePeriods(adminUserId: string, filters: Fi
     };
   }
 
-  const rows = finance.reservations
+  // Finance must never hide a reservation simply because it was created in a
+  // different month. The month view is primarily the rental/service month, so
+  // any reservation whose pickup/return interval overlaps the selected month is
+  // visible. Financial recognition is still calculated separately below.
+  const db = database();
+  const periodRange = inclusiveRange(finance.period.from, finance.period.to);
+  const alreadyLoadedIds = new Set(finance.reservations.map((row) => row.id));
+  const rentalReservations = await db.carReservation.findMany({
+    where: {
+      companyId: selectedCompany.id,
+      pickupAt: { lt: periodRange.endExclusive },
+      returnAt: { gte: periodRange.start },
+      ...(alreadyLoadedIds.size ? { id: { notIn: [...alreadyLoadedIds] } } : {}),
+    },
+    orderBy: { pickupAt: "asc" },
+    take: 500,
+    include: { vehicle: true },
+  });
+
+  const extraReservationIds = rentalReservations.map((row) => row.id);
+  const extraSettlementItems = extraReservationIds.length
+    ? await db.carFinanceSettlementItem.findMany({
+        where: { reservationId: { in: extraReservationIds } },
+        select: { reservationId: true, settlementId: true },
+      })
+    : [];
+  const extraSettlementByReservation = new Map(extraSettlementItems.map((item) => [item.reservationId, item.settlementId]));
+  const sourceRows = [
+    ...finance.reservations,
+    ...rentalReservations.map((row) => financeReservation(row, extraSettlementByReservation.get(row.id) ?? null)),
+  ];
+
+  const rows = sourceRows
     .map((row) => {
-      const bookingDate = row.createdAt.slice(0, 10);
-      const bookedInPeriod = bookingDate >= finance.period.from && bookingDate <= finance.period.to;
+      const pickupDate = row.pickupAt.slice(0, 10);
+      const returnDate = row.returnAt.slice(0, 10);
+      const rentalInPeriod = pickupDate <= finance.period.to && returnDate >= finance.period.from;
       const accountingDate = row.collectedBy === "HANDMEKEY" || row.paymentMode === "PAY_NOW"
-        ? bookingDate
-        : row.returnAt.slice(0, 10);
+        ? row.createdAt.slice(0, 10)
+        : returnDate;
       const financeRecognizedInPeriod = accountingDate >= finance.period.from && accountingDate <= finance.period.to;
 
       return {
         ...row,
-        bookedInPeriod,
+        rentalInPeriod,
         financeRecognizedInPeriod,
         financeRecognitionDate: accountingDate,
         financeEligible: row.financeEligible && financeRecognizedInPeriod,
-        periodRole: bookedInPeriod
+        periodRole: rentalInPeriod
           ? financeRecognizedInPeriod
-            ? "BOOKED_AND_RECOGNIZED"
-            : "BOOKED_PENDING"
+            ? "RENTAL_AND_RECOGNIZED"
+            : "RENTAL_PENDING"
           : "RECOGNIZED_CARRYOVER",
       };
     })
-    .filter((row) => row.bookedInPeriod || row.financeRecognizedInPeriod);
+    .filter((row) => row.rentalInPeriod || row.financeRecognizedInPeriod)
+    .sort((a, b) => a.pickupAt.localeCompare(b.pickupAt));
 
   const eligible = rows.filter((row) => row.financeEligible);
   const unsettled = eligible.filter((row) => !row.settlementId);
@@ -214,6 +250,41 @@ export async function closeAdminCarFinanceMonth(adminUserId: string, input: Clos
   return serializePeriodSettlement(created);
 }
 
+function financeReservation(row: any, settlementId: string | null) {
+  const total = Number(row.total);
+  const commissionRate = Number(row.commissionRate);
+  const platformCommission = Number(row.commissionAmount);
+  const collectedBy = row.paymentCollector === "HANDMEKEY" ? "HANDMEKEY" : "COMPANY";
+  const onlineCollection = row.paymentMode === "PAY_NOW";
+  const financeEligible = collectedBy === "HANDMEKEY" || onlineCollection
+    ? PLATFORM_ELIGIBLE_STATUSES.some((status) => status === row.status)
+    : row.status === "COMPLETED";
+  const companyPayable = financeEligible && collectedBy === "HANDMEKEY" ? roundMoney(total - platformCommission) : 0;
+  const commissionReceivable = financeEligible && collectedBy === "COMPANY" ? platformCommission : 0;
+
+  return {
+    id: row.id,
+    reference: row.reference,
+    guestName: row.guestName,
+    vehicle: `${row.vehicle.make} ${row.vehicle.model}`,
+    status: row.status,
+    paymentMode: row.paymentMode,
+    collectedBy,
+    financeEligible,
+    currency: row.currency,
+    total,
+    commissionRate,
+    platformCommission,
+    companyPayable,
+    commissionReceivable,
+    netCompanyDelta: roundMoney(companyPayable - commissionReceivable),
+    settlementId,
+    pickupAt: row.pickupAt.toISOString(),
+    returnAt: row.returnAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
 function isApplicationErrorCode(error: unknown, code: string) {
   return Boolean(error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === code);
 }
@@ -261,6 +332,13 @@ function monthLabel(value: string) {
 
 function validDateString(value?: string): value is string {
   return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime()));
+}
+
+function inclusiveRange(from: string, to: string) {
+  return {
+    start: new Date(`${from}T00:00:00.000Z`),
+    endExclusive: new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 86_400_000),
+  };
 }
 
 function moneySum(values: number[]) {
