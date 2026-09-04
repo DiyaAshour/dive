@@ -11,7 +11,7 @@
 /* Keep the primary market action visible while only the options area scrolls. */
 .panel{display:flex;flex-direction:column;height:min(760px,calc(100dvh - 96px));max-height:none;overflow:hidden}
 .head,.marketHint,.actions,.error{flex:0 0 auto}
-.grid{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-inline-end:4px}
+.grid{min-height:0;flex:1 1 auto;width:100%;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-inline-end:4px}
 .currencyOptionGrid{max-height:none;overflow:visible}
 .actions{margin:14px -18px -18px;padding:14px 18px 18px;background:rgba(255,255,255,.98);box-shadow:0 -10px 24px rgba(16,40,64,.055);backdrop-filter:blur(12px)}
 .apply{min-width:110px}
