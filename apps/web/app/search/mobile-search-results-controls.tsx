@@ -4,6 +4,7 @@ import { CalendarDays, Search, SlidersHorizontal, Users, X } from "lucide-react"
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { MobileStayDatePicker } from "./mobile-stay-date-picker";
 
 type Sheet = "search" | "filters" | null;
 
@@ -81,8 +82,7 @@ export function MobileSearchResultsControls() {
           {preservedFields(params, new Set(["destination","arrival","departure","adults","children","cursor"]))}
           <label><span>{t(locale,"Destination","الوجهة","目的地")}</span><input name="destination" defaultValue={destination} required autoComplete="off"/></label>
           <div className="mobileSearchSheetGrid">
-            <label><span>{t(locale,"Check in","تسجيل الوصول","入住")}</span><input name="arrival" type="date" defaultValue={arrival} required/></label>
-            <label><span>{t(locale,"Check out","تسجيل المغادرة","退房")}</span><input name="departure" type="date" defaultValue={departure} required/></label>
+            <MobileStayDatePicker locale={locale} defaultArrival={arrival} defaultDeparture={departure}/>
             <label><span>{t(locale,"Adults","البالغون","成人")}</span><input name="adults" type="number" min="1" max="20" defaultValue={adults} required/></label>
             <label><span>{t(locale,"Children","الأطفال","儿童")}</span><input name="children" type="number" min="0" max="20" defaultValue={children} required/></label>
           </div>
