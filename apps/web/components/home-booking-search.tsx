@@ -39,8 +39,6 @@ type GuestRow = Readonly<{
   serviceAnimal?: string;
 }>;
 
-const FLEX_OPTIONS = [0, 1, 2, 3, 7, 14] as const;
-
 export function HomeBookingSearch({locale, defaultDestination, defaultArrival, defaultDeparture, copy}: Props) {
   const safeDeparture = defaultDeparture > defaultArrival ? defaultDeparture : addDaysValue(defaultArrival, 1);
   const [arrival, setArrival] = useState(defaultArrival);
@@ -48,17 +46,10 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activeDate, setActiveDate] = useState<ActiveDate>("checkIn");
   const [calendarCursor, setCalendarCursor] = useState(() => startOfMonth(parseDate(defaultArrival)));
-  const [dateMode, setDateMode] = useState<"dates" | "flexible">("dates");
-  const [flexDays, setFlexDays] = useState<number>(0);
   const [guests, setGuests] = useState<Guests>({adults: 2, children: 0, infants: 0, pets: 0});
   const rootRef = useRef<HTMLDivElement>(null);
 
   const dictionary = locale === "ar" ? {
-    dates: "التواريخ",
-    flexible: "مرن",
-    exactDates: "تواريخ محددة",
-    day: "يوم",
-    days: "أيام",
     adults: "البالغون",
     adultsHint: "13 سنة فأكثر",
     children: "الأطفال",
@@ -78,11 +69,6 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
     chooseCheckIn: "اختر تاريخ الوصول",
     chooseCheckOut: "اختر تاريخ المغادرة",
   } : {
-    dates: "Dates",
-    flexible: "Flexible",
-    exactDates: "Exact dates",
-    day: "day",
-    days: "days",
     adults: "Adults",
     adultsHint: "Ages 13 or above",
     children: "Children",
@@ -154,11 +140,6 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
     setGuests((current) => ({...current, [key]: Math.min(max, Math.max(min, current[key] + delta))}));
   }
 
-  function selectFlex(days: number) {
-    setFlexDays(days);
-    setDateMode(days === 0 ? "dates" : "flexible");
-  }
-
   return <div className={styles.root} ref={rootRef}>
     <span
       className="premiumSearchDock"
@@ -215,17 +196,11 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
       <input type="hidden" name="children" value={guests.children}/>
       <input type="hidden" name="infants" value={guests.infants}/>
       <input type="hidden" name="pets" value={guests.pets}/>
-      <input type="hidden" name="flexibleDays" value={flexDays}/>
 
       <button className={styles.searchButton} type="submit"><Search size={19}/><span>{copy.search}</span></button>
     </form>
 
     {openPanel === "dates" && <div className={styles.datePanel} role="dialog" aria-label={activeDate === "checkIn" ? dictionary.chooseCheckIn : dictionary.chooseCheckOut}>
-      <div className={styles.segmented}>
-        <button type="button" className={dateMode === "dates" ? styles.segmentActive : ""} onClick={() => {setDateMode("dates"); setFlexDays(0);}}>{dictionary.dates}</button>
-        <button type="button" className={dateMode === "flexible" ? styles.segmentActive : ""} onClick={() => {setDateMode("flexible"); if (flexDays === 0) setFlexDays(1);}}>{dictionary.flexible}</button>
-      </div>
-
       <div className={styles.calendarHeaderMobile}>{activeDate === "checkIn" ? copy.checkIn : copy.checkOut}</div>
       <div className={styles.months}>
         <MonthCalendar
@@ -246,15 +221,6 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
           onSelect={chooseDate}
           nextAction={<button type="button" className={styles.monthArrow} aria-label={dictionary.nextMonth} onClick={() => setCalendarCursor((month) => addMonths(month, 1))}><ChevronRight size={19}/></button>}
         />
-      </div>
-
-      <div className={styles.flexRow}>
-        {FLEX_OPTIONS.map((days) => <button
-          key={days}
-          type="button"
-          className={flexDays === days ? styles.flexActive : ""}
-          onClick={() => selectFlex(days)}
-        >{days === 0 ? <><CalendarDays size={14}/>{dictionary.exactDates}</> : `± ${days} ${days === 1 ? dictionary.day : dictionary.days}`}</button>)}
       </div>
     </div>}
 
