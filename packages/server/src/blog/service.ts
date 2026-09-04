@@ -77,6 +77,15 @@ export async function listBlogFeedEntries(limit = 30) {
   });
 }
 
+export async function getPublicBlogAsset(assetId: string) {
+  const asset = await database().blogAsset.findUnique({
+    where: {id: assetId},
+    select: {contentType: true, bytes: true, originalFileName: true, sizeBytes: true, createdAt: true},
+  });
+  if (!asset) notFound("Blog asset");
+  return asset;
+}
+
 export async function listAdminBlogPosts(actorUserId: string, filters: {query?: string; status?: string; locale?: string; category?: string} = {}) {
   await requirePlatformAdmin(actorUserId);
   const status = validStatus(filters.status) ? filters.status : undefined;
@@ -116,6 +125,20 @@ export async function getAdminBlogPost(actorUserId: string, postId: string) {
   const post = await database().blogPost.findUnique({where: {id: postId}});
   if (!post) notFound("Blog post");
   return post;
+}
+
+export async function createAdminBlogAsset(actorUserId: string, input: {contentType: string; bytes: Uint8Array; originalFileName: string}) {
+  const actor = await requirePlatformAdmin(actorUserId);
+  return database().blogAsset.create({
+    data: {
+      contentType: input.contentType,
+      bytes: input.bytes,
+      originalFileName: input.originalFileName,
+      sizeBytes: input.bytes.byteLength,
+      createdByUserId: actor.id,
+    },
+    select: {id: true, contentType: true, originalFileName: true, sizeBytes: true, createdAt: true},
+  });
 }
 
 export async function createAdminBlogPost(actorUserId: string, rawInput: BlogPostInput) {
