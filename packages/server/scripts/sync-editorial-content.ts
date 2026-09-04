@@ -23,26 +23,33 @@ async function main(){
     return;
   }
 
-  let created=0,updated=0,unchanged=0;
+  let created=0,updated=0,unchanged=0,protectedCount=0;
   for(const file of files){
-    const input=await readArticle(file);
-    const existing=await database().blogPost.findFirst({where:{locale:input.locale,slug:input.slug}});
-    if(existing&&sameArticle(existing,input)){
-      unchanged++;
-      console.log(`[editorial-sync] unchanged ${input.locale}/${input.slug}`);
-      continue;
-    }
-    if(existing){
-      await updateAdminBlogPost(actorUserId,existing.id,input);
-      updated++;
-      console.log(`[editorial-sync] updated draft ${input.locale}/${input.slug}`);
-    }else{
-      await createAdminBlogPost(actorUserId,input);
-      created++;
-      console.log(`[editorial-sync] created draft ${input.locale}/${input.slug}`);
+    const articles=await readArticles(file);
+    for(const input of articles){
+      const existing=await database().blogPost.findFirst({where:{locale:input.locale,slug:input.slug}});
+      if(existing&&existing.status!=="DRAFT"){
+        protectedCount++;
+        console.log(`[editorial-sync] protected ${existing.status.toLowerCase()} ${input.locale}/${input.slug}`);
+        continue;
+      }
+      if(existing&&sameArticle(existing,input)){
+        unchanged++;
+        console.log(`[editorial-sync] unchanged ${input.locale}/${input.slug}`);
+        continue;
+      }
+      if(existing){
+        await updateAdminBlogPost(actorUserId,existing.id,input);
+        updated++;
+        console.log(`[editorial-sync] updated draft ${input.locale}/${input.slug}`);
+      }else{
+        await createAdminBlogPost(actorUserId,input);
+        created++;
+        console.log(`[editorial-sync] created draft ${input.locale}/${input.slug}`);
+      }
     }
   }
-  console.log(`[editorial-sync] complete: ${created} created, ${updated} updated, ${unchanged} unchanged`);
+  console.log(`[editorial-sync] complete: ${created} created, ${updated} updated, ${unchanged} unchanged, ${protectedCount} published/archived protected`);
 }
 
 async function listJsonFiles(){
@@ -67,16 +74,20 @@ async function resolveActorUserId(){
   return user.id;
 }
 
-async function readArticle(file:string):Promise<BlogPostInput>{
-  const raw=JSON.parse(await readFile(file,"utf8")) as Record<string,unknown>;
-  // Repository-driven editorial content is deliberately forced to DRAFT.
-  // Publishing remains a conscious action in the HandMeKey admin editor.
-  const parsed=blogPostInputSchema.safeParse({...raw,status:"DRAFT"});
-  if(!parsed.success){
-    const detail=parsed.error.issues.map(issue=>`${issue.path.join(".")||"article"}: ${issue.message}`).join(" | ");
-    throw new Error(`[editorial-sync] invalid ${path.basename(file)}: ${detail}`);
-  }
-  return parsed.data;
+async function readArticles(file:string):Promise<BlogPostInput[]>{
+  const raw=JSON.parse(await readFile(file,"utf8")) as unknown;
+  const rows=Array.isArray(raw)?raw:[raw];
+  return rows.map((row,index)=>{
+    if(!row||typeof row!=="object")throw new Error(`[editorial-sync] invalid ${path.basename(file)} item ${index+1}: expected an object`);
+    // Repository-driven editorial content is deliberately forced to DRAFT.
+    // Publishing remains a conscious action in the HandMeKey admin editor.
+    const parsed=blogPostInputSchema.safeParse({...row,status:"DRAFT"});
+    if(!parsed.success){
+      const detail=parsed.error.issues.map(issue=>`${issue.path.join(".")||"article"}: ${issue.message}`).join(" | ");
+      throw new Error(`[editorial-sync] invalid ${path.basename(file)} item ${index+1}: ${detail}`);
+    }
+    return parsed.data;
+  });
 }
 
 function sameArticle(existing:{
