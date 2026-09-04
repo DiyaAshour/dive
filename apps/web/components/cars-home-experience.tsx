@@ -5,6 +5,7 @@ import { demoCars } from "@/lib/demo-cars";
 import styles from "./cars-home-experience.module.css";
 import polish from "./cars-home-polish.module.css";
 import backgroundFix from "./cars-home-background-fix.module.css";
+import copyFix from "./cars-home-copy-fix.module.css";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
@@ -61,11 +62,11 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
       style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
     >
       <div className={`${styles.heroInner} ${polish.heroInner}`}>
-        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
-          <span className={`${styles.kicker} ${polish.kicker} ${backgroundFix.kicker}`}>{copy.kicker}</span>
+        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${copyFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
+          <span className={`${styles.kicker} ${polish.kicker} ${backgroundFix.kicker} ${copyFix.kicker}`}>{copy.kicker}</span>
           <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
           <p>{copy.intro}</p>
-          <div className={`${styles.trustRow} ${polish.trustRow}`}>
+          <div className={`${styles.trustRow} ${polish.trustRow} ${copyFix.trustRow}`}>
             <div><span><Tag size={21}/></span><p><strong>{copy.clear}</strong><small>{copy.clearSub}</small></p></div>
             <div><span><ShieldCheck size={21}/></span><p><strong>{copy.trusted}</strong><small>{copy.trustedSub}</small></p></div>
             <div><span><Headphones size={21}/></span><p><strong>{copy.support}</strong><small>{copy.supportSub}</small></p></div>
