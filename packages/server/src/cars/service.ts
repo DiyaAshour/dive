@@ -13,6 +13,7 @@ export type CreateCarCompanyInput = Readonly<{
 }>;
 
 export type CreateCarVehicleInput = Readonly<{
+  catalogVehicleId?: string;
   make: string;
   model: string;
   year: number;
@@ -151,51 +152,77 @@ export async function getCarDashboard(userId: string) {
 
 export async function listCarCompanyVehicles(userId: string) {
   const membership = await requireCompany(userId);
-  const rows = await database().carVehicle.findMany({
+  const db = database();
+  const rows = await db.carVehicle.findMany({
     where: {companyId: membership.companyId},
     orderBy: [{status: "asc"}, {createdAt: "desc"}],
     include: {homeLocation: true},
   });
-  return rows.map((row) => serializeVehicle(row));
+  const links = rows.length ? await db.carVehicleCatalogLink.findMany({
+    where: {vehicleId: {in: rows.map((row) => row.id)}},
+    include: {catalogVehicle: true},
+  }) : [];
+  const catalogByVehicle = new Map(links.map((link) => [link.vehicleId, link.catalogVehicle]));
+  return rows.map((row) => serializeVehicle(row, catalogByVehicle.get(row.id)));
 }
 
 export async function createCarVehicle(userId: string, input: CreateCarVehicleInput) {
   const membership = await requireCompany(userId);
-  if (input.year < 1990 || input.year > new Date().getUTCFullYear() + 1) badRequest("CAR_YEAR_INVALID", "Vehicle year is invalid");
-  if (input.seats < 1 || input.seats > 16) badRequest("CAR_SEATS_INVALID", "Vehicle seat count is invalid");
+  const db = database();
+  const catalog = input.catalogVehicleId ? await db.carCatalogVehicle.findFirst({where: {id: input.catalogVehicleId, active: true}}) : null;
+  if (input.catalogVehicleId && !catalog) notFound("Car catalog vehicle");
+
+  const year = catalog?.year ?? input.year;
+  const seats = catalog?.seats ?? input.seats;
+  const make = catalog?.make ?? input.make.trim();
+  const model = catalog ? [catalog.model, catalog.trim].filter(Boolean).join(" ") : input.model.trim();
+  const category = catalog?.category ?? input.category.trim();
+  const transmission = catalog?.transmission ?? input.transmission;
+  const fuel = catalog?.fuel ?? input.fuel;
+  const bags = catalog?.bags ?? input.bags ?? 2;
+  const doors = catalog?.doors ?? input.doors ?? 4;
+
+  if (year < 1990 || year > new Date().getUTCFullYear() + 1) badRequest("CAR_YEAR_INVALID", "Vehicle year is invalid");
+  if (seats < 1 || seats > 16) badRequest("CAR_SEATS_INVALID", "Vehicle seat count is invalid");
   if (input.dailyPrice <= 0) badRequest("CAR_PRICE_INVALID", "Daily price must be greater than zero");
   if (!Number.isFinite(input.deposit) || input.deposit <= 0) badRequest("CAR_DEPOSIT_REQUIRED", "A deposit greater than zero is required for every vehicle");
 
   if (input.homeLocationId) {
-    const location = await database().carRentalLocation.findFirst({where: {id: input.homeLocationId, companyId: membership.companyId}});
+    const location = await db.carRentalLocation.findFirst({where: {id: input.homeLocationId, companyId: membership.companyId}});
     if (!location) notFound("Car rental location");
   }
 
-  const row = await database().carVehicle.create({
-    data: {
-      companyId: membership.companyId,
-      homeLocationId: input.homeLocationId || null,
-      make: input.make.trim(),
-      model: input.model.trim(),
-      year: input.year,
-      category: input.category.trim(),
-      transmission: input.transmission,
-      fuel: input.fuel,
-      seats: input.seats,
-      bags: input.bags ?? 2,
-      doors: input.doors ?? 4,
-      dailyPrice: input.dailyPrice,
-      deposit: input.deposit,
-      freeCancellation: input.freeCancellation ?? true,
-      unlimitedMileage: input.unlimitedMileage ?? false,
-      airportPickup: input.airportPickup ?? false,
-      imageUrl: input.imageUrl?.trim() || null,
-      imageAlt: input.imageAlt?.trim() || null,
-      status: "ACTIVE",
-    },
-    include: {homeLocation: true},
+  const row = await db.$transaction(async (tx) => {
+    const vehicle = await tx.carVehicle.create({
+      data: {
+        companyId: membership.companyId,
+        homeLocationId: input.homeLocationId || null,
+        make,
+        model,
+        year,
+        category,
+        transmission,
+        fuel,
+        seats,
+        bags,
+        doors,
+        dailyPrice: input.dailyPrice,
+        deposit: input.deposit,
+        freeCancellation: input.freeCancellation ?? true,
+        unlimitedMileage: input.unlimitedMileage ?? false,
+        airportPickup: input.airportPickup ?? false,
+        imageUrl: catalog?.primaryImageUrl ?? input.imageUrl?.trim() ?? null,
+        imageAlt: catalog ? `${make} ${model} ${year}` : input.imageAlt?.trim() || null,
+        status: "ACTIVE",
+      },
+      include: {homeLocation: true},
+    });
+    if (catalog) {
+      await tx.carVehicleCatalogLink.create({data: {vehicleId: vehicle.id, catalogVehicleId: catalog.id, matchedBy: "PARTNER"}});
+    }
+    return vehicle;
   });
-  return serializeVehicle(row);
+  return serializeVehicle(row, catalog);
 }
 
 export async function listCarCompanyLocations(userId: string) {
@@ -248,32 +275,45 @@ export async function listCarCompanyReservations(userId: string) {
 }
 
 export async function listPublicCarVehicles() {
-  const rows = await database().carVehicle.findMany({
+  const db = database();
+  const rows = await db.carVehicle.findMany({
     where: {status: "ACTIVE", deposit: {gt: 0}, company: {status: "ACTIVE", verified: true}},
     orderBy: [{dailyPrice: "asc"}, {createdAt: "desc"}],
     include: {company: true, homeLocation: true},
   });
-  return rows.map((row) => ({
-    id: row.id,
-    brand: row.make,
-    model: row.model,
-    year: row.year,
-    category: row.category,
-    transmission: row.transmission === "AUTOMATIC" ? "Automatic" : "Manual",
-    fuel: titleFuel(row.fuel),
-    seats: row.seats,
-    bags: row.bags,
-    supplier: row.company.name,
-    supplierRating: 0,
-    dailyPrice: Number(row.dailyPrice),
-    deposit: Number(row.deposit),
-    freeCancellation: row.freeCancellation,
-    unlimitedMileage: row.unlimitedMileage,
-    airportPickup: row.airportPickup,
-    imageUrl: row.imageUrl,
-    imageAlt: row.imageAlt,
-    location: row.homeLocation?.name ?? row.company.city,
-  }));
+  const links = rows.length ? await db.carVehicleCatalogLink.findMany({
+    where: {vehicleId: {in: rows.map((row) => row.id)}},
+    include: {catalogVehicle: true},
+  }) : [];
+  const catalogByVehicle = new Map(links.map((link) => [link.vehicleId, link.catalogVehicle]));
+  return rows.map((row) => {
+    const catalog = catalogByVehicle.get(row.id);
+    return {
+      id: row.id,
+      brand: row.make,
+      model: row.model,
+      year: row.year,
+      category: row.category,
+      transmission: row.transmission === "AUTOMATIC" ? "Automatic" : "Manual",
+      fuel: titleFuel(row.fuel),
+      seats: row.seats,
+      bags: row.bags,
+      supplier: row.company.name,
+      supplierRating: 0,
+      dailyPrice: Number(row.dailyPrice),
+      deposit: Number(row.deposit),
+      freeCancellation: row.freeCancellation,
+      unlimitedMileage: row.unlimitedMileage,
+      airportPickup: row.airportPickup,
+      imageUrl: catalog?.primaryImageUrl ?? row.imageUrl,
+      imageAlt: catalog ? `${catalog.make} ${catalog.model}${catalog.trim ? ` ${catalog.trim}` : ""} ${catalog.year}` : row.imageAlt,
+      catalogVehicleId: catalog?.id ?? null,
+      visualProvider: catalog?.provider ?? null,
+      exterior360Available: catalog?.exterior360Available ?? false,
+      interior360Available: catalog?.interior360Available ?? false,
+      location: row.homeLocation?.name ?? row.company.city,
+    };
+  });
 }
 
 function serializeCompany(company: {
@@ -314,7 +354,7 @@ function serializeLocation(row: {id:string;companyId:string;name:string;city:str
   };
 }
 
-function serializeVehicle(row: any) {
+function serializeVehicle(row: any, catalog?: any) {
   return {
     id: row.id,
     make: row.make,
@@ -331,9 +371,22 @@ function serializeVehicle(row: any) {
     freeCancellation: row.freeCancellation,
     unlimitedMileage: row.unlimitedMileage,
     airportPickup: row.airportPickup,
-    imageUrl: row.imageUrl,
-    imageAlt: row.imageAlt,
+    imageUrl: catalog?.primaryImageUrl ?? row.imageUrl,
+    imageAlt: catalog ? `${catalog.make} ${catalog.model}${catalog.trim ? ` ${catalog.trim}` : ""} ${catalog.year}` : row.imageAlt,
     status: row.status,
+    catalog: catalog ? {
+      id: catalog.id,
+      slug: catalog.slug,
+      make: catalog.make,
+      model: catalog.model,
+      year: catalog.year,
+      generation: catalog.generation,
+      trim: catalog.trim,
+      provider: catalog.provider,
+      primaryImageUrl: catalog.primaryImageUrl,
+      exterior360Available: catalog.exterior360Available,
+      interior360Available: catalog.interior360Available,
+    } : null,
     homeLocation: row.homeLocation ? {id: row.homeLocation.id, name: row.homeLocation.name, city: row.homeLocation.city} : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

@@ -184,7 +184,41 @@ export async function deleteCarVehiclePhoto(userId: string, vehicleId: string, p
 }
 
 export async function listPublicCarVehiclePhotos(vehicleId: string) {
-  return listVehiclePhotos(vehicleId, true);
+  const db = database();
+  const [supplierPhotos, link] = await Promise.all([
+    listVehiclePhotos(vehicleId, true),
+    db.carVehicleCatalogLink.findUnique({
+      where: {vehicleId},
+      include: {
+        catalogVehicle: {
+          include: {assets: {where: {active: true}, orderBy: [{sortOrder: "asc"}, {createdAt: "asc"}], take: 160}},
+        },
+      },
+    }),
+  ]);
+
+  if (!link) return supplierPhotos;
+  const catalog = link.catalogVehicle;
+  const catalogPhotos = catalog.assets.map((asset, index) => catalogAssetView(catalog, asset, index));
+  if (catalog.primaryImageUrl && !catalog.assets.some((asset) => asset.type === "HERO")) {
+    catalogPhotos.unshift({
+      id: `catalog-primary-${catalog.id}`,
+      vehicleId,
+      category: "HERO",
+      url: catalog.primaryImageUrl,
+      originalFileName: "catalog-primary",
+      contentType: "image/webp",
+      sizeBytes: 0,
+      alt: `${catalog.make} ${catalog.model}${catalog.trim ? ` ${catalog.trim}` : ""} ${catalog.year}`,
+      sortOrder: -1,
+      isPrimary: true,
+      state: "READY",
+      uploadExpiresAt: catalog.updatedAt.toISOString(),
+      uploadedAt: catalog.updatedAt.toISOString(),
+      createdAt: catalog.createdAt.toISOString(),
+    });
+  }
+  return [...catalogPhotos, ...supplierPhotos];
 }
 
 async function listVehiclePhotos(vehicleId: string, readyOnly: boolean) {
@@ -256,6 +290,25 @@ function photoView(photo: {
     uploadExpiresAt: photo.uploadExpiresAt.toISOString(),
     uploadedAt: photo.uploadedAt?.toISOString() ?? null,
     createdAt: photo.createdAt.toISOString(),
+  };
+}
+
+function catalogAssetView(catalog: any, asset: any, index: number) {
+  return {
+    id: `catalog-${asset.id}`,
+    vehicleId: "catalog",
+    category: asset.type,
+    url: asset.url,
+    originalFileName: `catalog-${asset.type.toLowerCase()}`,
+    contentType: "image/webp",
+    sizeBytes: 0,
+    alt: `${catalog.make} ${catalog.model}${catalog.trim ? ` ${catalog.trim}` : ""} ${catalog.year}`,
+    sortOrder: asset.sortOrder ?? index,
+    isPrimary: asset.type === "HERO" || index === 0,
+    state: "READY",
+    uploadExpiresAt: asset.updatedAt.toISOString(),
+    uploadedAt: asset.updatedAt.toISOString(),
+    createdAt: asset.createdAt.toISOString(),
   };
 }
 
