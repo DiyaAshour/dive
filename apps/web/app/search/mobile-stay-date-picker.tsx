@@ -1,7 +1,7 @@
 "use client";
 
 import {CalendarDays, ChevronLeft, ChevronRight} from "lucide-react";
-import {useMemo, useState} from "react";
+import {useMemo, useState, type ReactNode} from "react";
 
 type Locale = "en" | "ar" | "zh";
 type ActiveDate = "arrival" | "departure";
@@ -68,6 +68,9 @@ export function MobileStayDatePicker({locale, defaultArrival, defaultDeparture}:
     }
   }
 
+  const previousButton = <button type="button" aria-label={copy.previous} disabled={!canGoPrevious} onClick={() => setCursor((month) => addMonths(month, -1))}><ChevronLeft size={18}/></button>;
+  const nextButton = <button type="button" aria-label={copy.next} onClick={() => setCursor((month) => addMonths(month, 1))}><ChevronRight size={18}/></button>;
+
   return <>
     <label className="mobileCustomDateField">
       <span>{copy.arrival}</span>
@@ -90,25 +93,8 @@ export function MobileStayDatePicker({locale, defaultArrival, defaultDeparture}:
         <span>{active === "arrival" ? formatDate(arrival, locale) : formatDate(departure, locale)}</span>
       </div>
       <div className="mobileInlineMonths">
-        <MonthCalendar
-          month={cursor}
-          locale={locale}
-          arrival={arrival}
-          departure={departure}
-          active={active}
-          onSelect={chooseDate}
-          previous={<button type="button" aria-label={copy.previous} disabled={!canGoPrevious} onClick={() => setCursor((month) => addMonths(month, -1))}><ChevronLeft size={18}/></button>}
-        />
-        <MonthCalendar
-          month={monthTwo}
-          locale={locale}
-          arrival={arrival}
-          departure={departure}
-          active={active}
-          onSelect={chooseDate}
-          next={<button type="button" aria-label={copy.next} onClick={() => setCursor((month) => addMonths(month, 1))}><ChevronRight size={18}/></button>}
-          second
-        />
+        <MonthCalendar month={cursor} locale={locale} arrival={arrival} departure={departure} active={active} onSelect={chooseDate} previous={previousButton} next={nextButton}/>
+        <MonthCalendar month={monthTwo} locale={locale} arrival={arrival} departure={departure} active={active} onSelect={chooseDate} second/>
       </div>
     </div>}
   </>;
@@ -121,8 +107,8 @@ function MonthCalendar({month, locale, arrival, departure, active, onSelect, pre
   departure: string;
   active: ActiveDate;
   onSelect: (value: string) => void;
-  previous?: React.ReactNode;
-  next?: React.ReactNode;
+  previous?: ReactNode;
+  next?: ReactNode;
   second?: boolean;
 }) {
   const days = buildCalendarDays(month);
