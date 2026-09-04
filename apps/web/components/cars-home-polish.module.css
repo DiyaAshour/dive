@@ -1,0 +1,475 @@
+:global(body:has([data-cars-reference="true"]) .premiumHero) {
+  overflow: visible;
+  border-bottom: 0;
+  background: #fff;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero::before) {
+  display: none;
+}
+
+:global(body:has([data-cars-reference="true"]) .siteHeader) {
+  background: rgba(255, 255, 255, .985);
+  border-bottom-color: rgba(224, 229, 235, .92);
+  box-shadow: 0 1px 0 rgba(16, 40, 64, .025);
+}
+
+:global(body:has([data-cars-reference="true"]) .siteHeaderInner) {
+  width: min(1440px, calc(100% - 64px));
+  height: 72px;
+  gap: 24px;
+}
+
+:global(body:has([data-cars-reference="true"]) .siteNav) {
+  gap: 24px;
+}
+
+:global(body:has([data-cars-reference="true"]) .siteNav a) {
+  color: #31475d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+:global(body:has([data-cars-reference="true"]) .partnerEntry) {
+  padding: 10px 11px;
+  color: #334a60;
+  font-weight: 750;
+}
+
+:global(body:has([data-cars-reference="true"]) .accountButton) {
+  min-height: 42px;
+  padding-inline: 16px;
+  border-radius: 13px;
+  box-shadow: 0 8px 18px rgba(16, 40, 64, .12);
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero > .shell:first-of-type) {
+  padding-top: 14px;
+  padding-bottom: 4px;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero nav[aria-label="نوع الحجز"]),
+:global(body:has([data-cars-reference="true"]) .premiumHero nav[aria-label="Booking type"]) {
+  width: min(420px, 100%);
+  min-height: 48px;
+  padding: 3px;
+  border-color: #dce3ea;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(16, 40, 64, .08);
+}
+
+.heroScene {
+  min-height: 612px;
+  margin-top: 8px;
+  padding: 44px 0 128px;
+  border-top: 0;
+  border-bottom: 1px solid rgba(220, 226, 232, .86);
+  background-image:
+    linear-gradient(90deg, rgba(252, 250, 245, .98) 0%, rgba(252, 250, 245, .96) 25%, rgba(252, 250, 245, .79) 43%, rgba(252, 250, 245, .34) 61%, rgba(16, 40, 64, .05) 100%),
+    var(--hero-city);
+  background-size: cover;
+  background-position: center 55%;
+  overflow: visible;
+}
+
+:global([dir="rtl"]) .heroScene {
+  background-image:
+    linear-gradient(90deg, rgba(252, 250, 245, .99) 0%, rgba(252, 250, 245, .96) 28%, rgba(252, 250, 245, .72) 47%, rgba(252, 250, 245, .25) 65%, rgba(16, 40, 64, .04) 100%),
+    var(--hero-city);
+}
+
+.heroScene::before {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, .78), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 46%, rgba(16, 40, 64, .025));
+}
+
+.heroInner {
+  width: min(1440px, calc(100% - 64px));
+  min-height: 414px;
+  grid-template-columns: minmax(0, .82fr) minmax(590px, 1.18fr);
+  gap: 30px;
+}
+
+.heroCopy {
+  max-width: 570px;
+  padding: 2px 0 8px;
+}
+
+.kicker {
+  display: block;
+  width: 100%;
+  margin-bottom: 15px;
+  color: #b68424;
+  font-size: 11px;
+  letter-spacing: .18em;
+}
+
+:global([dir="rtl"]) .kicker {
+  direction: ltr;
+  text-align: left;
+}
+
+.heroCopy h1 {
+  font-size: clamp(50px, 4.8vw, 70px);
+  line-height: 1.02;
+  letter-spacing: -.048em;
+}
+
+.heroCopy h1 strong {
+  margin-top: 4px;
+  color: #c5932f;
+}
+
+.heroCopy > p {
+  max-width: 520px;
+  margin-top: 18px;
+  color: #354b61;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.trustRow {
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.trustRow > div {
+  min-height: 66px;
+  padding: 11px 12px;
+  border-color: rgba(216, 223, 230, .92);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 8px 22px rgba(16, 40, 64, .045);
+}
+
+.trustRow > div > span {
+  flex-basis: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.trustRow strong {
+  font-size: 11.5px;
+}
+
+.trustRow small {
+  font-size: 9px;
+}
+
+.heroVisual {
+  min-height: 440px;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+.heroVisual::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 86%;
+  height: 72%;
+  right: -1%;
+  bottom: 3%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, .52), rgba(255, 255, 255, 0) 69%);
+  filter: blur(8px);
+}
+
+.heroVisual::after {
+  inset: auto 3% 1% 6%;
+  height: 82px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(14, 36, 56, .2), rgba(14, 36, 56, 0) 68%);
+  filter: blur(12px);
+}
+
+.heroVisual img {
+  position: absolute;
+  z-index: 1;
+  right: -4%;
+  bottom: -1%;
+  width: 108%;
+  height: 460px;
+  object-fit: cover;
+  object-position: 58% 54%;
+  transform: scale(1.13);
+  border-radius: 0;
+  filter: saturate(.82) contrast(1.04) brightness(1.08);
+  -webkit-mask-image: radial-gradient(ellipse at 58% 56%, #000 0 48%, rgba(0,0,0,.96) 58%, rgba(0,0,0,.68) 68%, transparent 82%);
+  mask-image: radial-gradient(ellipse at 58% 56%, #000 0 48%, rgba(0,0,0,.96) 58%, rgba(0,0,0,.68) 68%, transparent 82%);
+}
+
+.exploreMark {
+  top: 48px;
+  right: 18px;
+  font-size: clamp(32px, 3vw, 48px);
+  text-shadow: 0 4px 18px rgba(9, 27, 43, .24);
+  transform: rotate(-5deg);
+}
+
+.exploreMark::after {
+  content: "";
+  display: block;
+  width: 72%;
+  height: 3px;
+  margin: 8px 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .92);
+  transform: rotate(-3deg);
+  box-shadow: 0 2px 10px rgba(9, 27, 43, .18);
+}
+
+.searchShell {
+  bottom: -48px;
+  width: min(1420px, calc(100% - 64px));
+}
+
+.searchModes {
+  width: min(370px, 90%);
+  margin-bottom: -7px;
+  padding: 3px;
+  border-color: rgba(211, 219, 227, .98);
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(16, 40, 64, .1);
+}
+
+.searchModes > span {
+  min-height: 40px;
+  font-size: 11px;
+}
+
+.searchModeActive {
+  background: linear-gradient(135deg, #102e4a, #163d5f);
+  box-shadow: 0 7px 18px rgba(16, 40, 64, .16);
+}
+
+.showcase {
+  padding-top: 92px;
+}
+
+.section {
+  width: min(1420px, calc(100% - 64px));
+}
+
+.sectionHead {
+  margin-bottom: 18px;
+}
+
+.sectionHead h2 {
+  font-size: clamp(27px, 2.35vw, 36px);
+}
+
+.categoryGrid,
+.popularGrid {
+  gap: 14px;
+}
+
+.categoryCard {
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(16, 40, 64, .03);
+}
+
+.categoryImage {
+  height: 128px;
+}
+
+.carCard {
+  border-radius: 20px;
+}
+
+.carCardMedia {
+  height: 170px;
+}
+
+@media (max-width: 1180px) {
+  .heroInner {
+    width: min(1180px, calc(100% - 48px));
+    grid-template-columns: minmax(0, .9fr) minmax(470px, 1.1fr);
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(46px, 5vw, 62px);
+  }
+
+  .heroVisual img {
+    right: -8%;
+    width: 116%;
+  }
+
+  .searchShell,
+  .section {
+    width: min(1180px, calc(100% - 48px));
+  }
+}
+
+@media (max-width: 900px) {
+  :global(body:has([data-cars-reference="true"]) .siteHeaderInner) {
+    width: min(760px, calc(100% - 36px));
+  }
+
+  .heroScene,
+  :global([dir="rtl"]) .heroScene {
+    min-height: 0;
+    padding: 28px 0 94px;
+    background-image:
+      linear-gradient(180deg, rgba(252, 250, 245, .99) 0%, rgba(252, 250, 245, .92) 42%, rgba(252, 250, 245, .46) 68%, rgba(16, 40, 64, .08) 100%),
+      var(--hero-city);
+  }
+
+  .heroInner {
+    width: min(760px, calc(100% - 36px));
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .heroCopy {
+    max-width: 650px;
+    padding-inline: 8px;
+  }
+
+  :global([dir="rtl"]) .kicker {
+    text-align: right;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(42px, 8vw, 58px);
+  }
+
+  .trustRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .heroVisual {
+    min-height: 290px;
+  }
+
+  .heroVisual img {
+    right: -2%;
+    bottom: -4%;
+    width: 104%;
+    height: 330px;
+    transform: scale(1.08);
+    -webkit-mask-image: radial-gradient(ellipse at 58% 56%, #000 0 50%, rgba(0,0,0,.9) 64%, transparent 84%);
+    mask-image: radial-gradient(ellipse at 58% 56%, #000 0 50%, rgba(0,0,0,.9) 64%, transparent 84%);
+  }
+
+  .exploreMark {
+    top: 22px;
+    right: 20px;
+  }
+
+  .searchShell {
+    bottom: -58px;
+    width: min(760px, calc(100% - 28px));
+  }
+
+  .showcase {
+    padding-top: 116px;
+  }
+}
+
+@media (max-width: 640px) {
+  :global(body:has([data-cars-reference="true"]) .siteHeaderInner) {
+    width: calc(100% - 24px);
+    height: 66px;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero > .shell:first-of-type) {
+    padding-top: 10px;
+    padding-bottom: 0;
+  }
+
+  .heroScene,
+  :global([dir="rtl"]) .heroScene {
+    margin-top: 6px;
+    padding: 22px 0 84px;
+  }
+
+  .heroInner {
+    width: calc(100% - 24px);
+  }
+
+  .heroCopy {
+    padding-inline: 4px;
+  }
+
+  .kicker {
+    margin-bottom: 10px;
+    font-size: 9px;
+  }
+
+  .heroCopy h1 {
+    font-size: 39px;
+    line-height: 1.05;
+  }
+
+  .heroCopy > p {
+    margin-top: 13px;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .trustRow {
+    gap: 6px;
+    margin-top: 15px;
+  }
+
+  .trustRow > div {
+    min-height: 58px;
+    gap: 7px;
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .trustRow > div > span {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .trustRow strong {
+    font-size: 9px;
+  }
+
+  .trustRow small {
+    font-size: 7.5px;
+  }
+
+  .heroVisual {
+    min-height: 228px;
+  }
+
+  .heroVisual img {
+    right: -12%;
+    width: 124%;
+    height: 260px;
+    transform: scale(1.03);
+  }
+
+  .exploreMark {
+    top: 18px;
+    right: 4px;
+    font-size: 29px;
+  }
+
+  .searchModes {
+    width: min(330px, 94%);
+  }
+
+  .searchShell {
+    bottom: -80px;
+    width: calc(100% - 18px);
+  }
+
+  .showcase {
+    padding-top: 154px;
+  }
+
+  .section {
+    width: calc(100% - 24px);
+  }
+}
