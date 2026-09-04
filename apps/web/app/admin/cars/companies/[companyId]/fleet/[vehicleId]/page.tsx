@@ -5,8 +5,8 @@ import { getAdminCarVehicle, getAdminNavigationCounts } from "@platform/server";
 import { AdminShell } from "@/components/admin-shell";
 import { currentAdminPrincipal } from "@/lib/server-session";
 import { requestLocale } from "@/lib/request-locale";
-import { updateCompanyFleetVehicle } from "../../../actions";
-import styles from "../../../cars-admin.module.css";
+import { updateCompanyFleetVehicle } from "../../../../actions";
+import styles from "../../../../cars-admin.module.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = {title: "Edit fleet vehicle · HandMeKey"};
