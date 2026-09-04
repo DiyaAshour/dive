@@ -5,7 +5,6 @@ import { demoCars } from "@/lib/demo-cars";
 import styles from "./cars-home-experience.module.css";
 import polish from "./cars-home-polish.module.css";
 import backgroundFix from "./cars-home-background-fix.module.css";
-import { CARS_HERO_BACKGROUND_DATA_URI } from "./cars-hero-bg/data";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
@@ -58,7 +57,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
   return <div
     className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`}
     data-cars-reference="true"
-    style={{"--hero-full-bg": `url("${CARS_HERO_BACKGROUND_DATA_URI}")`} as React.CSSProperties}
+    style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
   >
     <div className={`${styles.heroInner} ${polish.heroInner}`}>
       <div className={`${styles.heroCopy} ${polish.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
