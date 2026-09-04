@@ -54,25 +54,27 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
     comingSoon: "Soon",
   };
 
-  return <div
-    className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`}
-    data-cars-reference="true"
-    style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
-  >
-    <div className={`${styles.heroInner} ${polish.heroInner}`}>
-      <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
-        <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
-        <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
-        <p>{copy.intro}</p>
-        <div className={`${styles.trustRow} ${polish.trustRow}`}>
-          <div><span><Tag size={21}/></span><p><strong>{copy.clear}</strong><small>{copy.clearSub}</small></p></div>
-          <div><span><ShieldCheck size={21}/></span><p><strong>{copy.trusted}</strong><small>{copy.trustedSub}</small></p></div>
-          <div><span><Headphones size={21}/></span><p><strong>{copy.support}</strong><small>{copy.supportSub}</small></p></div>
+  return <>
+    <div
+      className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`}
+      data-cars-reference="true"
+      style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
+    >
+      <div className={`${styles.heroInner} ${polish.heroInner}`}>
+        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
+          <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
+          <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
+          <p>{copy.intro}</p>
+          <div className={`${styles.trustRow} ${polish.trustRow}`}>
+            <div><span><Tag size={21}/></span><p><strong>{copy.clear}</strong><small>{copy.clearSub}</small></p></div>
+            <div><span><ShieldCheck size={21}/></span><p><strong>{copy.trusted}</strong><small>{copy.trustedSub}</small></p></div>
+            <div><span><Headphones size={21}/></span><p><strong>{copy.support}</strong><small>{copy.supportSub}</small></p></div>
+          </div>
         </div>
-      </div>
 
-      <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual}`}>
-        <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark}`}>{copy.explore}</div>
+        <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual}`}>
+          <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark}`}>{copy.explore}</div>
+        </div>
       </div>
     </div>
 
@@ -83,7 +85,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
       </div>
       <CarsHomeSearch locale={locale} defaultPickupDate={defaultPickupDate} defaultReturnDate={defaultReturnDate}/>
     </div>
-  </div>;
+  </>;
 }
 
 export function CarsHomeShowcase({locale}: ShowcaseProps) {
