@@ -2,7 +2,7 @@ import {randomUUID} from "node:crypto";
 import {mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
 import type {NextRequest} from "next/server";
-import {ApplicationError, objectStorage} from "@platform/server";
+import {ApplicationError, createAdminBlogAsset, objectStorage} from "@platform/server";
 import {handleApiError, ok} from "@/lib/api";
 import {requestAdminUser} from "@/lib/request-auth";
 
@@ -25,21 +25,37 @@ export async function POST(request:NextRequest){
     if(!matchesImageSignature(file.type,bytes))throw new ApplicationError("BLOG_IMAGE_SIGNATURE","The selected file does not match its image type",400);
     const extension=extensionFor(file.type);
     const objectName=`${randomUUID()}.${extension}`;
-    const storage=objectStorage();
+
+    let storage:ReturnType<typeof objectStorage>=null;
+    try{
+      storage=objectStorage();
+    }catch(error){
+      console.warn("Blog image object storage is unavailable; using database fallback.",error);
+    }
 
     if(storage){
       const objectKey=`blog/images/${objectName}`;
       const publicUrl=storage.publicUrl(objectKey);
-      if(!publicUrl)throw new ApplicationError("PUBLIC_MEDIA_URL_NOT_CONFIGURED","STORAGE_PUBLIC_BASE_URL is required before blog images can be uploaded",503);
-      const grant=await storage.createUploadGrant({objectKey,contentType:file.type,expiresInSeconds:10*60});
-      const uploadResponse=await fetch(grant.url,{method:"PUT",headers:grant.headers,body:new Blob([bytes],{type:file.type})});
-      if(!uploadResponse.ok)throw new ApplicationError("BLOG_IMAGE_UPLOAD_FAILED",`Image storage returned ${uploadResponse.status}`,502);
-      const stored=await storage.headObject(objectKey);
-      if(!stored||stored.sizeBytes!==file.size)throw new ApplicationError("BLOG_IMAGE_UPLOAD_VERIFY","The uploaded image could not be verified",502);
-      return ok({url:publicUrl,storage:"object",fileName:file.name,sizeBytes:file.size,contentType:file.type});
+      if(publicUrl){
+        try{
+          const grant=await storage.createUploadGrant({objectKey,contentType:file.type,expiresInSeconds:10*60});
+          const uploadResponse=await fetch(grant.url,{method:"PUT",headers:grant.headers,body:new Blob([bytes],{type:file.type})});
+          if(!uploadResponse.ok)throw new Error(`Image storage returned ${uploadResponse.status}`);
+          const stored=await storage.headObject(objectKey);
+          if(!stored||stored.sizeBytes!==file.size)throw new Error("The uploaded image could not be verified");
+          return ok({url:publicUrl,storage:"object",fileName:file.name,sizeBytes:file.size,contentType:file.type});
+        }catch(error){
+          console.warn("Blog image object upload failed; using database fallback.",error);
+        }
+      }
     }
 
-    if(process.env.NODE_ENV==="production")throw new ApplicationError("STORAGE_NOT_CONFIGURED","Object storage must be configured before blog images can be uploaded in production",503);
+    if(process.env.NODE_ENV==="production"){
+      const asset=await createAdminBlogAsset(user.id,{contentType:file.type,bytes,originalFileName:file.name});
+      const url=new URL(`/api/v1/blog/assets/${asset.id}`,request.nextUrl.origin).toString();
+      return ok({url,storage:"database",fileName:file.name,sizeBytes:file.size,contentType:file.type});
+    }
+
     const publicRoot=resolveWebPublicRoot();
     const uploadDir=path.join(publicRoot,"uploads","blog");
     await mkdir(uploadDir,{recursive:true});

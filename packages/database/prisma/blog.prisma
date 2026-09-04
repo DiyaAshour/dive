@@ -37,3 +37,15 @@ model BlogPost {
   @@index([locale, category, status])
   @@index([featured, status, publishedAt])
 }
+
+model BlogAsset {
+  id               String   @id @default(cuid())
+  contentType      String
+  bytes            Bytes
+  originalFileName String
+  sizeBytes        Int
+  createdByUserId  String
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+}
