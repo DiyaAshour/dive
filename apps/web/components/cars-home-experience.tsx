@@ -7,6 +7,7 @@ import polish from "./cars-home-polish.module.css";
 import backgroundFix from "./cars-home-background-fix.module.css";
 import copyFix from "./cars-home-copy-fix.module.css";
 import directionalHero from "./cars-home-directional-hero.module.css";
+import mobileHero from "./cars-home-mobile-hero.module.css";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
@@ -58,29 +59,29 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
 
   return <>
     <div
-      className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene} ${directionalHero.heroScene}`}
+      className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene} ${directionalHero.heroScene} ${mobileHero.heroScene}`}
       data-cars-reference="true"
       style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
     >
-      <div className={`${styles.heroInner} ${polish.heroInner} ${directionalHero.heroInner}`}>
-        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${copyFix.heroCopy} ${directionalHero.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
+      <div className={`${styles.heroInner} ${polish.heroInner} ${directionalHero.heroInner} ${mobileHero.heroInner}`}>
+        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${copyFix.heroCopy} ${directionalHero.heroCopy} ${mobileHero.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
           <span className={`${styles.kicker} ${polish.kicker} ${backgroundFix.kicker} ${copyFix.kicker}`}>{copy.kicker}</span>
           <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
           <p>{copy.intro}</p>
-          <div className={`${styles.trustRow} ${polish.trustRow} ${copyFix.trustRow}`}>
+          <div className={`${styles.trustRow} ${polish.trustRow} ${copyFix.trustRow} ${mobileHero.trustRow}`}>
             <div><span><Tag size={21}/></span><p><strong>{copy.clear}</strong><small>{copy.clearSub}</small></p></div>
             <div><span><ShieldCheck size={21}/></span><p><strong>{copy.trusted}</strong><small>{copy.trustedSub}</small></p></div>
             <div><span><Headphones size={21}/></span><p><strong>{copy.support}</strong><small>{copy.supportSub}</small></p></div>
           </div>
         </div>
 
-        <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual} ${directionalHero.heroVisual}`}>
+        <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual} ${directionalHero.heroVisual} ${mobileHero.heroVisual}`}>
           <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark} ${directionalHero.exploreMark}`}>{copy.explore}</div>
         </div>
       </div>
     </div>
 
-    <div className={`${styles.searchShell} ${polish.searchShell} ${backgroundFix.searchShell}`}>
+    <div className={`${styles.searchShell} ${polish.searchShell} ${backgroundFix.searchShell} ${mobileHero.searchShell}`}>
       <div className={`${styles.searchModes} ${polish.searchModes}`} aria-label={ar ? "نوع خدمة السيارات" : "Car service type"}>
         <span className={`${styles.searchModeActive} ${polish.searchModeActive}`}><Car size={17}/>{copy.rental}</span>
         <span className={styles.searchModeDisabled} aria-disabled="true"><BadgeCheck size={16}/>{copy.transfer}<small>{copy.comingSoon}</small></span>

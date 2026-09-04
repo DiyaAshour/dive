@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {".": "./src/index.ts"},
-  "scripts": {"typecheck": "tsc --noEmit", "bootstrap-admin": "tsx scripts/bootstrap-admin.ts", "admin-smoke": "tsx scripts/admin-smoke.ts", "rewards-admin-smoke": "tsx scripts/rewards-admin-smoke.ts", "room-product-smoke": "tsx scripts/room-product-smoke.ts", "rate-management-smoke": "tsx scripts/rate-management-smoke.ts", "reservation-management-smoke": "tsx scripts/reservation-management-smoke.ts", "finance-settlement-smoke": "tsx scripts/finance-settlement-smoke.ts", "reliability-torture-smoke": "tsx scripts/reliability-torture-smoke.ts", "platform-10x-smoke": "tsx scripts/platform-10x-smoke.ts", "loyalty-rule-smoke": "tsx scripts/loyalty-rule-smoke.ts"},
+  "scripts": {"typecheck": "tsc --noEmit", "bootstrap-admin": "tsx scripts/bootstrap-admin.ts", "admin-smoke": "tsx scripts/admin-smoke.ts", "rewards-admin-smoke": "tsx scripts/rewards-admin-smoke.ts", "room-product-smoke": "tsx scripts/room-product-smoke.ts", "rate-management-smoke": "tsx scripts/rate-management-smoke.ts", "reservation-management-smoke": "tsx scripts/reservation-management-smoke.ts", "finance-settlement-smoke": "tsx scripts/finance-settlement-smoke.ts", "reliability-torture-smoke": "tsx scripts/reliability-torture-smoke.ts", "platform-10x:smoke": "tsx scripts/platform-10x-smoke.ts", "loyalty-rule:smoke": "tsx scripts/loyalty-rule-smoke.ts", "sync-editorial-content": "tsx scripts/sync-editorial-content.ts"},
   "dependencies": {
     "@platform/contracts": "0.2.0",
     "@platform/core": "0.2.0",
