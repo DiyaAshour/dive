@@ -41,16 +41,23 @@ export async function GET(request: NextRequest) {
     if (!imaginConfigured()) return ok({configured:false, listing:null});
 
     const url = new URL(request.url);
+    const make = value(url, "make");
+    const modelFamily = value(url, "modelFamily");
+    const modelRange = value(url, "modelRange");
+    const modelVariant = value(url, "modelVariant");
+    const powerTrain = value(url, "powerTrain");
+    const bodySize = value(url, "bodySize");
+    const trim = value(url, "trim");
     const yearValue = Number(url.searchParams.get("modelYear"));
     const filters = {
-      ...(value(url, "make") ? {make: value(url, "make")} : {}),
-      ...(value(url, "modelFamily") ? {modelFamily: value(url, "modelFamily")} : {}),
-      ...(value(url, "modelRange") ? {modelRange: value(url, "modelRange")} : {}),
-      ...(value(url, "modelVariant") ? {modelVariant: value(url, "modelVariant")} : {}),
+      ...(make ? {make} : {}),
+      ...(modelFamily ? {modelFamily} : {}),
+      ...(modelRange ? {modelRange} : {}),
+      ...(modelVariant ? {modelVariant} : {}),
       ...(Number.isInteger(yearValue) && yearValue > 0 ? {modelYear: yearValue} : {}),
-      ...(value(url, "powerTrain") ? {powerTrain: value(url, "powerTrain")} : {}),
-      ...(value(url, "bodySize") ? {bodySize: value(url, "bodySize")} : {}),
-      ...(value(url, "trim") ? {trim: value(url, "trim")} : {}),
+      ...(powerTrain ? {powerTrain} : {}),
+      ...(bodySize ? {bodySize} : {}),
+      ...(trim ? {trim} : {}),
     };
     return ok({configured:true, listing: await getImaginCarListing(filters)});
   } catch (error) {
