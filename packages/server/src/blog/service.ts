@@ -243,5 +243,5 @@ function estimateReadingMinutes(body: string) {
 }
 
 function auditSnapshot(post: {locale: string; slug: string; title: string; status: string; featured: boolean; publishedAt: Date | null}) {
-  return {locale: post.locale, slug: post.slug, title: post.title, status: post.status, featured: post.featureed, publishedAt: post.publishedAt?.toISOString() ?? null};
+  return {locale: post.locale, slug: post.slug, title: post.title, status: post.status, featured: post.featured, publishedAt: post.publishedAt?.toISOString() ?? null};
 }
