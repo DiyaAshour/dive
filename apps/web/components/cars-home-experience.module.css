@@ -1,0 +1,775 @@
+.heroScene {
+  --hero-city: none;
+  position: relative;
+  min-height: 690px;
+  margin-top: 18px;
+  padding: 62px 0 150px;
+  background-image:
+    linear-gradient(90deg, rgba(250,248,242,.98) 0%, rgba(250,248,242,.92) 29%, rgba(250,248,242,.58) 50%, rgba(16,40,64,.10) 77%, rgba(16,40,64,.16) 100%),
+    var(--hero-city);
+  background-size: cover;
+  background-position: center 52%;
+  border-top: 1px solid rgba(221,226,231,.74);
+  border-bottom: 1px solid rgba(218,225,232,.8);
+  overflow: visible;
+  isolation: isolate;
+}
+
+.heroScene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 12% 22%, rgba(255,255,255,.74), rgba(255,255,255,0) 34%),
+    linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 42%, rgba(16,40,64,.035));
+}
+
+.heroInner {
+  width: min(1440px, calc(100% - 72px));
+  min-height: 460px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0,.86fr) minmax(520px,1.14fr);
+  gap: 34px;
+  align-items: center;
+  direction: ltr;
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 3;
+  max-width: 590px;
+  padding: 16px 0 22px;
+}
+
+.rtlCopy {
+  direction: rtl;
+  text-align: right;
+}
+
+.ltrCopy {
+  direction: ltr;
+  text-align: left;
+}
+
+.kicker {
+  display: inline-block;
+  margin-bottom: 18px;
+  color: #b58221;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.heroCopy h1 {
+  margin: 0;
+  color: #102840;
+  font-size: clamp(52px, 5.2vw, 82px);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+
+.heroCopy h1 span,
+.heroCopy h1 strong {
+  display: block;
+}
+
+.heroCopy h1 strong {
+  margin-top: 8px;
+  color: #c7962f;
+  font-weight: 850;
+}
+
+.heroCopy > p {
+  max-width: 540px;
+  margin: 24px 0 0;
+  color: #344b62;
+  font-size: 18px;
+  line-height: 1.78;
+}
+
+.trustRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.trustRow > div {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 14px 13px;
+  border: 1px solid rgba(214,221,228,.94);
+  border-radius: 18px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 12px 30px rgba(16,40,64,.055);
+  backdrop-filter: blur(10px);
+}
+
+.trustRow > div > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: rgba(217,164,65,.12);
+  color: #b68121;
+}
+
+.trustRow p {
+  margin: 0;
+  min-width: 0;
+}
+
+.trustRow strong,
+.trustRow small {
+  display: block;
+}
+
+.trustRow strong {
+  color: #17324d;
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+.trustRow small {
+  margin-top: 4px;
+  color: #68788a;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.heroVisual {
+  position: relative;
+  min-height: 430px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+  border-radius: 38px;
+  box-shadow: 0 26px 70px rgba(9,29,47,.18);
+}
+
+.heroVisual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(249,247,241,.84) 0%, rgba(249,247,241,.28) 18%, rgba(249,247,241,0) 44%),
+    linear-gradient(180deg, rgba(16,40,64,0) 60%, rgba(16,40,64,.16) 100%);
+}
+
+.heroVisual img {
+  width: 100%;
+  height: 430px;
+  object-fit: cover;
+  object-position: 60% center;
+  transform: scale(1.03);
+}
+
+.exploreMark {
+  position: absolute;
+  z-index: 3;
+  top: 46px;
+  right: 42px;
+  color: #fff;
+  font-family: cursive;
+  font-size: clamp(34px,3.5vw,56px);
+  line-height: .9;
+  font-style: italic;
+  text-shadow: 0 4px 20px rgba(9,27,43,.34);
+  transform: rotate(-6deg);
+}
+
+.searchShell {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: -54px;
+  width: min(1420px, calc(100% - 72px));
+  transform: translateX(-50%);
+}
+
+.searchModes {
+  position: relative;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(390px, 90%);
+  margin: 0 auto -11px;
+  padding: 4px;
+  border: 1px solid rgba(211,219,227,.95);
+  border-radius: 999px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 12px 28px rgba(16,40,64,.12);
+}
+
+.searchModes > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.searchModeActive {
+  background: #102f4c;
+  color: #fff;
+}
+
+.searchModeDisabled {
+  color: #536477;
+  background: transparent;
+}
+
+.searchModeDisabled small {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f4ead4;
+  color: #9b7220;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.searchShell :global(#car-search) {
+  margin-top: 0;
+}
+
+.searchShell :global(#car-search > form) {
+  padding-top: 22px;
+  border-radius: 28px;
+  box-shadow: 0 28px 70px rgba(15,38,61,.16);
+}
+
+.showcase {
+  background: #fff;
+  padding: 86px 0 26px;
+}
+
+.section {
+  width: min(1420px, calc(100% - 72px));
+  margin-inline: auto;
+  padding: 26px 0 34px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.sectionHead h2 {
+  margin: 0;
+  color: #102840;
+  font-size: clamp(28px,2.7vw,40px);
+  letter-spacing: -.035em;
+}
+
+.sectionHead p {
+  margin: 7px 0 0;
+  color: #7b8795;
+  font-size: 13px;
+}
+
+.sectionHead > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  color: #0f5a9a;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 16px;
+}
+
+.categoryCard {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2e7ec;
+  border-radius: 22px;
+  background: linear-gradient(180deg,#fff,#fbfcfd);
+  box-shadow: 0 9px 24px rgba(16,40,64,.035);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.categoryCard:hover {
+  transform: translateY(-3px);
+  border-color: #d3dce5;
+  box-shadow: 0 16px 34px rgba(16,40,64,.07);
+}
+
+.categoryImage {
+  height: 142px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(180deg,#fbfcfd,#f5f7f9);
+}
+
+.categoryImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .2s ease;
+}
+
+.categoryCard:hover img {
+  transform: scale(1.035);
+}
+
+.categoryCard > strong {
+  display: block;
+  padding: 13px 14px 15px;
+  color: #17324d;
+  font-size: 14px;
+  text-align: center;
+}
+
+.popularSection {
+  padding-top: 18px;
+}
+
+.popularGrid {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 16px;
+}
+
+.carCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e1e6eb;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(16,40,64,.045);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.carCard:hover {
+  transform: translateY(-4px);
+  border-color: #cfd8e2;
+  box-shadow: 0 19px 40px rgba(16,40,64,.085);
+}
+
+.carCardMedia {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: linear-gradient(180deg,#fafbfc,#f1f4f7);
+}
+
+.carCardMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .2s ease;
+}
+
+.carCard:hover .carCardMedia img {
+  transform: scale(1.035);
+}
+
+.featureBadge,
+.discountBadge {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  inset-inline-start: 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(16,40,64,.12);
+}
+
+.featureBadge {
+  background: #c99936;
+}
+
+.discountBadge {
+  background: #21815c;
+}
+
+.carCardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.carCardBody h3 {
+  margin: 0;
+  color: #17304b;
+  font-size: 16px;
+  letter-spacing: -.015em;
+}
+
+.specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  margin-top: 11px;
+  color: #6a7888;
+  font-size: 10px;
+}
+
+.specs span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.priceLine {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.priceLine > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.priceLine del {
+  color: #98a2ad;
+  font-size: 10px;
+}
+
+.priceLine strong {
+  color: #102840;
+  font-size: 20px;
+}
+
+.priceLine span:not(.cardArrow) {
+  color: #7b8795;
+  font-size: 9px;
+}
+
+.cardArrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f1f4f7;
+  color: #17324d;
+}
+
+@media (max-width: 1180px) {
+  .heroInner {
+    grid-template-columns: minmax(0,.9fr) minmax(430px,1.1fr);
+    width: min(1180px, calc(100% - 48px));
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(46px,5.4vw,68px);
+  }
+
+  .heroCopy > p {
+    font-size: 16px;
+  }
+
+  .trustRow {
+    grid-template-columns: 1fr;
+  }
+
+  .trustRow > div {
+    max-width: 300px;
+  }
+
+  .searchShell,
+  .section {
+    width: min(1180px, calc(100% - 48px));
+  }
+
+  .categoryGrid,
+  .popularGrid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .heroScene {
+    min-height: 0;
+    padding: 38px 0 86px;
+    background-image:
+      linear-gradient(180deg, rgba(250,248,242,.98) 0%, rgba(250,248,242,.88) 42%, rgba(250,248,242,.44) 68%, rgba(16,40,64,.12) 100%),
+      var(--hero-city);
+  }
+
+  .heroInner {
+    width: min(760px, calc(100% - 36px));
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .heroCopy {
+    max-width: none;
+    padding-inline: 10px;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(44px,9.5vw,64px);
+  }
+
+  .heroCopy > p {
+    max-width: 620px;
+  }
+
+  .trustRow {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .trustRow > div {
+    max-width: none;
+  }
+
+  .heroVisual {
+    min-height: 330px;
+    border-radius: 30px;
+  }
+
+  .heroVisual img {
+    height: 330px;
+  }
+
+  .searchShell {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: min(760px, calc(100% - 36px));
+    margin: 26px auto -45px;
+    transform: none;
+  }
+
+  .showcase {
+    padding-top: 70px;
+  }
+
+  .section {
+    width: min(760px, calc(100% - 36px));
+  }
+
+  .categoryGrid,
+  .popularGrid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .heroScene {
+    margin-top: 10px;
+    padding-top: 28px;
+    border-top: 0;
+  }
+
+  .heroInner {
+    width: calc(100% - 24px);
+  }
+
+  .heroCopy {
+    padding: 6px 6px 0;
+  }
+
+  .kicker {
+    margin-bottom: 12px;
+    font-size: 9px;
+    letter-spacing: .14em;
+  }
+
+  .heroCopy h1 {
+    font-size: 41px;
+    line-height: 1.02;
+  }
+
+  .heroCopy h1 strong {
+    margin-top: 5px;
+  }
+
+  .heroCopy > p {
+    margin-top: 16px;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  .trustRow {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 18px;
+  }
+
+  .trustRow > div {
+    min-height: 58px;
+    padding: 9px 11px;
+    border-radius: 15px;
+  }
+
+  .trustRow > div > span {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .trustRow strong {
+    font-size: 11px;
+  }
+
+  .heroVisual {
+    min-height: 245px;
+    border-radius: 24px;
+  }
+
+  .heroVisual img {
+    height: 245px;
+  }
+
+  .exploreMark {
+    top: 24px;
+    right: 22px;
+    font-size: 31px;
+  }
+
+  .searchShell {
+    width: calc(100% - 20px);
+    margin-top: 18px;
+  }
+
+  .searchModes {
+    width: min(340px, calc(100% - 28px));
+  }
+
+  .searchModes > span {
+    min-height: 39px;
+    gap: 5px;
+    font-size: 10px;
+  }
+
+  .searchModeDisabled small {
+    display: none;
+  }
+
+  .searchShell :global(#car-search > form) {
+    padding-top: 20px;
+    border-radius: 22px;
+  }
+
+  .showcase {
+    padding-top: 64px;
+  }
+
+  .section {
+    width: calc(100% - 24px);
+    padding-block: 20px 28px;
+  }
+
+  .sectionHead {
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .sectionHead h2 {
+    font-size: 26px;
+  }
+
+  .sectionHead p {
+    font-size: 11px;
+  }
+
+  .sectionHead > a {
+    font-size: 10px;
+  }
+
+  .categoryGrid,
+  .popularGrid {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .categoryGrid::-webkit-scrollbar,
+  .popularGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .categoryCard {
+    flex: 0 0 168px;
+    scroll-snap-align: start;
+    border-radius: 18px;
+  }
+
+  .categoryImage {
+    height: 112px;
+  }
+
+  .categoryCard > strong {
+    padding: 11px 10px 13px;
+    font-size: 12px;
+  }
+
+  .carCard {
+    flex: 0 0 245px;
+    scroll-snap-align: start;
+    border-radius: 20px;
+  }
+
+  .carCardMedia {
+    height: 156px;
+  }
+
+  .carCardBody {
+    padding: 13px;
+  }
+
+  .carCardBody h3 {
+    font-size: 14px;
+  }
+
+  .priceLine strong {
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoryCard,
+  .carCard,
+  .categoryImage img,
+  .carCardMedia img {
+    transition: none;
+  }
+}
