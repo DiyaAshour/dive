@@ -23,9 +23,10 @@
 :global([dir="rtl"]) .timeButton{padding:2px 0 2px 6px!important}
 .dateChevron{top:47%!important}
 
-.ageField{position:relative}
-.ageField select{display:block;width:100%;min-width:0;margin:0;padding:2px 24px 2px 0;border:0;outline:0;background:transparent;color:#12263d;font:inherit;font-size:14px;font-weight:820;appearance:none;cursor:pointer}
-:global([dir="rtl"]) .ageField select{padding:2px 0 2px 24px}
+.ageField{position:relative;justify-content:center}
+.ageButton{display:block;width:100%;min-width:0;margin:0;padding:0 24px 0 0;border:0;background:transparent;color:inherit;text-align:start;cursor:pointer}
+.ageButton strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#12263d;font-size:14px;line-height:1.3;font-weight:820;font-variant-numeric:tabular-nums}
+:global([dir="rtl"]) .ageButton{padding:0 0 0 24px}
 .searchButton{white-space:nowrap}
 .searchButton span{display:inline!important}
 
@@ -38,8 +39,18 @@
 .timeGrid button{position:relative;display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:42px;padding:0 8px;border:1px solid #e0e5ea;border-radius:11px;background:#fff;color:#263a50;font:inherit;font-size:11px;font-weight:780;cursor:pointer;transition:border-color .15s ease,background .15s ease,color .15s ease}
 .timeGrid button:hover{border-color:#bdc8d2;background:#f7f9fa}.timeGrid .timeOptionActive{border-color:var(--navy);background:var(--navy);color:#fff;box-shadow:0 5px 14px rgba(16,40,64,.15)}.timeGrid .timeOptionActive svg{flex:0 0 auto}
 
+.agePanel{position:absolute;top:calc(100% + 12px);left:50%;z-index:56;width:min(370px,calc(100vw - 56px));transform:translateX(-50%);padding:16px 18px 18px;border:1px solid rgba(222,228,235,.96);border-radius:24px;background:#fff;box-shadow:0 26px 70px rgba(16,40,64,.18)}
+.agePanel:before{content:"";position:absolute;top:-7px;left:50%;width:14px;height:14px;background:#fff;border-top:1px solid rgba(222,228,235,.96);border-left:1px solid rgba(222,228,235,.96);transform:translateX(-50%) rotate(45deg)}
+.agePanelHead{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px;padding:0 2px 11px;border-bottom:1px solid #edf0f3;color:#17304b}
+.agePanelHead>div{min-width:0}.agePanelHead strong{display:block;font-size:14px;line-height:1.3}.agePanelHead span{display:block;margin-top:3px;color:#83909f;font-size:10px;font-weight:680}.agePanelHead>svg{flex:0 0 auto;color:#7b8998}
+.ageOptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ageOptions button{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:50px;padding:0 13px;border:1px solid #e0e5ea;border-radius:13px;background:#fff;color:#263a50;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:border-color .15s ease,background .15s ease,color .15s ease,transform .15s ease}
+.ageOptions button:hover{border-color:#bdc8d2;background:#f7f9fa;transform:translateY(-1px)}
+.ageOptions .ageOptionActive{border-color:var(--navy);background:var(--navy);color:#fff;box-shadow:0 7px 18px rgba(16,40,64,.16)}
+.ageOptions .ageOptionActive svg{flex:0 0 auto}
+
 @media (max-width:1050px){
-  .dateButton strong,.ageField select{font-size:13px}
+  .dateButton strong,.ageButton strong{font-size:13px}
   .timeButton{font-size:10px!important}
 }
 
@@ -55,7 +66,7 @@
   .dateButton strong{font-size:12.5px}
   .timeButton{margin-top:4px;font-size:10px!important}
   .ageField{min-height:60px!important}
-  .ageField select{font-size:13px}
+  .ageButton strong{font-size:13px}
   .searchButton{min-height:54px!important}
   .sameLine{font-size:9px}
   .carDatePanel{z-index:1002!important;bottom:calc(86px + env(safe-area-inset-bottom))!important;max-height:calc(100dvh - 154px)!important}
@@ -64,6 +75,11 @@
   .timePanelHead{margin-bottom:10px;padding-bottom:10px}
   .timeGrid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:min(49dvh,360px);gap:7px}
   .timeGrid button{min-height:43px;font-size:10.5px}
+  .agePanel{position:fixed;z-index:1002;left:12px;right:12px;top:auto;bottom:calc(86px + env(safe-area-inset-bottom));width:auto;transform:none;border-radius:26px;padding:15px 16px 16px;box-shadow:0 28px 80px rgba(16,40,64,.28)}
+  .agePanel:before{display:none}
+  .agePanelHead{margin-bottom:10px;padding-bottom:10px}
+  .ageOptions{gap:7px}
+  .ageOptions button{min-height:48px;font-size:11.5px}
 }
 
 @media (max-width:390px){
@@ -73,6 +89,9 @@
   .timePanel{left:10px;right:10px;padding-inline:13px}
   .timeGrid{gap:6px}
   .timeGrid button{min-height:41px;padding-inline:5px;font-size:10px}
+  .agePanel{left:10px;right:10px;padding-inline:13px}
+  .ageOptions{gap:6px}
+  .ageOptions button{min-height:46px;padding-inline:11px;font-size:11px}
 }
 
-@media (prefers-reduced-motion:reduce){.switchTrack,.switchTrack>span,.timeButton,.timeGrid button{transition:none}}
+@media (prefers-reduced-motion:reduce){.switchTrack,.switchTrack>span,.timeButton,.timeGrid button,.ageOptions button{transition:none}}
