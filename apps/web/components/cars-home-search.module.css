@@ -1,303 +1,60 @@
-.form {
-  direction: inherit;
-  display: grid;
-  grid-template-columns: minmax(260px, 1.35fr) minmax(235px, 1.08fr) minmax(235px, 1.08fr) minmax(150px, .7fr) minmax(205px, .95fr);
-  gap: 12px;
-  align-items: start;
-  min-height: 140px;
-  overflow: visible;
-  padding: 46px 20px 16px;
-  border: 1px solid rgba(218, 225, 232, .96);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, .985);
-  box-shadow: 0 18px 48px rgba(16, 40, 64, .13);
-  backdrop-filter: blur(18px);
+.root{direction:inherit;min-width:0}
+.form{direction:inherit}
+
+.locationField{justify-content:center;padding-block:9px!important}
+.locationInput{display:block;min-width:0}
+.locationInput input{display:block;width:100%;min-width:0;margin:1px 0 0;padding:2px 0;border:0;outline:0;background:transparent;color:#12263d;font:inherit;font-size:14px;font-weight:780;line-height:1.35;text-overflow:ellipsis}
+.sameLine{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:4px;padding-top:5px;border-top:1px solid #edf0f3;color:#7b8796;font-size:9.5px;font-weight:720;cursor:pointer}
+.switchInput{position:absolute;opacity:0;pointer-events:none}
+.switchTrack{position:relative;flex:0 0 30px;width:30px;height:17px;border-radius:999px;background:#cbd3dc;transition:background .18s ease}
+.switchTrack>span{position:absolute;top:3px;left:3px;width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(16,40,64,.22);transition:transform .18s ease}
+.switchInput:checked+.switchTrack{background:var(--navy)}
+.switchInput:checked+.switchTrack>span{transform:translateX(13px)}
+:global([dir="rtl"]) .switchTrack>span{left:auto;right:3px}
+:global([dir="rtl"]) .switchInput:checked+.switchTrack>span{transform:translateX(-13px)}
+.dropoffReveal{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;margin-top:5px;padding-top:5px;border-top:1px solid #edf0f3;color:#7c8795;font-size:9px;font-weight:760}
+.dropoffReveal input{min-width:0;border:0;outline:0;background:transparent;color:#17304b;font:inherit;font-size:11px;font-weight:760}
+
+.momentField{justify-content:center;padding:9px 36px 9px 14px!important}
+.dateButton{display:block;width:100%;min-width:0;margin:0;padding:0;border:0;background:transparent;color:inherit;text-align:start;cursor:pointer}
+.dateButton strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#12263d;font-size:14px;line-height:1.28;font-weight:820;font-variant-numeric:tabular-nums}
+.timeBox{display:flex;align-items:center;gap:5px;margin-top:2px;color:#8793a2}
+.timeBox input{width:82px;min-width:0;margin:0;padding:0;border:0;outline:0;background:transparent;color:#647386;font:inherit;font-size:10.5px;font-weight:760;font-variant-numeric:tabular-nums}
+.timeBox input::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer}
+.dateChevron{top:47%!important}
+
+.ageField{position:relative}
+.ageField select{display:block;width:100%;min-width:0;margin:0;padding:2px 24px 2px 0;border:0;outline:0;background:transparent;color:#12263d;font:inherit;font-size:14px;font-weight:820;appearance:none;cursor:pointer}
+:global([dir="rtl"]) .ageField select{padding:2px 0 2px 24px}
+.searchButton{white-space:nowrap}
+
+@media (max-width:1050px){
+  .dateButton strong,.ageField select{font-size:13px}
+  .timeBox input{width:72px;font-size:10px}
 }
 
-.field {
-  position: relative;
-  min-width: 0;
-  min-height: 58px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 8px 12px;
-  border: 1px solid #dbe3ea;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .98);
-  box-shadow: 0 2px 7px rgba(16, 40, 64, .025);
+@media (max-width:820px){
+  .locationField{grid-column:1/-1!important;min-height:78px!important}
+  .ageField{grid-column:1/-1!important;min-height:62px!important}
+  .searchButton{grid-column:1/-1!important;min-height:58px!important}
 }
 
-.locationField {
-  overflow: visible;
+@media (max-width:640px){
+  .locationField{min-height:86px!important;padding:9px 12px!important}
+  .momentField{min-height:72px!important;padding:9px 31px 9px 11px!important}
+  .dateButton strong{font-size:12.5px}
+  .timeBox{margin-top:3px}
+  .timeBox input{width:70px;font-size:10px}
+  .ageField{min-height:60px!important}
+  .ageField select{font-size:13px}
+  .searchButton{min-height:54px!important}
+  .sameLine{font-size:9px}
 }
 
-.field label {
-  display: block;
-  min-width: 0;
+@media (max-width:390px){
+  .momentField{padding-inline-start:9px!important;padding-inline-end:28px!important}
+  .dateButton strong{font-size:11.8px}
+  .timeBox input{width:64px;font-size:9.6px}
 }
 
-.label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  color: #778596;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .01em;
-}
-
-.locationField > label > input,
-.dropoffReveal input,
-.ageField select,
-.momentRow > input,
-.timeBox input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #102f4c;
-  font: inherit;
-  font-weight: 850;
-}
-
-.locationField > label > input {
-  min-width: 0;
-  font-size: 11.5px;
-  text-overflow: ellipsis;
-}
-
-.sameLine {
-  position: absolute;
-  inset-inline-start: 10px;
-  bottom: -28px;
-  display: flex !important;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 7px;
-  color: #6d7b8a;
-  font-size: 8.5px;
-  font-weight: 750;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.switchInput {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.switchTrack {
-  position: relative;
-  flex: 0 0 26px;
-  width: 26px;
-  height: 15px;
-  border-radius: 999px;
-  background: #c9d1da;
-  transition: background .18s ease;
-}
-
-.switchTrack > span {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(16, 40, 64, .22);
-  transition: transform .18s ease;
-}
-
-.switchInput:checked + .switchTrack {
-  background: #173b5c;
-}
-
-.switchInput:checked + .switchTrack > span {
-  transform: translateX(11px);
-}
-
-:global([dir="rtl"]) .switchTrack > span {
-  left: auto;
-  right: 3px;
-}
-
-:global([dir="rtl"]) .switchInput:checked + .switchTrack > span {
-  transform: translateX(-11px);
-}
-
-.dropoffReveal {
-  margin-top: 8px;
-  padding-top: 7px;
-  border-top: 1px solid #edf0f3;
-}
-
-.dropoffReveal > span {
-  display: block;
-  margin-bottom: 4px;
-  color: #8b96a4;
-  font-size: 8px;
-  font-weight: 800;
-}
-
-.dropoffReveal input {
-  font-size: 10.5px;
-}
-
-.momentRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 74px;
-  gap: 8px;
-  align-items: center;
-}
-
-.momentRow > input,
-.timeBox {
-  min-width: 0;
-  height: 26px;
-  background: transparent;
-}
-
-.momentRow > input {
-  padding: 0;
-  font-size: 10px;
-}
-
-.momentRow > input::-webkit-calendar-picker-indicator,
-.timeBox input::-webkit-calendar-picker-indicator {
-  opacity: .6;
-}
-
-.timeBox {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-inline-start: 8px;
-  border-inline-start: 1px solid #e3e8ee;
-  color: #647386;
-}
-
-.timeBox input {
-  min-width: 0;
-  padding: 0;
-  font-size: 9.5px;
-}
-
-.ageField select {
-  height: 26px;
-  padding: 0;
-  font-size: 10px;
-  appearance: auto;
-}
-
-.searchButton {
-  position: relative;
-  min-height: 58px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 22px;
-  border: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0f2b47, #153b5d);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 900;
-  box-shadow: 0 9px 22px rgba(16, 40, 64, .16);
-  transition: transform .18s ease, box-shadow .18s ease;
-}
-
-.searchButton::after {
-  content: "400+ cars available";
-  position: absolute;
-  top: calc(100% + 7px);
-  left: 50%;
-  width: max-content;
-  transform: translateX(-50%);
-  color: #7d8996;
-  font-size: 8px;
-  font-weight: 700;
-  pointer-events: none;
-}
-
-:global([dir="rtl"]) .searchButton::after {
-  content: "400+ سيارة متوفرة";
-}
-
-.searchButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 13px 28px rgba(16, 40, 64, .2);
-}
-
-@media (max-width: 1180px) {
-  .form {
-    grid-template-columns: 1.3fr 1fr 1fr .7fr 175px;
-    gap: 9px;
-    padding-inline: 14px;
-  }
-  .field {
-    padding-inline: 10px;
-  }
-}
-
-@media (max-width: 900px) {
-  .form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    min-height: 0;
-    padding: 42px 10px 12px;
-    border-radius: 20px;
-  }
-  .field {
-    min-height: 64px;
-    border-radius: 13px;
-  }
-  .locationField,
-  .searchButton {
-    grid-column: 1 / -1;
-  }
-  .sameLine {
-    position: static;
-    margin-top: 7px;
-  }
-  .searchButton {
-    min-height: 54px;
-    margin-bottom: 18px;
-  }
-}
-
-@media (max-width: 560px) {
-  .form {
-    grid-template-columns: 1fr 1fr;
-    padding: 40px 8px 10px;
-    gap: 7px;
-  }
-  .locationField {
-    min-height: 88px;
-  }
-  .field {
-    min-height: 66px;
-    padding: 8px 9px;
-  }
-  .momentRow {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-  .momentRow > input,
-  .timeBox {
-    height: 24px;
-  }
-  .timeBox {
-    padding-inline-start: 0;
-    border-inline-start: 0;
-  }
-  .ageField {
-    grid-column: 1 / -1;
-  }
-  .searchButton {
-    min-height: 50px;
-  }
-}
+@media (prefers-reduced-motion:reduce){.switchTrack,.switchTrack>span{transition:none}}
