@@ -19,6 +19,22 @@ type CloseMonthInput = Readonly<{
 const PLATFORM_ELIGIBLE_STATUSES = ["CONFIRMED", "MODIFIED", "COMPLETED"] as const;
 
 export async function getAdminCarFinancePeriods(adminUserId: string, filters: FinanceFilters = {}) {
+  await requirePlatformAdmin(adminUserId);
+  const db = database();
+
+  // A rental that has passed its scheduled return time is financially complete
+  // unless it was explicitly moved to another terminal state (cancelled/no-show/etc.).
+  // Reconcile this before loading finance so PAY_AT_COUNTER commission becomes
+  // receivable in the correct return month without requiring a manual status click.
+  await db.carReservation.updateMany({
+    where: {
+      status: { in: ["CONFIRMED", "MODIFIED"] },
+      returnAt: { lte: new Date() },
+      ...(filters.companyId ? { companyId: filters.companyId } : {}),
+    },
+    data: { status: "COMPLETED" },
+  });
+
   const finance = await getAdminCarFinance(adminUserId, filters);
   const selectedCompany = finance.selectedCompany;
 
@@ -37,7 +53,6 @@ export async function getAdminCarFinancePeriods(adminUserId: string, filters: Fi
   // different month. The month view is primarily the rental/service month, so
   // any reservation whose pickup/return interval overlaps the selected month is
   // visible. Financial recognition is still calculated separately below.
-  const db = database();
   const periodRange = inclusiveRange(finance.period.from, finance.period.to);
   const alreadyLoadedIds = new Set(finance.reservations.map((row) => row.id));
   const rentalReservations = await db.carReservation.findMany({
