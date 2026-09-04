@@ -9,6 +9,7 @@ import { getSiteLaunchConfig } from "@/lib/site-launch";
 import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 import "./phase2.css";
+import "./partner-auth-mobile-fix.css";
 import "./room-amenities-dnd.css";
 import "./account.css";
 import "./trips.css";

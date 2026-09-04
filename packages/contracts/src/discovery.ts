@@ -7,6 +7,8 @@ export const publicStaySchema = z.object({
   departure: dateOnly,
   adults: z.coerce.number().int().min(1).max(20).default(2),
   children: z.coerce.number().int().min(0).max(20).default(0),
+  infants: z.coerce.number().int().min(0).max(5).default(0),
+  pets: z.coerce.number().int().min(0).max(5).default(0),
 }).superRefine((value, ctx) => {
   const arrival = new Date(`${value.arrival}T00:00:00.000Z`);
   const departure = new Date(`${value.departure}T00:00:00.000Z`);
