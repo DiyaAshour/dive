@@ -1,0 +1,41 @@
+@media(max-width:900px){
+  .mobileCustomDateField{display:grid;gap:5px;min-width:0}
+  .mobileCustomDateField>span{color:#28445d;font-size:11px;font-weight:800}
+  .mobileCustomDateField>button{display:flex;align-items:center;gap:8px;width:100%;min-width:0;min-height:48px;padding:0 12px;border:1px solid #d4dfe7;border-radius:12px;background:#fff;color:#102b45;font:inherit;text-align:start;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
+  .mobileCustomDateField>button svg{flex:0 0 auto;color:#6f8191}
+  .mobileCustomDateField>button strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:850;font-variant-numeric:tabular-nums}
+  .mobileCustomDateField>button.isActive{border-color:#5d91ba;background:#f8fbfd;box-shadow:0 0 0 3px rgba(64,131,181,.12)}
+
+  .mobileInlineCalendar{grid-column:1/-1;overflow:hidden;margin-top:1px;padding:12px;border:1px solid #d7e1e8;border-radius:18px;background:#fff;box-shadow:0 16px 38px rgba(15,39,71,.13)}
+  .mobileInlineCalendarTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;padding:0 2px 9px;border-bottom:1px solid #e8edf1;color:#173650}
+  .mobileInlineCalendarTitle strong{font-size:13px}
+  .mobileInlineCalendarTitle span{color:#6e8090;font-size:11px;font-weight:780;font-variant-numeric:tabular-nums}
+  .mobileInlineMonths{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .mobileInlineMonth{min-width:0}
+  .mobileInlineMonthHead{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;align-items:center;gap:5px;margin-bottom:7px}
+  .mobileInlineMonthHead>strong{overflow:hidden;text-align:center;text-overflow:ellipsis;white-space:nowrap;color:#173650;font-size:12px;font-weight:900}
+  .mobileInlineMonthHead>button{display:grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid #dde5eb;border-radius:10px;background:#f8fafb;color:#294861;cursor:pointer}
+  .mobileInlineMonthHead>button:disabled{opacity:.3;cursor:not-allowed}
+  .mobileInlineWeekdays,.mobileInlineDays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+  .mobileInlineWeekdays{margin-bottom:3px;color:#83919e;font-size:9px;font-weight:850;text-align:center}
+  .mobileInlineWeekdays span{display:grid;place-items:center;height:22px}
+  .mobileInlineDays>button,.mobileInlineDays>.empty{aspect-ratio:1/1;min-width:0}
+  .mobileInlineDays>button{display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:transparent;color:#20394f;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
+  .mobileInlineDays>button:hover:not(:disabled){background:#edf3f7}
+  .mobileInlineDays>button.inRange{border-radius:0;background:#eef4f8}
+  .mobileInlineDays>button.selected{border-radius:10px;background:#0f2f4a;color:#fff;box-shadow:0 5px 13px rgba(15,47,74,.2)}
+  .mobileInlineDays>button:disabled{color:#c4ccd3;cursor:not-allowed}
+}
+
+@media(max-width:620px){
+  .mobileInlineMonths{grid-template-columns:1fr;gap:0}
+  .mobileInlineMonthSecond{display:none}
+  .mobileInlineCalendar{padding:11px 10px 12px;border-radius:17px}
+  .mobileInlineDays>button{font-size:11px}
+  .mobileInlineWeekdays{font-size:9.5px}
+}
+
+@media(max-width:360px){
+  .mobileCustomDateField>button strong{font-size:13px}
+  .mobileInlineCalendar{padding-inline:8px}
+}
