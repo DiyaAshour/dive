@@ -27,6 +27,12 @@ enum CarCatalogAssetType {
   OTHER
 }
 
+enum CarCatalogAssetUploadState {
+  PENDING_UPLOAD
+  READY
+  DELETED
+}
+
 model CarCatalogVehicle {
   id                   String                  @id @default(cuid())
   slug                 String                  @unique
@@ -54,6 +60,7 @@ model CarCatalogVehicle {
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   assets               CarCatalogAsset[]
+  assetUploads         CarCatalogAssetUpload[]
   fleetLinks           CarVehicleCatalogLink[]
 
   @@index([make, model, year, active])
@@ -82,6 +89,32 @@ model CarCatalogAsset {
 
   @@index([catalogVehicleId, active, type, sortOrder])
   @@index([catalogVehicleId, paintCode, type, spinFrame])
+}
+
+model CarCatalogAssetUpload {
+  id                String                     @id @default(cuid())
+  catalogVehicleId  String
+  catalogVehicle    CarCatalogVehicle          @relation(fields: [catalogVehicleId], references: [id], onDelete: Cascade)
+  uploadedByUserId  String
+  type              CarCatalogAssetType
+  angle             String?
+  objectKey         String                     @unique
+  publicUrl         String
+  originalFileName  String
+  contentType       String
+  expectedSizeBytes Int
+  width             Int?
+  height            Int?
+  sourceRef         String?
+  state             CarCatalogAssetUploadState @default(PENDING_UPLOAD)
+  uploadExpiresAt   DateTime
+  uploadedAt        DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([catalogVehicleId, state, createdAt])
+  @@index([uploadExpiresAt, state])
 }
 
 model CarVehicleCatalogLink {
