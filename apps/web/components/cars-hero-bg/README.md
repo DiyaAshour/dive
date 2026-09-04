@@ -1,0 +1,1 @@
+This module stores the generated HandMeKey Cars hero scene as a compact WebP data URI split across small TypeScript chunks. The scene already contains the Amman cityscape and SUV, so the homepage must not overlay a second vehicle image on top of it.
