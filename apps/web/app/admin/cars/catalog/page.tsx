@@ -3,6 +3,7 @@ import {redirect} from "next/navigation";
 import {BadgeCheck, Building2, CalendarRange, CarFront, CircleDollarSign, Images, Rotate3D, ShieldCheck, TriangleAlert} from "lucide-react";
 import {getAdminCarCatalogCoverage, getAdminCarCatalogOverview, getAdminNavigationCounts, getJordanRentalMarketSummary} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
+import {CarCatalogCutoutUploader} from "@/components/car-catalog-cutout-uploader";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import styles from "../cars-admin.module.css";
@@ -45,6 +46,8 @@ export default async function AdminCarsCatalogPage() {
       <Metric icon={<Images size={16}/>} label={ar ? "مقصورة 360°" : "Interior 360°"} value={overview.interior360Cars} sub={ar ? "بانوراما داخلية" : "Interior panorama ready"}/>
       <Metric icon={<CarFront size={16}/>} label={ar ? "ربط الأسطول" : "Fleet visual coverage"} value={coveragePercent} sub={`% · ${coverage.linkedFleetVehicles}/${coverage.fleetVehicles}`}/>
     </section>
+
+    <CarCatalogCutoutUploader locale={locale}/>
 
     <div className={styles.split}>
       <section className={styles.panel}>
