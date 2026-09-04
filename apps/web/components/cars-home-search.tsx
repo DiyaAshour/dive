@@ -1,16 +1,18 @@
 "use client";
 
 import {useEffect, useMemo, useRef, useState, type ReactNode} from "react";
-import {CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock, MapPin, Search, Users} from "lucide-react";
+import {CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, MapPin, Search, Users} from "lucide-react";
 import stayStyles from "./home-booking-search.module.css";
 import styles from "./cars-home-search.module.css";
 
 type Locale = "ar" | "en";
 type Props = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
 type ActiveDate = "pickup" | "return";
+type OpenPanel = "dates" | "pickupTime" | "returnTime" | null;
 
 const DRIVER_AGES = ["18-24", "25-29", "30-65", "66+"] as const;
 const MIN_RENTAL_DAYS = 3;
+const TIME_SLOTS = Array.from({length: 48}, (_, index) => `${String(Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "30" : "00"}`);
 
 export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: Props) {
   const ar = locale === "ar";
@@ -18,7 +20,9 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
   const [pickupDate, setPickupDate] = useState(defaultPickupDate);
   const minimumReturnDate = useMemo(() => addDaysValue(pickupDate, MIN_RENTAL_DAYS), [pickupDate]);
   const [returnDate, setReturnDate] = useState(() => defaultReturnDate >= addDaysValue(defaultPickupDate, MIN_RENTAL_DAYS) ? defaultReturnDate : addDaysValue(defaultPickupDate, MIN_RENTAL_DAYS));
-  const [openDates, setOpenDates] = useState(false);
+  const [pickupTime, setPickupTime] = useState("10:00");
+  const [returnTime, setReturnTime] = useState("10:00");
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activeDate, setActiveDate] = useState<ActiveDate>("pickup");
   const [calendarCursor, setCalendarCursor] = useState(() => startOfMonth(parseDate(defaultPickupDate)));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -36,6 +40,9 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
     ageSuffix: "سنة",
     choosePickup: "اختر تاريخ الاستلام",
     chooseReturn: "اختر تاريخ الإعادة",
+    choosePickupTime: "اختر وقت الاستلام",
+    chooseReturnTime: "اختر وقت الإعادة",
+    localTime: "جميع الأوقات بالتوقيت المحلي",
     previousMonth: "الشهر السابق",
     nextMonth: "الشهر التالي",
   } : {
@@ -51,16 +58,19 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
     ageSuffix: "years",
     choosePickup: "Choose pick-up date",
     chooseReturn: "Choose return date",
+    choosePickupTime: "Choose pick-up time",
+    chooseReturnTime: "Choose return time",
+    localTime: "All times are local",
     previousMonth: "Previous month",
     nextMonth: "Next month",
   };
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenDates(false);
+      if (!rootRef.current?.contains(event.target as Node)) setOpenPanel(null);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenDates(false);
+      if (event.key === "Escape") setOpenPanel(null);
     };
     document.addEventListener("mousedown", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
@@ -78,7 +88,7 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
   function showDates(field: ActiveDate) {
     setActiveDate(field);
     setCalendarCursor(startOfMonth(parseDate(field === "pickup" ? pickupDate : returnDate)));
-    setOpenDates(true);
+    setOpenPanel("dates");
   }
 
   function chooseDate(value: string) {
@@ -91,7 +101,13 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
     }
     if (value < minimumReturnDate) return;
     setReturnDate(value);
-    setOpenDates(false);
+    setOpenPanel(null);
+  }
+
+  function chooseTime(value: string) {
+    if (openPanel === "pickupTime") setPickupTime(value);
+    if (openPanel === "returnTime") setReturnTime(value);
+    setOpenPanel(null);
   }
 
   return <div className={`${stayStyles.root} ${styles.root}`} id="car-search" ref={rootRef}>
@@ -109,8 +125,8 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
         {sameDropoff ? <input type="hidden" name="dropoff" value="same"/> : <label className={styles.dropoffReveal}><span>{copy.dropoff}</span><input name="dropoff" placeholder={copy.dropoffPlaceholder} required/></label>}
       </div>
 
-      <MomentField locale={locale} label={copy.pickupMoment} date={pickupDate} timeName="pickupTime" active={openDates && activeDate === "pickup"} onDate={() => showDates("pickup")}/>
-      <MomentField locale={locale} label={copy.returnMoment} date={returnDate} timeName="returnTime" active={openDates && activeDate === "return"} onDate={() => showDates("return")}/>
+      <MomentField locale={locale} label={copy.pickupMoment} date={pickupDate} time={pickupTime} active={openPanel === "dates" && activeDate === "pickup" || openPanel === "pickupTime"} dateActive={openPanel === "dates" && activeDate === "pickup"} timeActive={openPanel === "pickupTime"} onDate={() => showDates("pickup")} onTime={() => setOpenPanel("pickupTime")}/>
+      <MomentField locale={locale} label={copy.returnMoment} date={returnDate} time={returnTime} active={openPanel === "dates" && activeDate === "return" || openPanel === "returnTime"} dateActive={openPanel === "dates" && activeDate === "return"} timeActive={openPanel === "returnTime"} onDate={() => showDates("return")} onTime={() => setOpenPanel("returnTime")}/>
 
       <label className={`${stayStyles.field} ${stayStyles.guestField} ${styles.ageField}`}>
         <span className={stayStyles.fieldLabel}><Users size={14}/>{copy.age}</span>
@@ -122,26 +138,41 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
 
       <input type="hidden" name="pickupDate" value={pickupDate}/>
       <input type="hidden" name="returnDate" value={returnDate}/>
+      <input type="hidden" name="pickupTime" value={pickupTime}/>
+      <input type="hidden" name="returnTime" value={returnTime}/>
       <button className={`${stayStyles.searchButton} ${styles.searchButton}`} type="submit"><Search size={19}/><span>{copy.search}</span></button>
     </form>
 
-    {openDates && <div className={stayStyles.datePanel} role="dialog" aria-label={activeDate === "pickup" ? copy.choosePickup : copy.chooseReturn}>
+    {openPanel === "dates" && <div className={`${stayStyles.datePanel} ${styles.carDatePanel}`} role="dialog" aria-label={activeDate === "pickup" ? copy.choosePickup : copy.chooseReturn}>
       <div className={stayStyles.calendarHeaderMobile}>{activeDate === "pickup" ? copy.pickupMoment : copy.returnMoment}</div>
       <div className={stayStyles.months}>
         <MonthCalendar month={monthOne} locale={locale} pickupDate={pickupDate} returnDate={returnDate} activeDate={activeDate} minimumReturnDate={minimumReturnDate} onSelect={chooseDate} previousAction={<button type="button" className={stayStyles.monthArrow} aria-label={copy.previousMonth} disabled={!canGoPrevious} onClick={() => setCalendarCursor((month) => addMonths(month, -1))}><ChevronLeft size={19}/></button>}/>
         <MonthCalendar month={monthTwo} locale={locale} pickupDate={pickupDate} returnDate={returnDate} activeDate={activeDate} minimumReturnDate={minimumReturnDate} onSelect={chooseDate} nextAction={<button type="button" className={stayStyles.monthArrow} aria-label={copy.nextMonth} onClick={() => setCalendarCursor((month) => addMonths(month, 1))}><ChevronRight size={19}/></button>}/>
       </div>
     </div>}
+
+    {(openPanel === "pickupTime" || openPanel === "returnTime") && <div className={styles.timePanel} role="dialog" aria-label={openPanel === "pickupTime" ? copy.choosePickupTime : copy.chooseReturnTime}>
+      <div className={styles.timePanelHead}>
+        <div><strong>{openPanel === "pickupTime" ? copy.choosePickupTime : copy.chooseReturnTime}</strong><span>{copy.localTime}</span></div>
+        <Clock size={18}/>
+      </div>
+      <div className={styles.timeGrid}>
+        {TIME_SLOTS.map((value) => {
+          const active = (openPanel === "pickupTime" ? pickupTime : returnTime) === value;
+          return <button type="button" key={value} className={active ? styles.timeOptionActive : ""} onClick={() => chooseTime(value)}><span>{formatTime(value, locale)}</span>{active && <Check size={15}/>}</button>;
+        })}
+      </div>
+    </div>}
   </div>;
 }
 
-function MomentField({locale, label, date, timeName, active, onDate}: {locale: Locale; label: string; date: string; timeName: string; active: boolean; onDate: () => void}) {
+function MomentField({locale, label, date, time, active, dateActive, timeActive, onDate, onTime}: {locale: Locale; label: string; date: string; time: string; active: boolean; dateActive: boolean; timeActive: boolean; onDate: () => void; onTime: () => void}) {
   return <div className={`${stayStyles.field} ${stayStyles.dateField} ${styles.momentField} ${active ? stayStyles.activeField : ""}`}>
-    <button type="button" className={styles.dateButton} onClick={onDate} aria-haspopup="dialog" aria-expanded={active}>
+    <button type="button" className={styles.dateButton} onClick={onDate} aria-haspopup="dialog" aria-expanded={dateActive}>
       <span className={stayStyles.fieldLabel}><CalendarDays size={14}/>{label}</span>
       <strong>{formatDate(date, locale)}</strong>
     </button>
-    <div className={styles.timeBox}><Clock size={14}/><input name={timeName} type="time" defaultValue="10:00" required/></div>
+    <button type="button" className={`${styles.timeButton} ${timeActive ? styles.timeButtonActive : ""}`} onClick={onTime} aria-haspopup="dialog" aria-expanded={timeActive}><Clock size={14}/><span>{formatTime(time, locale)}</span></button>
     <ChevronDown size={16} className={`${stayStyles.fieldChevron} ${styles.dateChevron}`}/>
   </div>;
 }
@@ -179,4 +210,5 @@ function addDays(date: Date, amount: number) { const next = new Date(date); next
 function localDateValue(date: Date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, "0"); const day = String(date.getDate()).padStart(2, "0"); return `${year}-${month}-${day}`; }
 function addDaysValue(value: string, amount: number) { return localDateValue(addDays(parseDate(value), amount)); }
 function formatDate(value: string, locale: Locale) { return new Intl.DateTimeFormat(locale === "ar" ? "ar-JO" : "en-GB", {day: "2-digit", month: "2-digit", year: "numeric"}).format(parseDate(value)); }
+function formatTime(value: string, locale: Locale) { const [hour = "0", minute = "0"] = value.split(":"); const date = new Date(2026, 0, 1, Number(hour), Number(minute)); return new Intl.DateTimeFormat(locale === "ar" ? "ar-JO-u-nu-latn" : "en-US", {hour: "numeric", minute: "2-digit", hour12: true}).format(date); }
 function buildCalendarDays(month: Date) { const first = startOfMonth(month); const mondayOffset = (first.getDay() + 6) % 7; const numberOfDays = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(); const cells: Array<Date | null> = Array.from({length: mondayOffset}, () => null); for (let day = 1; day <= numberOfDays; day += 1) cells.push(new Date(first.getFullYear(), first.getMonth(), day, 12)); while (cells.length % 7 !== 0) cells.push(null); return cells; }
