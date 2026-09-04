@@ -1,13 +1,70 @@
+:global(body:has([data-cars-reference="true"]) .siteHeader) {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 90 !important;
+  border-bottom: 0 !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.97) 0%, rgba(255,255,255,.89) 64%, rgba(255,255,255,.34) 88%, rgba(255,255,255,0) 100%) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .siteHeaderInner) {
+  width: min(1440px, calc(100% - 96px)) !important;
+  height: 64px !important;
+  gap: 24px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .siteNav) {
+  gap: 28px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .siteNav a) {
+  color: #19334c !important;
+  font-size: 12px !important;
+  font-weight: 760 !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .partnerEntry) {
+  color: #1c3852 !important;
+  font-size: 12px !important;
+  font-weight: 780 !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .accountButton) {
+  min-height: 40px !important;
+  padding-inline: 17px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 7px 17px rgba(16,40,64,.14) !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero) {
+  overflow: visible !important;
+  border: 0 !important;
+  background: #fff !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero::before) {
+  display: none !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero > .shell:first-of-type) {
+  display: none !important;
+}
+
 .heroScene {
-  height: clamp(585px, 42.85vw, 821px);
-  min-height: 0 !important;
-  padding-top: clamp(38px, 3vw, 58px) !important;
-  padding-bottom: 128px !important;
+  position: relative;
+  height: 520px !important;
+  min-height: 520px !important;
+  margin-top: 0 !important;
+  padding: 92px 0 94px !important;
+  border: 0 !important;
   background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/ammancitybooking.png") !important;
   background-size: cover !important;
   background-position: center bottom !important;
   background-repeat: no-repeat !important;
-  background-color: #f5efe3 !important;
+  background-color: #f6efe2 !important;
   overflow: hidden !important;
   isolation: isolate;
 }
@@ -18,10 +75,17 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/ammancitybooking.png") !important;
-  background-size: 92% auto !important;
-  background-position: center bottom !important;
-  background-repeat: no-repeat !important;
+  background:
+    linear-gradient(90deg,
+      rgba(255,255,255,.99) 0%,
+      rgba(255,255,255,.97) 10%,
+      rgba(255,255,255,.91) 19%,
+      rgba(255,255,255,.77) 29%,
+      rgba(255,255,255,.51) 39%,
+      rgba(255,255,255,.20) 49%,
+      rgba(255,255,255,.03) 59%,
+      rgba(255,255,255,0) 67%),
+    linear-gradient(180deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 25%, rgba(255,255,255,0) 50%);
 }
 
 .heroScene > * {
@@ -29,9 +93,36 @@
   z-index: 1;
 }
 
+:global([dir="rtl"]) .heroScene::before {
+  background:
+    linear-gradient(90deg,
+      rgba(255,255,255,.99) 0%,
+      rgba(255,255,255,.97) 10%,
+      rgba(255,255,255,.91) 19%,
+      rgba(255,255,255,.77) 29%,
+      rgba(255,255,255,.51) 39%,
+      rgba(255,255,255,.20) 49%,
+      rgba(255,255,255,.03) 59%,
+      rgba(255,255,255,0) 67%),
+    linear-gradient(180deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 25%, rgba(255,255,255,0) 50%);
+}
+
+.heroInner {
+  width: min(1080px, calc(100% - 120px)) !important;
+  min-height: 330px !important;
+  margin-inline: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr) !important;
+  gap: 32px !important;
+  align-items: start !important;
+  direction: ltr !important;
+}
+
 .heroCopy {
   position: relative;
-  max-width: 600px !important;
+  max-width: 520px !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 :global([dir="rtl"]) .heroCopy {
@@ -45,8 +136,12 @@
 }
 
 .kicker {
-  color: #9f6b13 !important;
+  display: block !important;
+  margin: 0 0 14px !important;
+  color: #a36e13 !important;
+  font-size: 10px !important;
   font-weight: 900 !important;
+  letter-spacing: .18em !important;
 }
 
 :global([dir="rtl"]) .kicker {
@@ -56,37 +151,102 @@
   text-transform: none !important;
 }
 
-:global([dir="ltr"]) .kicker {
-  direction: ltr !important;
-  text-align: left !important;
-}
-
 .heroCopy h1 {
-  max-width: 620px;
+  max-width: 520px !important;
+  margin: 0 !important;
+  color: #102f4c !important;
+  font-size: clamp(46px, 3.55vw, 56px) !important;
+  line-height: .96 !important;
+  letter-spacing: -.045em !important;
   text-wrap: balance;
 }
 
-.heroCopy h1 span {
-  color: #102840 !important;
+:global([dir="rtl"]) .heroCopy h1 {
+  letter-spacing: -.025em !important;
+  line-height: 1.02 !important;
+}
+
+.heroCopy h1 span,
+.heroCopy h1 strong {
+  display: block !important;
   text-shadow: none !important;
+}
+
+.heroCopy h1 span {
+  color: #102f4c !important;
 }
 
 .heroCopy h1 strong {
-  color: #b77b10 !important;
-  text-shadow: none !important;
+  margin-top: 4px !important;
+  color: #ba831a !important;
+  font-weight: 880 !important;
 }
 
 .heroCopy > p {
-  max-width: 560px !important;
+  max-width: 470px !important;
+  margin: 15px 0 0 !important;
   color: #17324d !important;
-  font-weight: 700 !important;
-  line-height: 1.65 !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+  line-height: 1.55 !important;
   text-shadow: none !important;
   text-wrap: pretty;
 }
 
+.trustRow {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  max-width: 500px !important;
+  margin-top: 18px !important;
+  overflow: hidden !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.58) !important;
+  box-shadow: 0 6px 18px rgba(16,40,64,.035) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.trustRow > div {
+  min-height: 52px !important;
+  gap: 8px !important;
+  padding: 8px 11px !important;
+  border: 0 !important;
+  border-inline-start: 1px solid rgba(218,225,232,.82) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.trustRow > div:first-child {
+  border-inline-start: 0 !important;
+}
+
+.trustRow > div > span {
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 10px !important;
+  background: rgba(213,161,58,.10) !important;
+  color: #b9861f !important;
+}
+
+.trustRow strong {
+  color: #17324d !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+}
+
+.trustRow small {
+  margin-top: 3px !important;
+  color: #7a8794 !important;
+  font-size: 8px !important;
+  line-height: 1.15 !important;
+}
+
 .heroVisual {
-  min-height: clamp(370px, 27vw, 500px);
+  position: relative !important;
+  min-height: 320px !important;
   overflow: visible !important;
   background: transparent !important;
   border-radius: 0 !important;
@@ -100,12 +260,14 @@
 }
 
 .exploreMark {
-  top: 44px !important;
-  right: 3% !important;
+  top: 72px !important;
+  right: 0 !important;
   z-index: 4 !important;
-  font-size: clamp(34px, 3vw, 52px) !important;
+  color: #fff !important;
+  font-size: clamp(33px, 2.8vw, 46px) !important;
+  line-height: .88 !important;
   transform: rotate(-6deg) !important;
-  text-shadow: 0 4px 18px rgba(9,27,43,.24) !important;
+  text-shadow: 0 4px 17px rgba(9,27,43,.28) !important;
 }
 
 .searchShell {
@@ -114,10 +276,38 @@
   right: auto !important;
   top: auto !important;
   bottom: auto !important;
-  z-index: 20 !important;
-  width: min(1280px, calc(100% - 96px)) !important;
-  margin: -70px auto 0 !important;
+  z-index: 30 !important;
+  width: min(1320px, calc(100% - 64px)) !important;
+  margin: -112px auto 0 !important;
   transform: none !important;
+}
+
+.searchShell > :first-child {
+  position: relative !important;
+  z-index: 40 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  width: min(372px, 80%) !important;
+  min-height: 36px !important;
+  margin: 0 auto -36px !important;
+  padding: 3px !important;
+  border: 1px solid rgba(211,219,227,.98) !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.98) !important;
+  box-shadow: 0 7px 20px rgba(16,40,64,.10) !important;
+}
+
+.searchShell > :first-child > span {
+  min-height: 30px !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+.searchShell > :first-child > span:first-child {
+  background: linear-gradient(135deg, #0f2d49, #153c5d) !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
 
 .searchShell form {
@@ -125,51 +315,260 @@
   margin: 0 !important;
 }
 
+:global(body:has([data-cars-reference="true"]) .premiumHero + div) {
+  background: #fff !important;
+  padding: 28px 0 26px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section) {
+  width: min(1344px, calc(100% - 96px)) !important;
+  margin-inline: auto !important;
+  padding: 0 0 22px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section > div:first-child) {
+  margin-bottom: 10px !important;
+  align-items: center !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section > div:first-child h2) {
+  margin: 0 !important;
+  color: #102f4c !important;
+  font-size: 23px !important;
+  line-height: 1.1 !important;
+  letter-spacing: -.02em !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section > div:first-child p) {
+  margin-top: 4px !important;
+  color: #788594 !important;
+  font-size: 11px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section > div:first-child > a) {
+  color: #0f5d9d !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child) {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a) {
+  height: 124px !important;
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;
+  border: 1px solid #e0e6ec !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 4px 13px rgba(16,40,64,.025) !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a > strong) {
+  display: block !important;
+  padding: 9px 12px 0 !important;
+  color: #17324d !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a > div) {
+  height: 88px !important;
+  background: #fff !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child img) {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 2px 18px 8px !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2)) {
+  padding-top: 2px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child) {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child)::before,
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child)::after {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid #dce3e9;
+  border-radius: 50%;
+  background: rgba(255,255,255,.98);
+  color: #17324d;
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 0 6px 16px rgba(16,40,64,.08);
+  pointer-events: none;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child)::before {
+  content: "‹";
+  left: -44px;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child)::after {
+  content: "›";
+  right: -44px;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a) {
+  min-height: 194px !important;
+  overflow: hidden !important;
+  border: 1px solid #e0e6ec !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 4px 14px rgba(16,40,64,.03) !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a > div:first-child) {
+  height: 104px !important;
+  background: #fff !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a > div:first-child img) {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 4px 14px 0 !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a > div:last-child) {
+  min-height: 88px !important;
+  padding: 9px 12px 11px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) h3) {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) a > div:last-child > div:nth-child(2)) {
+  gap: 5px 8px !important;
+  margin-top: 6px !important;
+  font-size: 8px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) a > div:last-child > div:last-child) {
+  padding-top: 8px !important;
+}
+
+:global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) a > div:last-child > div:last-child strong) {
+  font-size: 16px !important;
+}
+
 @media (max-width: 1180px) {
+  :global(body:has([data-cars-reference="true"]) .siteHeader) {
+    position: sticky !important;
+    background: rgba(255,255,255,.97) !important;
+    backdrop-filter: blur(18px) !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero > .shell:first-of-type) {
+    display: block !important;
+  }
+
   .heroScene {
-    height: clamp(585px, 51vw, 650px);
-    background-position: 56% bottom !important;
+    height: 610px !important;
+    min-height: 610px !important;
+    padding: 54px 0 108px !important;
+    background-position: 57% bottom !important;
   }
 
   .heroScene::before {
-    background-size: 96% auto !important;
-    background-position: 58% bottom !important;
+    background: linear-gradient(90deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.78) 38%, rgba(255,255,255,.20) 63%, rgba(255,255,255,0) 78%);
   }
 
-  .heroVisual {
-    min-height: 370px;
+  .heroInner {
+    width: min(980px, calc(100% - 48px)) !important;
+    grid-template-columns: minmax(0, 470px) minmax(0, 1fr) !important;
   }
 
-  .exploreMark {
-    right: 2% !important;
+  .heroCopy h1 {
+    font-size: clamp(44px, 5vw, 56px) !important;
+  }
+
+  .trustRow {
+    max-width: 460px !important;
   }
 
   .searchShell {
-    width: min(1100px, calc(100% - 48px)) !important;
-    margin-top: -58px !important;
+    width: min(1080px, calc(100% - 48px)) !important;
+    margin-top: -84px !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section) {
+    width: min(1080px, calc(100% - 48px)) !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child),
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
 
 @media (max-width: 900px) {
+  :global(body:has([data-cars-reference="true"]) .premiumHero > .shell:first-of-type) {
+    display: block !important;
+  }
+
   .heroScene {
-    height: 760px;
+    height: 760px !important;
     min-height: 760px !important;
-    padding-top: 28px !important;
-    padding-bottom: 118px !important;
+    padding: 28px 0 118px !important;
     background-image:
-      linear-gradient(180deg, rgba(255,252,246,.84) 0%, rgba(255,252,246,.66) 28%, rgba(255,252,246,.14) 52%, rgba(255,252,246,0) 72%),
+      linear-gradient(180deg, rgba(255,252,246,.90) 0%, rgba(255,252,246,.70) 28%, rgba(255,252,246,.18) 54%, rgba(255,252,246,0) 72%),
       url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/ammancitybooking.png") !important;
     background-size: auto 100% !important;
     background-position: 58% center !important;
-    overflow: hidden !important;
   }
 
   .heroScene::before {
-    display: none;
+    display: none !important;
+  }
+
+  .heroInner {
+    width: min(760px, calc(100% - 36px)) !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .heroCopy {
+    max-width: 650px !important;
+    padding-inline: 8px !important;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(42px, 8vw, 58px) !important;
+  }
+
+  .trustRow {
+    max-width: 100% !important;
   }
 
   .heroVisual {
-    min-height: 292px;
+    min-height: 292px !important;
   }
 
   .exploreMark {
@@ -182,14 +581,31 @@
     width: min(760px, calc(100% - 28px)) !important;
     margin-top: -46px !important;
   }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div) {
+    padding-top: 38px !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section) {
+    width: min(760px, calc(100% - 28px)) !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child),
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child)::before,
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child)::after {
+    display: none !important;
+  }
 }
 
 @media (max-width: 640px) {
   .heroScene {
-    height: 680px;
+    height: 680px !important;
     min-height: 680px !important;
-    padding-top: 22px !important;
-    padding-bottom: 108px !important;
+    padding: 22px 0 108px !important;
     background-position: 61% center !important;
   }
 
@@ -201,8 +617,20 @@
     max-width: 100% !important;
   }
 
+  .trustRow {
+    grid-template-columns: 1fr !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .trustRow > div {
+    border: 1px solid rgba(218,225,232,.85) !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.84) !important;
+  }
+
   .heroVisual {
-    min-height: 228px;
+    min-height: 228px !important;
   }
 
   .exploreMark {
@@ -214,5 +642,9 @@
   .searchShell {
     width: calc(100% - 18px) !important;
     margin-top: -34px !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .premiumHero + div > section) {
+    width: calc(100% - 24px) !important;
   }
 }
