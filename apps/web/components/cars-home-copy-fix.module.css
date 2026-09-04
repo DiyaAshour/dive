@@ -1,0 +1,168 @@
+.heroCopy {
+  max-width: 560px !important;
+  padding-top: 4px !important;
+}
+
+.heroCopy h1 {
+  max-width: 540px !important;
+  margin: 0 !important;
+  font-size: clamp(54px, 4vw, 64px) !important;
+  line-height: .94 !important;
+  letter-spacing: -.05em !important;
+  text-wrap: balance;
+}
+
+.heroCopy h1 span,
+.heroCopy h1 strong {
+  display: block !important;
+}
+
+.heroCopy h1 strong {
+  margin-top: 5px !important;
+}
+
+.heroCopy > p {
+  max-width: 500px !important;
+  margin-top: 17px !important;
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+  font-weight: 680 !important;
+}
+
+.kicker {
+  display: block !important;
+  margin-bottom: 16px !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: .22em !important;
+  line-height: 1.2 !important;
+}
+
+:global([dir="rtl"]) .kicker {
+  letter-spacing: 0 !important;
+}
+
+.trustRow {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  width: 100% !important;
+  max-width: 570px !important;
+  margin-top: 22px !important;
+  overflow: visible !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.trustRow > div {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  min-height: 62px !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(214,222,230,.96) !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.92) !important;
+  box-shadow: 0 8px 22px rgba(16,40,64,.055) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.trustRow > div > span {
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 11px !important;
+  background: rgba(215,164,61,.12) !important;
+  color: #b68121 !important;
+}
+
+.trustRow p {
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.trustRow strong,
+.trustRow small {
+  display: block !important;
+  white-space: normal !important;
+}
+
+.trustRow strong {
+  color: #17324d !important;
+  font-size: 11.5px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+}
+
+.trustRow small {
+  margin-top: 3px !important;
+  color: #6f7d8c !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
+:global([dir="rtl"]) .heroCopy,
+:global([dir="rtl"]) .trustRow {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+:global([dir="ltr"]) .heroCopy,
+:global([dir="ltr"]) .trustRow {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+@media (max-width: 1180px) {
+  .heroCopy h1 {
+    font-size: clamp(46px, 5vw, 58px) !important;
+  }
+
+  .trustRow {
+    max-width: 520px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .heroCopy {
+    max-width: 100% !important;
+  }
+
+  .heroCopy h1 {
+    max-width: 100% !important;
+    font-size: clamp(42px, 8.5vw, 56px) !important;
+  }
+
+  .heroCopy > p {
+    max-width: 100% !important;
+  }
+
+  .trustRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroCopy h1 {
+    font-size: clamp(38px, 10vw, 48px) !important;
+  }
+
+  .heroCopy > p {
+    font-size: 14px !important;
+  }
+
+  .trustRow {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .trustRow > div {
+    min-height: 56px !important;
+  }
+}
