@@ -29,6 +29,11 @@
   z-index: 1;
 }
 
+.heroCopy {
+  position: relative;
+  isolation: isolate;
+}
+
 .heroVisual {
   min-height: clamp(370px, 27vw, 500px);
   overflow: visible !important;
@@ -50,6 +55,44 @@
   font-size: clamp(34px, 3vw, 52px) !important;
   transform: rotate(-6deg) !important;
   text-shadow: 0 4px 18px rgba(9,27,43,.24) !important;
+}
+
+@media (min-width: 901px) {
+  .heroCopy::before {
+    content: "";
+    position: absolute;
+    inset: -24px -34px -28px -34px;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 34px;
+    background: radial-gradient(ellipse at 34% 48%, rgba(255,250,240,.82) 0%, rgba(255,250,240,.60) 43%, rgba(255,250,240,.26) 66%, rgba(255,250,240,0) 84%);
+    filter: blur(2px);
+  }
+
+  .heroCopy h1 span {
+    color: #102840 !important;
+    text-shadow: 0 2px 18px rgba(255,255,255,.95), 0 1px 2px rgba(255,255,255,.95);
+  }
+
+  .heroCopy h1 strong {
+    color: #b8780d !important;
+    text-shadow: 0 2px 18px rgba(255,255,255,.98), 0 1px 2px rgba(255,255,255,.98);
+  }
+
+  .heroCopy > p {
+    color: #20384d !important;
+    font-weight: 650;
+    text-shadow: 0 1px 10px rgba(255,255,255,.96);
+  }
+
+  .searchShell {
+    left: 50% !important;
+    right: auto !important;
+    bottom: -38px !important;
+    width: min(1360px, calc(100% - 96px)) !important;
+    margin: 0 !important;
+    transform: translateX(-50%) !important;
+  }
 }
 
 @media (max-width: 1180px) {
