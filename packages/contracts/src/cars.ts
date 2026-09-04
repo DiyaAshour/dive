@@ -16,6 +16,7 @@ export const createCarCompanySchema = z.object({
 });
 
 export const createCarVehicleSchema = z.object({
+  catalogVehicleId: z.string().trim().min(1).optional(),
   make: z.string().trim().min(1).max(80),
   model: z.string().trim().min(1).max(100),
   year: z.number().int().min(1990).max(new Date().getUTCFullYear() + 1),
