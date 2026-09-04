@@ -1,0 +1,102 @@
+.heroScene {
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  background-position: center bottom !important;
+}
+
+/* English / LTR: vehicle on the right, clean copy space on the left. */
+:global([dir="ltr"]) .heroScene {
+  background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Main%20page%20Left%20%26%20Right/carrightcarrentalbackground.png") !important;
+}
+
+/* Arabic / RTL: vehicle on the left, clean copy space on the right. */
+:global([dir="rtl"]) .heroScene {
+  background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Main%20page%20Left%20%26%20Right/carrentallift.png") !important;
+}
+
+/* The new assets already contain the intentional white fade, so do not stack
+   the previous directional overlay over them. */
+.heroScene::before {
+  display: none !important;
+}
+
+.heroInner {
+  direction: ltr !important;
+}
+
+:global([dir="ltr"]) .heroInner {
+  grid-template-columns: minmax(0, 520px) minmax(0, 1fr) !important;
+}
+
+:global([dir="rtl"]) .heroInner {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 520px) !important;
+}
+
+:global([dir="ltr"]) .heroCopy {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  direction: ltr !important;
+  text-align: left !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+:global([dir="ltr"]) .heroVisual {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+:global([dir="rtl"]) .heroCopy {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  direction: rtl !important;
+  text-align: right !important;
+  margin-right: 0 !important;
+  margin-left: auto !important;
+}
+
+:global([dir="rtl"]) .heroVisual {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+}
+
+.exploreMark {
+  display: none !important;
+}
+
+@media (max-width: 1180px) {
+  :global([dir="ltr"]) .heroScene {
+    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Main%20page%20Left%20%26%20Right/carrightcarrentalbackground.png") !important;
+    background-position: center bottom !important;
+  }
+
+  :global([dir="rtl"]) .heroScene {
+    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Main%20page%20Left%20%26%20Right/carrentallift.png") !important;
+    background-position: center bottom !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .heroInner {
+    grid-template-columns: 1fr !important;
+  }
+
+  :global([dir="ltr"]) .heroCopy,
+  :global([dir="rtl"]) .heroCopy,
+  :global([dir="ltr"]) .heroVisual,
+  :global([dir="rtl"]) .heroVisual {
+    grid-column: 1 !important;
+  }
+
+  :global([dir="ltr"]) .heroScene {
+    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Main%20page%20Left%20%26%20Right/carrightcarrentalbackground.png") !important;
+    background-size: auto 100% !important;
+    background-position: 62% center !important;
+  }
+
+  :global([dir="rtl"]) .heroScene {
+    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Main%20page%20Left%20%26%20Right/carrentallift.png") !important;
+    background-size: auto 100% !important;
+    background-position: 38% center !important;
+  }
+}
