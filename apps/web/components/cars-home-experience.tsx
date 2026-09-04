@@ -6,6 +6,7 @@ import styles from "./cars-home-experience.module.css";
 import polish from "./cars-home-polish.module.css";
 import backgroundFix from "./cars-home-background-fix.module.css";
 import copyFix from "./cars-home-copy-fix.module.css";
+import directionalHero from "./cars-home-directional-hero.module.css";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
@@ -57,12 +58,12 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
 
   return <>
     <div
-      className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`}
+      className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene} ${directionalHero.heroScene}`}
       data-cars-reference="true"
       style={{"--hero-full-bg": 'url("/images/cars/hero-amman-hq.webp")'} as React.CSSProperties}
     >
-      <div className={`${styles.heroInner} ${polish.heroInner}`}>
-        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${copyFix.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
+      <div className={`${styles.heroInner} ${polish.heroInner} ${directionalHero.heroInner}`}>
+        <div className={`${styles.heroCopy} ${polish.heroCopy} ${backgroundFix.heroCopy} ${copyFix.heroCopy} ${directionalHero.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
           <span className={`${styles.kicker} ${polish.kicker} ${backgroundFix.kicker} ${copyFix.kicker}`}>{copy.kicker}</span>
           <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
           <p>{copy.intro}</p>
@@ -73,8 +74,8 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
           </div>
         </div>
 
-        <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual}`}>
-          <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark}`}>{copy.explore}</div>
+        <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual} ${directionalHero.heroVisual}`}>
+          <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark} ${directionalHero.exploreMark}`}>{copy.explore}</div>
         </div>
       </div>
     </div>
