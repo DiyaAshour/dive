@@ -26,14 +26,14 @@ export type CarCatalogAssetKind =
 export type CarCatalogImportAsset = Readonly<{
   type: CarCatalogAssetKind;
   url: string;
-  angle?: string;
-  spinFrame?: number;
-  paintCode?: string;
-  paintName?: string;
-  width?: number;
-  height?: number;
-  sortOrder?: number;
-  sourceRef?: string;
+  angle?: string | undefined;
+  spinFrame?: number | undefined;
+  paintCode?: string | undefined;
+  paintName?: string | undefined;
+  width?: number | undefined;
+  height?: number | undefined;
+  sortOrder?: number | undefined;
+  sourceRef?: string | undefined;
 }>;
 
 export type CarCatalogImportVehicle = Readonly<{
@@ -41,21 +41,21 @@ export type CarCatalogImportVehicle = Readonly<{
   make: string;
   model: string;
   year: number;
-  generation?: string;
-  trim?: string;
-  bodyType?: string;
+  generation?: string | undefined;
+  trim?: string | undefined;
+  bodyType?: string | undefined;
   category: string;
-  transmission?: "AUTOMATIC" | "MANUAL";
-  fuel?: "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC";
-  seats?: number;
-  bags?: number;
-  doors?: number;
+  transmission?: "AUTOMATIC" | "MANUAL" | undefined;
+  fuel?: "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC" | undefined;
+  seats?: number | undefined;
+  bags?: number | undefined;
+  doors?: number | undefined;
   provider: CarCatalogProvider;
-  providerVehicleId?: string;
-  providerRevision?: string;
-  primaryImageUrl?: string;
-  reviewed?: boolean;
-  assets?: readonly CarCatalogImportAsset[];
+  providerVehicleId?: string | undefined;
+  providerRevision?: string | undefined;
+  primaryImageUrl?: string | undefined;
+  reviewed?: boolean | undefined;
+  assets?: readonly CarCatalogImportAsset[] | undefined;
 }>;
 
 export async function getAdminCarCatalogOverview(adminUserId: string) {
@@ -85,7 +85,7 @@ export async function getAdminCarCatalogOverview(adminUserId: string) {
 export async function importCarCatalogVehicles(
   adminUserId: string,
   records: readonly CarCatalogImportVehicle[],
-  options: {replaceAssets?: boolean} = {},
+  options: {replaceAssets?: boolean | undefined} = {},
 ) {
   await requirePlatformAdmin(adminUserId);
   if (records.length < 1 || records.length > 100) badRequest("CAR_CATALOG_IMPORT_SIZE", "Import must contain between 1 and 100 vehicles");
