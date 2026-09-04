@@ -42,29 +42,27 @@
     display: none !important;
   }
 
-  .heroScene {
-    height: 560px !important;
-    min-height: 560px !important;
-    padding: 26px 0 72px !important;
-    overflow: hidden !important;
-    background-repeat: no-repeat !important;
-    background-size: cover !important;
-  }
-
-  /* English / LTR mobile: dedicated portrait asset with vehicle on the right. */
-  :global([dir="ltr"]) .heroScene {
-    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Mobile%20Main%20RTL%20/rightcar.png") !important;
-    background-position: center center !important;
-  }
-
-  /* Arabic / RTL mobile: dedicated portrait asset with vehicle on the left. */
+  /* Mobile Cars follows the same text-first visual language as Stays.
+     The desktop directional car photography remains unchanged. */
+  .heroScene,
+  :global([dir="ltr"]) .heroScene,
   :global([dir="rtl"]) .heroScene {
-    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Mobile%20Main%20RTL%20/leftcar.png") !important;
-    background-position: center center !important;
+    height: auto !important;
+    min-height: 310px !important;
+    padding: 28px 0 54px !important;
+    overflow: visible !important;
+    background-image:
+      radial-gradient(circle at 8% 0%, rgba(255,255,255,.98) 0%, rgba(255,255,255,0) 43%),
+      radial-gradient(circle at 90% 16%, rgba(218,229,238,.62) 0%, rgba(218,229,238,0) 38%),
+      linear-gradient(180deg, #f7f4ee 0%, #fbfaf7 56%, #f1f4f6 100%) !important;
+    background-size: auto !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border-bottom: 1px solid rgba(218,225,232,.82) !important;
   }
 
   .heroInner {
-    width: calc(100% - 26px) !important;
+    width: calc(100% - 28px) !important;
     min-height: 0 !important;
     display: block !important;
     margin-inline: auto !important;
@@ -79,36 +77,48 @@
   }
 
   .heroCopy > span:first-child {
-    margin-bottom: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 26px !important;
+    margin-bottom: 12px !important;
+    padding: 5px 9px !important;
+    border: 1px solid rgba(16,40,64,.07) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.72) !important;
+    color: #a87518 !important;
     font-size: 8.5px !important;
-    line-height: 1.15 !important;
+    font-weight: 900 !important;
+    line-height: 1.1 !important;
+    box-shadow: 0 4px 14px rgba(16,40,64,.035) !important;
   }
 
   .heroCopy h1 {
-    max-width: 290px !important;
+    max-width: 330px !important;
+    margin: 0 !important;
     font-size: 36px !important;
-    line-height: .93 !important;
-    letter-spacing: -.045em !important;
+    line-height: .98 !important;
+    letter-spacing: -.04em !important;
   }
 
   :global([dir="rtl"]) .heroCopy h1 {
-    max-width: 292px !important;
+    max-width: 330px !important;
     margin-inline-start: auto !important;
     font-size: 35px !important;
-    line-height: 1 !important;
+    line-height: 1.02 !important;
     letter-spacing: -.02em !important;
   }
 
   .heroCopy h1 strong {
-    margin-top: 1px !important;
+    margin-top: 2px !important;
   }
 
   .heroCopy > p {
-    max-width: 290px !important;
-    margin-top: 8px !important;
-    font-size: 11.5px !important;
-    font-weight: 700 !important;
-    line-height: 1.35 !important;
+    max-width: 340px !important;
+    margin-top: 10px !important;
+    color: #607184 !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    line-height: 1.48 !important;
   }
 
   :global([dir="rtl"]) .heroCopy > p {
@@ -121,7 +131,7 @@
     gap: 6px !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin-top: 12px !important;
+    margin-top: 16px !important;
     overflow: visible !important;
     background: transparent !important;
     box-shadow: none !important;
@@ -130,37 +140,47 @@
 
   .trustRow > div {
     min-width: 0 !important;
-    min-height: 62px !important;
+    min-height: 38px !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 4px !important;
-    padding: 6px 4px !important;
-    border: 1px solid rgba(218,225,232,.92) !important;
-    border-radius: 12px !important;
-    background: rgba(255,255,255,.91) !important;
-    box-shadow: 0 5px 15px rgba(16,40,64,.06) !important;
-    backdrop-filter: blur(7px) !important;
+    gap: 5px !important;
+    padding: 6px 7px !important;
+    border: 1px solid rgba(210,219,226,.9) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.72) !important;
+    box-shadow: 0 4px 12px rgba(16,40,64,.035) !important;
+    backdrop-filter: blur(8px) !important;
     text-align: center !important;
   }
 
   .trustRow > div > span {
-    flex: 0 0 25px !important;
-    width: 25px !important;
-    height: 25px !important;
-    border-radius: 8px !important;
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 50% !important;
   }
 
   .trustRow > div > span svg {
-    width: 14px !important;
-    height: 14px !important;
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .trustRow p {
+    margin: 0 !important;
   }
 
   .trustRow strong {
-    font-size: 8.5px !important;
-    line-height: 1.08 !important;
+    display: block !important;
+    color: #24405a !important;
+    font-size: 8.2px !important;
+    font-weight: 850 !important;
+    line-height: 1.1 !important;
     text-align: center !important;
+    white-space: nowrap !important;
   }
 
   .trustRow small {
@@ -168,6 +188,7 @@
   }
 
   .heroVisual {
+    display: none !important;
     height: 0 !important;
     min-height: 0 !important;
     margin: 0 !important;
@@ -176,7 +197,7 @@
 
   .searchShell {
     width: calc(100% - 12px) !important;
-    margin: -28px auto 0 !important;
+    margin: -24px auto 0 !important;
     z-index: 40 !important;
   }
 
