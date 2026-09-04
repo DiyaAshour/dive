@@ -199,12 +199,20 @@ function validateOracleInput(input: OracleConnectionInput): OracleConnectionInpu
 
 function validateMappings(rows: Array<{localId: string; externalCode: string}>, allowedIds: ReadonlySet<string>, label: string) {
   if (!Array.isArray(rows) || rows.length > 500) throw new ApplicationError("INVALID_CONNECTIVITY_MAPPING", `Invalid ${label} mappings`, 400);
-  const seen = new Set<string>();
+  const seenLocal = new Set<string>();
+  const seenExternal = new Set<string>();
   return rows.map((row) => {
     const localId = row.localId?.trim();
     const externalCode = row.externalCode?.trim();
-    if (!allowedIds.has(localId) || !externalCode || externalCode.length > 120 || seen.has(localId)) throw new ApplicationError("INVALID_CONNECTIVITY_MAPPING", `Invalid ${label} mapping`, 400);
-    seen.add(localId);
+    if (!localId || !allowedIds.has(localId) || !externalCode || externalCode.length > 120 || seenLocal.has(localId)) {
+      throw new ApplicationError("INVALID_CONNECTIVITY_MAPPING", `Invalid ${label} mapping`, 400);
+    }
+    const externalKey = externalCode.toLocaleUpperCase("en-US");
+    if (seenExternal.has(externalKey)) {
+      throw new ApplicationError("DUPLICATE_CONNECTIVITY_MAPPING", `External ${label} code ${externalCode} is mapped more than once`, 400);
+    }
+    seenLocal.add(localId);
+    seenExternal.add(externalKey);
     return {localId, externalCode};
   });
 }
