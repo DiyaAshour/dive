@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {ArrowLeft, BadgeCheck, Building2, CalendarRange, CarFront, MapPin, ShieldCheck, Users} from "lucide-react";
+import {ArrowLeft, BadgeCheck, Building2, CalendarRange, CarFront, MapPin, Pencil, ShieldCheck, Users} from "lucide-react";
 import {getAdminCarCompany, getAdminNavigationCounts} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
@@ -67,8 +67,8 @@ export default async function AdminCarCompanyPage({params}: {params: Promise<{co
       </section>
 
       <section className={styles.panel}>
-        <div className={styles.panelHeader}><div><span className="eyebrow">{ar ? "الأسطول" : "Fleet"}</span><h2>{ar ? "سيارات الشركة" : "Company fleet"}</h2><p>{ar ? "أول 40 سيارة مرتبة حسب الحالة." : "Up to 40 vehicles ordered by status."}</p></div><CarFront size={20}/></div>
-        {company.vehicles.length ? <div className={styles.miniGrid}>{company.vehicles.map((vehicle) => <article className={styles.miniCard} key={vehicle.id}><Status value={vehicle.status}/><strong>{vehicle.make} {vehicle.model} · {vehicle.year}</strong><span>{vehicle.category} · {vehicle.transmission} · {vehicle.fuel}</span><small>{formatMoney(vehicle.dailyPrice, company.currency, locale)} / {ar ? "يوم" : "day"} · {ar ? "وديعة" : "deposit"} {formatMoney(vehicle.deposit, company.currency, locale)} · {vehicle.homeLocation?.name || (ar ? "بدون فرع" : "No home location")}</small></article>)}</div> : <div className={styles.empty}>{ar ? "لم تضف الشركة سيارات بعد." : "No vehicles added yet."}</div>}
+        <div className={styles.panelHeader}><div><span className="eyebrow">{ar ? "الأسطول" : "Fleet"}</span><h2>{ar ? "سيارات الشركة" : "Company fleet"}</h2><p>{ar ? "يمكنك تعديل بيانات أي سيارة مباشرة من Control Center." : "Edit any partner vehicle directly from the Cars Control Center."}</p></div><CarFront size={20}/></div>
+        {company.vehicles.length ? <div className={styles.miniGrid}>{company.vehicles.map((vehicle) => <article className={styles.miniCard} key={vehicle.id}><div className={styles.miniCardTop}><Status value={vehicle.status}/><Link className={styles.editVehicleLink} href={`/admin/cars/companies/${company.id}/fleet/${vehicle.id}`}><Pencil size={12}/>{ar ? "تعديل" : "Edit"}</Link></div><strong>{vehicle.make} {vehicle.model} · {vehicle.year}</strong><span>{vehicle.category} · {vehicle.transmission} · {vehicle.fuel}</span><small>{vehicle.seats} {ar ? "مقاعد" : "seats"} · {vehicle.bags} {ar ? "حقائب" : "bags"} · {vehicle.doors} {ar ? "أبواب" : "doors"}</small><small>{formatMoney(vehicle.dailyPrice, company.currency, locale)} / {ar ? "يوم" : "day"} · {ar ? "وديعة" : "deposit"} {formatMoney(vehicle.deposit, company.currency, locale)} · {vehicle.homeLocation?.name || (ar ? "بدون فرع" : "No home location")}</small></article>)}</div> : <div className={styles.empty}>{ar ? "لم تضف الشركة سيارات بعد." : "No vehicles added yet."}</div>}
       </section>
 
       <div className={styles.split}>

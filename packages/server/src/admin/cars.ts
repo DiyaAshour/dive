@@ -7,6 +7,26 @@ export type CarCompanyDecisionInput = Readonly<{
   verified: boolean;
 }>;
 
+export type AdminCarVehicleUpdateInput = Readonly<{
+  make: string;
+  model: string;
+  year: number;
+  category: string;
+  transmission: "AUTOMATIC" | "MANUAL";
+  fuel: "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC";
+  seats: number;
+  bags: number;
+  doors: number;
+  airConditioning: boolean;
+  dailyPrice: number;
+  deposit: number;
+  freeCancellation: boolean;
+  unlimitedMileage: boolean;
+  airportPickup: boolean;
+  homeLocationId?: string | null | undefined;
+  status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+}>;
+
 type CarReservationStatusValue = "HOLD" | "CONFIRMED" | "MODIFIED" | "CANCELLED" | "NO_SHOW" | "COMPLETED" | "EXPIRED";
 
 const BOOKED_STATUSES: CarReservationStatusValue[] = ["CONFIRMED", "MODIFIED", "COMPLETED"];
@@ -213,12 +233,155 @@ export async function getAdminCarCompany(adminUserId: string, companyId: string)
       transmission: vehicle.transmission,
       fuel: vehicle.fuel,
       seats: vehicle.seats,
+      bags: vehicle.bags,
+      doors: vehicle.doors,
+      airConditioning: vehicle.airConditioning,
       dailyPrice: Number(vehicle.dailyPrice),
       deposit: Number(vehicle.deposit),
+      freeCancellation: vehicle.freeCancellation,
+      unlimitedMileage: vehicle.unlimitedMileage,
+      airportPickup: vehicle.airportPickup,
       status: vehicle.status,
       homeLocation: vehicle.homeLocation ? {id: vehicle.homeLocation.id, name: vehicle.homeLocation.name} : null,
+      createdAt: vehicle.createdAt.toISOString(),
+      updatedAt: vehicle.updatedAt.toISOString(),
     })),
     reservations: company.reservations.map(serializeAdminReservation),
+  };
+}
+
+export async function getAdminCarVehicle(adminUserId: string, companyId: string, vehicleId: string) {
+  await requirePlatformAdmin(adminUserId);
+  const db = database();
+  const vehicle = await db.carVehicle.findFirst({
+    where: {id: vehicleId, companyId},
+    include: {
+      homeLocation: true,
+      company: {select: {id: true, name: true, currency: true, status: true, verified: true}},
+    },
+  });
+  if (!vehicle) notFound("Car vehicle");
+
+  const [locations, catalogLink] = await Promise.all([
+    db.carRentalLocation.findMany({
+      where: {companyId},
+      orderBy: [{active: "desc"}, {name: "asc"}],
+      select: {id: true, name: true, city: true, active: true},
+    }),
+    db.carVehicleCatalogLink.findUnique({
+      where: {vehicleId},
+      include: {catalogVehicle: true},
+    }),
+  ]);
+
+  return {
+    id: vehicle.id,
+    companyId: vehicle.companyId,
+    make: vehicle.make,
+    model: vehicle.model,
+    year: vehicle.year,
+    category: vehicle.category,
+    transmission: vehicle.transmission,
+    fuel: vehicle.fuel,
+    seats: vehicle.seats,
+    bags: vehicle.bags,
+    doors: vehicle.doors,
+    airConditioning: vehicle.airConditioning,
+    dailyPrice: Number(vehicle.dailyPrice),
+    deposit: Number(vehicle.deposit),
+    freeCancellation: vehicle.freeCancellation,
+    unlimitedMileage: vehicle.unlimitedMileage,
+    airportPickup: vehicle.airportPickup,
+    status: vehicle.status,
+    homeLocationId: vehicle.homeLocationId,
+    homeLocation: vehicle.homeLocation ? {id: vehicle.homeLocation.id, name: vehicle.homeLocation.name, city: vehicle.homeLocation.city} : null,
+    company: vehicle.company,
+    locations,
+    catalog: catalogLink ? {
+      id: catalogLink.catalogVehicle.id,
+      make: catalogLink.catalogVehicle.make,
+      model: catalogLink.catalogVehicle.model,
+      year: catalogLink.catalogVehicle.year,
+      generation: catalogLink.catalogVehicle.generation,
+      trim: catalogLink.catalogVehicle.trim,
+      provider: catalogLink.catalogVehicle.provider,
+      primaryImageUrl: catalogLink.catalogVehicle.primaryImageUrl,
+      matchedBy: catalogLink.matchedBy,
+    } : null,
+    createdAt: vehicle.createdAt.toISOString(),
+    updatedAt: vehicle.updatedAt.toISOString(),
+  };
+}
+
+export async function updateAdminCarVehicle(adminUserId: string, companyId: string, vehicleId: string, input: AdminCarVehicleUpdateInput) {
+  await requirePlatformAdmin(adminUserId);
+  const db = database();
+  const existing = await db.carVehicle.findFirst({
+    where: {id: vehicleId, companyId},
+    select: {id: true, make: true, model: true, year: true},
+  });
+  if (!existing) notFound("Car vehicle");
+
+  const make = input.make.trim();
+  const model = input.model.trim();
+  const category = input.category.trim();
+  if (!make || !model || !category) badRequest("CAR_VEHICLE_FIELDS_REQUIRED", "Make, model and category are required");
+  if (!Number.isInteger(input.year) || input.year < 1990 || input.year > new Date().getUTCFullYear() + 1) badRequest("CAR_YEAR_INVALID", "Vehicle year is invalid");
+  if (!Number.isInteger(input.seats) || input.seats < 1 || input.seats > 16) badRequest("CAR_SEATS_INVALID", "Vehicle seat count is invalid");
+  if (!Number.isInteger(input.bags) || input.bags < 0 || input.bags > 20) badRequest("CAR_BAGS_INVALID", "Vehicle bag count is invalid");
+  if (!Number.isInteger(input.doors) || input.doors < 2 || input.doors > 8) badRequest("CAR_DOORS_INVALID", "Vehicle door count is invalid");
+  if (!Number.isFinite(input.dailyPrice) || input.dailyPrice <= 0) badRequest("CAR_PRICE_INVALID", "Daily price must be greater than zero");
+  if (!Number.isFinite(input.deposit) || input.deposit <= 0) badRequest("CAR_DEPOSIT_REQUIRED", "A deposit greater than zero is required for every vehicle");
+
+  const homeLocationId = input.homeLocationId?.trim() || null;
+  if (homeLocationId) {
+    const location = await db.carRentalLocation.findFirst({where: {id: homeLocationId, companyId}, select: {id: true}});
+    if (!location) notFound("Car rental location");
+  }
+
+  const identityChanged = existing.make !== make || existing.model !== model || existing.year !== input.year;
+  const updated = await db.$transaction(async (tx) => {
+    const row = await tx.carVehicle.update({
+      where: {id: vehicleId},
+      data: {
+        make,
+        model,
+        year: input.year,
+        category,
+        transmission: input.transmission,
+        fuel: input.fuel,
+        seats: input.seats,
+        bags: input.bags,
+        doors: input.doors,
+        airConditioning: input.airConditioning,
+        dailyPrice: input.dailyPrice,
+        deposit: input.deposit,
+        freeCancellation: input.freeCancellation,
+        unlimitedMileage: input.unlimitedMileage,
+        airportPickup: input.airportPickup,
+        homeLocationId,
+        status: input.status,
+      },
+      include: {homeLocation: true},
+    });
+    if (identityChanged) {
+      await tx.carVehicleCatalogLink.deleteMany({where: {vehicleId}});
+    }
+    return row;
+  });
+
+  return {
+    id: updated.id,
+    companyId: updated.companyId,
+    make: updated.make,
+    model: updated.model,
+    year: updated.year,
+    category: updated.category,
+    status: updated.status,
+    dailyPrice: Number(updated.dailyPrice),
+    deposit: Number(updated.deposit),
+    visualLinkCleared: identityChanged,
+    updatedAt: updated.updatedAt.toISOString(),
   };
 }
 
