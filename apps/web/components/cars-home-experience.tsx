@@ -4,6 +4,7 @@ import { CarsHomeSearch } from "@/components/cars-home-search";
 import { demoCars } from "@/lib/demo-cars";
 import styles from "./cars-home-experience.module.css";
 import polish from "./cars-home-polish.module.css";
+import backgroundFix from "./cars-home-background-fix.module.css";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
@@ -56,7 +57,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
     comingSoon: "Soon",
   };
 
-  return <div className={`${styles.heroScene} ${polish.heroScene}`} data-cars-reference="true" style={{"--hero-city": `url(${HERO_CITY_IMAGE})`} as React.CSSProperties}>
+  return <div className={`${styles.heroScene} ${polish.heroScene} ${backgroundFix.heroScene}`} data-cars-reference="true" style={{"--hero-city": `url(${HERO_CITY_IMAGE})`} as React.CSSProperties}>
     <div className={`${styles.heroInner} ${polish.heroInner}`}>
       <div className={`${styles.heroCopy} ${polish.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
         <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
@@ -69,8 +70,8 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
         </div>
       </div>
 
-      <div className={`${styles.heroVisual} ${polish.heroVisual}`}>
-        <div className={`${styles.exploreMark} ${polish.exploreMark}`}>{copy.explore}</div>
+      <div className={`${styles.heroVisual} ${polish.heroVisual} ${backgroundFix.heroVisual}`}>
+        <div className={`${styles.exploreMark} ${polish.exploreMark} ${backgroundFix.exploreMark}`}>{copy.explore}</div>
         <img src={HERO_CAR_IMAGE} alt={ar ? "سيارة دفع رباعي في مشهد سفر" : "SUV in a travel scene"}/>
       </div>
     </div>
