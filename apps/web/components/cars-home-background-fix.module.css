@@ -31,6 +31,39 @@
 
 .heroCopy {
   position: relative;
+  max-width: 600px !important;
+}
+
+:global([dir="rtl"]) .heroCopy {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+:global([dir="ltr"]) .heroCopy {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+.kicker {
+  color: #9f6b13 !important;
+  font-weight: 900 !important;
+}
+
+:global([dir="rtl"]) .kicker {
+  direction: rtl !important;
+  text-align: right !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+:global([dir="ltr"]) .kicker {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+.heroCopy h1 {
+  max-width: 620px;
+  text-wrap: balance;
 }
 
 .heroCopy h1 span {
@@ -44,9 +77,12 @@
 }
 
 .heroCopy > p {
+  max-width: 560px !important;
   color: #17324d !important;
   font-weight: 700 !important;
+  line-height: 1.65 !important;
   text-shadow: none !important;
+  text-wrap: pretty;
 }
 
 .heroVisual {
@@ -155,6 +191,14 @@
     padding-top: 22px !important;
     padding-bottom: 108px !important;
     background-position: 61% center !important;
+  }
+
+  .heroCopy {
+    max-width: 100% !important;
+  }
+
+  .heroCopy > p {
+    max-width: 100% !important;
   }
 
   .heroVisual {
