@@ -1,0 +1,95 @@
+enum CarCatalogAssetProvider {
+  MANUAL
+  IMAGIN
+  EVOX
+  OEM
+}
+
+enum CarCatalogAssetType {
+  HERO
+  EXTERIOR_FRONT
+  EXTERIOR_FRONT_LEFT
+  EXTERIOR_FRONT_RIGHT
+  EXTERIOR_SIDE_LEFT
+  EXTERIOR_SIDE_RIGHT
+  EXTERIOR_REAR_LEFT
+  EXTERIOR_REAR_RIGHT
+  EXTERIOR_REAR
+  SPIN_FRAME
+  INTERIOR_DASHBOARD
+  INTERIOR_FRONT_SEATS
+  INTERIOR_REAR_SEATS
+  INTERIOR_PANORAMA
+  TRUNK
+  INFOTAINMENT
+  STEERING_WHEEL
+  OTHER
+}
+
+model CarCatalogVehicle {
+  id                   String                  @id @default(cuid())
+  slug                 String                  @unique
+  make                 String
+  model                String
+  year                 Int
+  generation           String?
+  trim                 String?
+  bodyType             String?
+  category             String
+  transmission         CarTransmission?
+  fuel                 CarFuel?
+  seats                Int?
+  bags                 Int?
+  doors                Int?
+  provider             CarCatalogAssetProvider @default(MANUAL)
+  providerVehicleId    String?
+  providerRevision     String?
+  primaryImageUrl      String?
+  exterior360Available Boolean                 @default(false)
+  interior360Available Boolean                 @default(false)
+  reviewed             Boolean                 @default(false)
+  active               Boolean                 @default(true)
+  lastSyncedAt         DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  assets               CarCatalogAsset[]
+  fleetLinks           CarVehicleCatalogLink[]
+
+  @@index([make, model, year, active])
+  @@index([provider, providerVehicleId])
+  @@index([year, category, active])
+}
+
+model CarCatalogAsset {
+  id               String                  @id @default(cuid())
+  catalogVehicleId String
+  catalogVehicle   CarCatalogVehicle       @relation(fields: [catalogVehicleId], references: [id], onDelete: Cascade)
+  type             CarCatalogAssetType
+  provider         CarCatalogAssetProvider @default(MANUAL)
+  url              String
+  angle            String?
+  spinFrame        Int?
+  paintCode        String?
+  paintName        String?
+  width            Int?
+  height           Int?
+  sortOrder        Int                     @default(0)
+  active           Boolean                 @default(true)
+  sourceRef        String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@index([catalogVehicleId, active, type, sortOrder])
+  @@index([catalogVehicleId, paintCode, type, spinFrame])
+}
+
+model CarVehicleCatalogLink {
+  vehicleId        String            @id
+  catalogVehicleId String
+  catalogVehicle   CarCatalogVehicle @relation(fields: [catalogVehicleId], references: [id], onDelete: Restrict)
+  matchedBy        String            @default("PARTNER")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([catalogVehicleId])
+}
