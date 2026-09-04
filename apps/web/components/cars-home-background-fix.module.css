@@ -31,7 +31,6 @@
 
 .heroCopy {
   position: relative;
-  isolation: isolate;
 }
 
 .heroVisual {
@@ -58,40 +57,34 @@
 }
 
 @media (min-width: 901px) {
-  .heroCopy::before {
-    content: "";
-    position: absolute;
-    inset: -24px -34px -28px -34px;
-    z-index: -1;
-    pointer-events: none;
-    border-radius: 34px;
-    background: radial-gradient(ellipse at 34% 48%, rgba(255,250,240,.82) 0%, rgba(255,250,240,.60) 43%, rgba(255,250,240,.26) 66%, rgba(255,250,240,0) 84%);
-    filter: blur(2px);
-  }
-
   .heroCopy h1 span {
     color: #102840 !important;
-    text-shadow: 0 2px 18px rgba(255,255,255,.95), 0 1px 2px rgba(255,255,255,.95);
+    text-shadow: none !important;
   }
 
   .heroCopy h1 strong {
-    color: #b8780d !important;
-    text-shadow: 0 2px 18px rgba(255,255,255,.98), 0 1px 2px rgba(255,255,255,.98);
+    color: #a96f0c !important;
+    text-shadow: none !important;
   }
 
   .heroCopy > p {
-    color: #20384d !important;
+    color: #17324d !important;
     font-weight: 650;
-    text-shadow: 0 1px 10px rgba(255,255,255,.96);
+    text-shadow: 0 1px 1px rgba(255,255,255,.42) !important;
   }
 
   .searchShell {
     left: 50% !important;
     right: auto !important;
-    bottom: -38px !important;
-    width: min(1360px, calc(100% - 96px)) !important;
+    bottom: 20px !important;
+    width: min(1280px, calc(100% - 96px)) !important;
     margin: 0 !important;
     transform: translateX(-50%) !important;
+  }
+
+  .searchShell form {
+    width: 100% !important;
+    margin: 0 !important;
   }
 }
 
