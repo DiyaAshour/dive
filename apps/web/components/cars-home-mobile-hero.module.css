@@ -4,16 +4,20 @@
     min-height: 560px !important;
     padding: 26px 0 72px !important;
     overflow: hidden !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
   }
 
+  /* English / LTR mobile: dedicated portrait asset with vehicle on the right. */
   :global([dir="ltr"]) .heroScene {
-    background-size: auto 100% !important;
-    background-position: 66% center !important;
+    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Mobile%20Main%20RTL%20/rightcar.png") !important;
+    background-position: center center !important;
   }
 
+  /* Arabic / RTL mobile: dedicated portrait asset with vehicle on the left. */
   :global([dir="rtl"]) .heroScene {
-    background-size: auto 100% !important;
-    background-position: 34% center !important;
+    background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Car%20rental%20background%20image/Mobile%20Main%20RTL%20/leftcar.png") !important;
+    background-position: center center !important;
   }
 
   .heroInner {
