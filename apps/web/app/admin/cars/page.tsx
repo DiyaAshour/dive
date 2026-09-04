@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {BadgeCheck, Building2, CalendarRange, CarFront, CircleAlert, CircleDollarSign, MapPin, ShieldCheck} from "lucide-react";
+import {BadgeCheck, Building2, CalendarRange, CarFront, CircleAlert, CircleDollarSign, Images, MapPin, ShieldCheck} from "lucide-react";
 import {getAdminCarOverview, getAdminNavigationCounts} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
@@ -29,6 +29,7 @@ export default async function AdminCarsPage() {
 
     <nav className={styles.tabs} aria-label={ar ? "إدارة السيارات" : "Cars admin"}>
       <Link className={styles.active} href="/admin/cars"><CarFront size={15}/>{ar ? "نظرة عامة" : "Overview"}</Link>
+      <Link href="/admin/cars/catalog"><Images size={15}/>{ar ? "مكتبة المجسمات" : "Visual catalog"}</Link>
       <Link href="/admin/cars/companies"><Building2 size={15}/>{ar ? "الشركات" : "Companies"}</Link>
       <Link href="/admin/cars/reservations"><CalendarRange size={15}/>{ar ? "كل الحجوزات" : "All reservations"}</Link>
       <Link href="/admin/cars/finance"><CircleDollarSign size={15}/>{ar ? "المالية" : "Finance"}</Link>
@@ -65,7 +66,7 @@ export default async function AdminCarsPage() {
           <div className={styles.infoItem}><span>{ar ? "حجوزات قادمة" : "Upcoming bookings"}</span><strong>{m.upcomingReservations}</strong></div>
           <div className={styles.infoItem}><span>{ar ? "سيارات فعالة" : "Active vehicles"}</span><strong>{m.activeVehicles}</strong></div>
         </div>
-        <div className={styles.heroActions} style={{marginTop: 14}}><Link className="primaryButton" href="/admin/cars/finance"><CircleDollarSign size={15}/>{ar ? "فتح المالية" : "Open finance"}</Link><Link className="secondaryButton" href="/admin/cars/companies?status=PENDING_REVIEW"><BadgeCheck size={15}/>{ar ? "راجع الشركات" : "Review companies"}</Link></div>
+        <div className={styles.heroActions} style={{marginTop: 14}}><Link className="primaryButton" href="/admin/cars/catalog"><Images size={15}/>{ar ? "مكتبة المجسمات" : "Visual catalog"}</Link><Link className="secondaryButton" href="/admin/cars/companies?status=PENDING_REVIEW"><BadgeCheck size={15}/>{ar ? "راجع الشركات" : "Review companies"}</Link></div>
       </aside>
     </div>
 
