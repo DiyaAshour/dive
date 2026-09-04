@@ -10,7 +10,12 @@ export async function GET(request: Request) {
     const limitValue = Number(url.searchParams.get("limit"));
     const year = Number.isInteger(yearValue) && yearValue > 0 ? yearValue : undefined;
     const limit = Number.isInteger(limitValue) && limitValue > 0 ? limitValue : 30;
-    return ok(await searchCarCatalog({query, make, year, limit}));
+    return ok(await searchCarCatalog({
+      ...(query ? {query} : {}),
+      ...(make ? {make} : {}),
+      ...(year !== undefined ? {year} : {}),
+      limit,
+    }));
   } catch (error) {
     return handleApiError(error);
   }
