@@ -19,7 +19,7 @@ async function main(){
 
   const actorUserId=await resolveActorUserId();
   if(!actorUserId){
-    console.log("[editorial-sync] PLATFORM_OWNER_USER_ID/PLATFORM_OWNER_EMAIL is not configured; skipping repository editorial sync");
+    console.log("[editorial-sync] no unambiguous platform-admin actor is available; skipping repository editorial sync");
     return;
   }
 
@@ -67,11 +67,29 @@ async function listJsonFiles(){
 async function resolveActorUserId(){
   const configuredId=process.env.PLATFORM_OWNER_USER_ID?.trim();
   if(configuredId)return configuredId;
+
   const email=process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
-  if(!email)return null;
-  const user=await database().user.findUnique({where:{email},select:{id:true}});
-  if(!user)throw new Error(`[editorial-sync] PLATFORM_OWNER_EMAIL does not match a user: ${email}`);
-  return user.id;
+  if(email){
+    const user=await database().user.findUnique({where:{email},select:{id:true,platformRole:true}});
+    if(!user)throw new Error(`[editorial-sync] PLATFORM_OWNER_EMAIL does not match a user: ${email}`);
+    if(user.platformRole!=="PLATFORM_ADMIN")throw new Error(`[editorial-sync] configured platform owner is not PLATFORM_ADMIN: ${email}`);
+    return user.id;
+  }
+
+  // Safe zero-config fallback for installations that still have exactly one platform admin.
+  // Never guess between multiple admins because all blog writes are audit-attributed.
+  const admins=await database().user.findMany({
+    where:{platformRole:"PLATFORM_ADMIN"},
+    select:{id:true,email:true},
+    orderBy:{createdAt:"asc"},
+    take:2,
+  });
+  if(admins.length===1){
+    console.log(`[editorial-sync] using sole PLATFORM_ADMIN actor ${admins[0]!.email}`);
+    return admins[0]!.id;
+  }
+  if(admins.length>1)console.log("[editorial-sync] multiple PLATFORM_ADMIN users found; set PLATFORM_OWNER_USER_ID to choose audit actor");
+  return null;
 }
 
 async function readArticles(file:string):Promise<BlogPostInput[]>{
