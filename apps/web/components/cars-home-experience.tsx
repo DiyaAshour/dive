@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BadgeCheck, BriefcaseBusiness, Car, Fuel, Gauge, Headphones, ShieldCheck, Tag, Users } from "lucide-react";
-import { CarBookingSearch } from "@/components/car-booking-search";
+import { CarsHomeSearch } from "@/components/cars-home-search";
 import { demoCars } from "@/lib/demo-cars";
 import styles from "./cars-home-experience.module.css";
+import polish from "./cars-home-polish.module.css";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
 type ShowcaseProps = Readonly<{locale: Locale}>;
 
-const HERO_CAR_IMAGE = "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=1600";
-const HERO_CITY_IMAGE = "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=2200&q=90";
+const HERO_CAR_IMAGE = "https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=1800";
+const HERO_CITY_IMAGE = "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=2400&q=92";
 
 const categoryConfig = [
   {id: "kia-picanto", ar: "سيارات صغيرة", en: "Small cars"},
@@ -55,31 +56,31 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
     comingSoon: "Soon",
   };
 
-  return <div className={styles.heroScene} style={{"--hero-city": `url(${HERO_CITY_IMAGE})`} as React.CSSProperties}>
-    <div className={styles.heroInner}>
-      <div className={`${styles.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
-        <span className={styles.kicker}>{copy.kicker}</span>
+  return <div className={`${styles.heroScene} ${polish.heroScene}`} data-cars-reference="true" style={{"--hero-city": `url(${HERO_CITY_IMAGE})`} as React.CSSProperties}>
+    <div className={`${styles.heroInner} ${polish.heroInner}`}>
+      <div className={`${styles.heroCopy} ${polish.heroCopy} ${ar ? styles.rtlCopy : styles.ltrCopy}`}>
+        <span className={`${styles.kicker} ${polish.kicker}`}>{copy.kicker}</span>
         <h1><span>{copy.lineOne}</span><strong>{copy.lineTwo}</strong></h1>
         <p>{copy.intro}</p>
-        <div className={styles.trustRow}>
+        <div className={`${styles.trustRow} ${polish.trustRow}`}>
           <div><span><Tag size={21}/></span><p><strong>{copy.clear}</strong><small>{copy.clearSub}</small></p></div>
           <div><span><ShieldCheck size={21}/></span><p><strong>{copy.trusted}</strong><small>{copy.trustedSub}</small></p></div>
           <div><span><Headphones size={21}/></span><p><strong>{copy.support}</strong><small>{copy.supportSub}</small></p></div>
         </div>
       </div>
 
-      <div className={styles.heroVisual}>
-        <div className={styles.exploreMark}>{copy.explore}</div>
+      <div className={`${styles.heroVisual} ${polish.heroVisual}`}>
+        <div className={`${styles.exploreMark} ${polish.exploreMark}`}>{copy.explore}</div>
         <img src={HERO_CAR_IMAGE} alt={ar ? "سيارة دفع رباعي في مشهد سفر" : "SUV in a travel scene"}/>
       </div>
     </div>
 
-    <div className={styles.searchShell}>
-      <div className={styles.searchModes} aria-label={ar ? "نوع خدمة السيارات" : "Car service type"}>
-        <span className={styles.searchModeActive}><Car size={17}/>{copy.rental}</span>
+    <div className={`${styles.searchShell} ${polish.searchShell}`}>
+      <div className={`${styles.searchModes} ${polish.searchModes}`} aria-label={ar ? "نوع خدمة السيارات" : "Car service type"}>
+        <span className={`${styles.searchModeActive} ${polish.searchModeActive}`}><Car size={17}/>{copy.rental}</span>
         <span className={styles.searchModeDisabled} aria-disabled="true"><BadgeCheck size={16}/>{copy.transfer}<small>{copy.comingSoon}</small></span>
       </div>
-      <CarBookingSearch locale={locale} defaultPickupDate={defaultPickupDate} defaultReturnDate={defaultReturnDate}/>
+      <CarsHomeSearch locale={locale} defaultPickupDate={defaultPickupDate} defaultReturnDate={defaultReturnDate}/>
     </div>
   </div>;
 }
@@ -116,31 +117,31 @@ export function CarsHomeShowcase({locale}: ShowcaseProps) {
   const categories = categoryConfig.map((item) => ({...item, car: demoCars.find((car) => car.id === item.id)})).filter((item) => item.car);
   const popular = popularIds.map((id) => demoCars.find((car) => car.id === id)).filter(Boolean) as typeof demoCars;
 
-  return <div className={styles.showcase}>
-    <section className={styles.section}>
+  return <div className={`${styles.showcase} ${polish.showcase}`}>
+    <section className={`${styles.section} ${polish.section}`}>
       <div className={styles.sectionHead}>
         <h2>{copy.categories}</h2>
         <Link href="/cars">{copy.allCategories}<Arrow size={17}/></Link>
       </div>
-      <div className={styles.categoryGrid}>
-        {categories.map(({car, ar: arLabel, en: enLabel}) => car && <Link className={styles.categoryCard} key={car.id} href={`/cars?brand=${encodeURIComponent(car.brand)}`}>
-          <div className={styles.categoryImage}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async"/></div>
+      <div className={`${styles.categoryGrid} ${polish.categoryGrid}`}>
+        {categories.map(({car, ar: arLabel, en: enLabel}) => car && <Link className={`${styles.categoryCard} ${polish.categoryCard}`} key={car.id} href={`/cars?brand=${encodeURIComponent(car.brand)}`}>
+          <div className={`${styles.categoryImage} ${polish.categoryImage}`}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async"/></div>
           <strong>{ar ? arLabel : enLabel}</strong>
         </Link>)}
       </div>
     </section>
 
-    <section className={`${styles.section} ${styles.popularSection}`}>
+    <section className={`${styles.section} ${styles.popularSection} ${polish.section}`}>
       <div className={styles.sectionHead}>
         <div><h2>{copy.popular}</h2><p>{copy.popularSub}</p></div>
         <Link href="/cars">{copy.allCars}<Arrow size={17}/></Link>
       </div>
-      <div className={styles.popularGrid}>
+      <div className={`${styles.popularGrid} ${polish.popularGrid}`}>
         {popular.map((car,index) => {
           const discounted = index === 2;
           const displayedPrice = discounted ? Math.round(car.dailyPrice * .85) : car.dailyPrice;
-          return <Link href={`/cars?brand=${encodeURIComponent(car.brand)}`} className={styles.carCard} key={car.id}>
-            <div className={styles.carCardMedia}>
+          return <Link href={`/cars?brand=${encodeURIComponent(car.brand)}`} className={`${styles.carCard} ${polish.carCard}`} key={car.id}>
+            <div className={`${styles.carCardMedia} ${polish.carCardMedia}`}>
               {index === 0 || index === 4 ? <span className={styles.featureBadge}>{copy.featured}</span> : null}
               {discounted ? <span className={styles.discountBadge}>{copy.discount}</span> : null}
               <img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async"/>
