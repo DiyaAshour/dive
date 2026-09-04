@@ -21,6 +21,7 @@ export * from "./hotels/content";
 export * from "./hotels/translations";
 export * from "./cars/service";
 export * from "./cars/catalog";
+export * from "./cars/jordan-market";
 export * from "./cars/dashboard";
 export * from "./cars/booking";
 export * from "./cars/demo-booking";
