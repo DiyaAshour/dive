@@ -4,7 +4,7 @@ import { getAdminCarCatalogOverview, importCarCatalogVehicles } from "@platform/
 import { handleApiError, ok, validationError } from "@/lib/api";
 import { requestAdminUser } from "@/lib/request-auth";
 
-const providerSchema = z.enum(["MANUAL", "IMAGIN", "EVOX", "OEM"]);
+const providerSchema = z.enum(["MANUAL", "HANDMEKEY", "IMAGIN", "EVOX", "OEM"]);
 const assetTypeSchema = z.enum([
   "HERO",
   "EXTERIOR_FRONT",
