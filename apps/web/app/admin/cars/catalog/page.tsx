@@ -1,9 +1,8 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {BadgeCheck, Building2, CalendarRange, CarFront, CircleDollarSign, Images, Rotate3D, ShieldCheck, TriangleAlert} from "lucide-react";
-import {getAdminCarCatalogCoverage, getAdminCarCatalogOverview, getAdminNavigationCounts, getJordanRentalMarketSummary} from "@platform/server";
+import {BadgeCheck, Building2, CalendarRange, CarFront, CircleDollarSign, Images, Rotate3D, ShieldCheck, Sparkles, TriangleAlert} from "lucide-react";
+import {automaticCarVisualsConfigured, getAdminCarCatalogCoverage, getAdminCarCatalogOverview, getAdminNavigationCounts, getJordanRentalMarketSummary} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
-import {CarCatalogCutoutUploader} from "@/components/car-catalog-cutout-uploader";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import styles from "../cars-admin.module.css";
@@ -23,6 +22,7 @@ export default async function AdminCarsCatalogPage() {
     getAdminNavigationCounts(principal.user.id),
   ]);
   const coveragePercent = coverage.fleetVehicles ? Math.round((coverage.linkedFleetVehicles / coverage.fleetVehicles) * 100) : 100;
+  const automaticVisuals = automaticCarVisualsConfigured();
 
   return <AdminShell locale={locale} principal={principal} active="cars" counts={counts}>
     <header className="adminTopbar">
@@ -47,7 +47,13 @@ export default async function AdminCarsCatalogPage() {
       <Metric icon={<CarFront size={16}/>} label={ar ? "ربط الأسطول" : "Fleet visual coverage"} value={coveragePercent} sub={`% · ${coverage.linkedFleetVehicles}/${coverage.fleetVehicles}`}/>
     </section>
 
-    <CarCatalogCutoutUploader locale={locale}/>
+    <section className={styles.panel}>
+      <div className={styles.panelHeader}><div><span className="eyebrow">HandMeKey Automatic Visuals</span><h2>{ar ? "الشركة تختار السيارة فقط" : "The rental company only chooses the car"}</h2><p>{automaticVisuals
+        ? (ar ? "محرك الصور متصل. عند حفظ أي سيارة يختار النظام صور الاستوديو ومجسم 360° المطابقين للماركة والموديل والسنة تلقائيًا، دون رفع ملفات." : "The imagery engine is connected. Saving a vehicle automatically attaches the exact make, model and year studio angles and 360° visual—no file upload required.")
+        : (ar ? "مسار الاختيار التلقائي جاهز، لكنه ينتظر تفعيل مفتاح مزود الصور المرخّص في إعدادات Vercel. لن نعرض صورة سيارة خاطئة أثناء ذلك." : "Automatic selection is ready and waiting for the licensed imagery-provider key in Vercel. HandMeKey will not show close-but-wrong vehicle artwork in the meantime.")}</p></div>
+        <span className={`${styles.status} ${automaticVisuals ? styles.active : styles.pending_review}`}><Sparkles size={14}/>{automaticVisuals ? (ar ? "متصل" : "Connected") : (ar ? "بانتظار التفعيل" : "Activation pending")}</span>
+      </div>
+    </section>
 
     <div className={styles.split}>
       <section className={styles.panel}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, CarFront, LoaderCircle, Rotate3D, Search, X } from "lucide-react";
+import { BadgeCheck, CarFront, LoaderCircle, Rotate3D, Search, Sparkles, X } from "lucide-react";
 import styles from "./car-catalog-picker.module.css";
 
 type CatalogVehicle = {
@@ -54,9 +54,9 @@ export function CarCatalogPicker({locale}:Props){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const copy=ar?{
-    eyebrow:"مكتبة سيارات HandMeKey",title:"اختر السيارة الدقيقة أو موديل السوق الأردني",body:"نبحث أولًا عن نسخة دقيقة مرتبطة بالصور القياسية. إذا لم تتوفر، ستجد موديلات سيارات التأجير المرصودة في الأردن لتعبئة البيانات بسرعة ثم تحدد السنة والنسخة.",placeholder:"مثال: BMW 5 Series أو Toyota Corolla",searching:"جارٍ البحث...",empty:"لا توجد نتيجة مطابقة في المكتبة أو قائمة سوق التأجير الأردني.",manual:"أدخل البيانات يدويًا",selected:"تم ربط السيارة بالمكتبة",marketSelected:"موديل معروف في سوق التأجير الأردني",visuals:"صور قياسية",spin:"360°",interior:"داخلية 360°",pending:"الصور القياسية قيد التجهيز",market:"سوق الأردن",catalog:"Catalog",chooseYear:"حدد السنة والنسخة في الحقول أدناه",clear:"إلغاء الاختيار"
+    eyebrow:"مكتبة سيارات HandMeKey",title:"اختر السيارة — والصور علينا",body:"اختر الماركة والموديل والسنة فقط. يطابق النظام السيارة تلقائيًا مع صور الاستوديو ومجسم 360° الدقيق عند الحفظ، بدون أن ترفع الشركة أي صورة.",placeholder:"مثال: BMW 5 Series أو Toyota Corolla",searching:"جارٍ البحث...",empty:"لا توجد نتيجة مطابقة في المكتبة أو قائمة سوق التأجير الأردني.",manual:"أدخل البيانات يدويًا وسيحاول النظام مطابقتها",selected:"تم اختيار السيارة الدقيقة",marketSelected:"تم اختيار الموديل",visuals:"صور استوديو جاهزة",spin:"360°",interior:"داخلية 360°",pending:"سيجهز النظام الصور تلقائيًا",market:"سوق الأردن",catalog:"نسخة دقيقة",chooseYear:"حدد السنة أدناه وسيختار النظام المجسم المطابق",clear:"إلغاء الاختيار",automatic:"اختيار آلي"
   }:{
-    eyebrow:"HandMeKey vehicle library",title:"Choose an exact car or a Jordan rental-market model",body:"We look for an exact standardized visual match first. If it is not ready yet, choose from models currently observed across Jordan rental fleets, then set the year and trim below.",placeholder:"e.g. BMW 5 Series or Toyota Corolla",searching:"Searching...",empty:"No match in the exact catalog or Jordan rental-market list.",manual:"Enter details manually",selected:"Linked to vehicle library",marketSelected:"Known Jordan rental-market model",visuals:"Standard visuals",spin:"360°",interior:"Interior 360°",pending:"Standard visuals pending",market:"Jordan fleet",catalog:"Catalog",chooseYear:"Set the exact year and trim in the fields below",clear:"Clear selection"
+    eyebrow:"HandMeKey vehicle library",title:"Choose the car — imagery is automatic",body:"Select the make, model and year. On save, HandMeKey automatically attaches the matching studio angles and exact 360° visual, with no supplier upload required.",placeholder:"e.g. BMW 5 Series or Toyota Corolla",searching:"Searching...",empty:"No match in the exact catalog or Jordan rental-market list.",manual:"Enter it manually and automatic matching will still run",selected:"Exact vehicle selected",marketSelected:"Model selected",visuals:"Studio visuals ready",spin:"360°",interior:"Interior 360°",pending:"Visuals will be prepared automatically",market:"Jordan fleet",catalog:"Exact vehicle",chooseYear:"Set the year below and the matching visual is selected automatically",clear:"Clear selection",automatic:"Automatic match"
   };
 
   useEffect(()=>{
@@ -75,8 +75,7 @@ export function CarCatalogPicker({locale}:Props){
         const catalog=Array.isArray(catalogPayload?.data)?catalogPayload.data:[];
         const market=Array.isArray(marketPayload?.data?.models)?marketPayload.data.models:[];
         setCatalogResults(catalog);
-        const exactKeys=new Set(catalog.map((vehicle:CatalogVehicle)=>modelKey(vehicle.make,vehicle.model)));
-        setMarketResults(market.filter((vehicle:MarketVehicle)=>!exactKeys.has(modelKey(vehicle.make,vehicle.model))));
+        setMarketResults(market);
       }catch(value){if((value as Error)?.name!=="AbortError")setError(value instanceof Error?value.message:"Catalog request failed");}
       finally{setLoading(false);}
     },query?180:0);
@@ -100,10 +99,13 @@ export function CarCatalogPicker({locale}:Props){
     setField(form,"make",vehicle.make);
     if("year" in vehicle){
       setField(form,"model",[vehicle.model,vehicle.trim].filter(Boolean).join(" "));
+      setField(form,"trim",vehicle.trim??"");
       setField(form,"year",String(vehicle.year));
     }else{
       setField(form,"model",vehicle.model);
+      setField(form,"trim","");
     }
+    setField(form,"bodyType",vehicle.bodyType??"");
     setField(form,"category",vehicle.category);
     if(vehicle.transmission)setField(form,"transmission",vehicle.transmission);
     if(vehicle.fuel)setField(form,"fuel",vehicle.fuel);
@@ -116,6 +118,8 @@ export function CarCatalogPicker({locale}:Props){
 
   return <div ref={rootRef} className={styles.catalogBox}>
     <input type="hidden" name="catalogVehicleId" value={selectedCatalog?.id??""}/>
+    <input type="hidden" name="trim" value={selectedCatalog?.trim??""}/>
+    <input type="hidden" name="bodyType" value={selectedCatalog?.bodyType??selectedMarket?.bodyType??""}/>
     <div className={styles.heading}>
       <div><span>{copy.eyebrow}</span><h3>{copy.title}</h3><p>{copy.body}</p></div>
       {selected?<button type="button" className={styles.clear} onClick={()=>setSelected(null)}><X size={14}/>{copy.clear}</button>:null}
@@ -126,7 +130,7 @@ export function CarCatalogPicker({locale}:Props){
       <div className={styles.vehicleCopy}><span className={styles.linked}><BadgeCheck size={13}/>{copy.selected}</span><strong>{selectedCatalog.make} {selectedCatalog.model}{selectedCatalog.trim?` ${selectedCatalog.trim}`:""}</strong><small>{selectedCatalog.year}{selectedCatalog.bodyType?` · ${selectedCatalog.bodyType}`:""}{selectedCatalog.generation?` · ${selectedCatalog.generation}`:""}</small><div className={styles.capabilities}><span>{selectedCatalog.primaryImageUrl?copy.visuals:copy.pending}</span>{selectedCatalog.exterior360Available?<span><Rotate3D size={12}/>{copy.spin}</span>:null}{selectedCatalog.interior360Available?<span><Rotate3D size={12}/>{copy.interior}</span>:null}</div></div>
     </div>:selectedMarket?<div className={styles.selectedCard}>
       <div className={styles.vehicleMedia}><CarFront size={35}/></div>
-      <div className={styles.vehicleCopy}><span className={styles.linked}><BadgeCheck size={13}/>{copy.marketSelected}</span><strong>{selectedMarket.make} {selectedMarket.model}</strong><small>{selectedMarket.bodyType} · {selectedMarket.category}</small><div className={styles.capabilities}><span>{copy.market}</span><span>{copy.chooseYear}</span></div></div>
+      <div className={styles.vehicleCopy}><span className={styles.linked}><BadgeCheck size={13}/>{copy.marketSelected}</span><strong>{selectedMarket.make} {selectedMarket.model}</strong><small>{selectedMarket.bodyType} · {selectedMarket.category}</small><div className={styles.capabilities}><span><Sparkles size={12}/>{copy.automatic}</span><span>{copy.chooseYear}</span></div></div>
     </div>:<>
       <label className={styles.search}><Search size={17}/><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder={copy.placeholder} autoComplete="off"/>{loading?<LoaderCircle className={styles.spin} size={16}/>:null}</label>
       {error?<div className={styles.error}>{error}</div>:null}
@@ -153,8 +157,4 @@ function setField(form:HTMLFormElement,name:string,value:string){
     field.value=value;
     field.dispatchEvent(new Event("change",{bubbles:true}));
   }
-}
-
-function modelKey(make:string,model:string){
-  return `${make} ${model}`.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 }

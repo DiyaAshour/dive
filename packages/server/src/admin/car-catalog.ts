@@ -124,6 +124,18 @@ export async function importCarCatalogVehicles(
   options: {replaceAssets?: boolean | undefined} = {},
 ) {
   await requirePlatformAdmin(adminUserId);
+  return upsertCarCatalogVehicles(records, options);
+}
+
+/**
+ * Internal catalog writer used by trusted server-side visual providers.
+ * User-facing imports must continue to go through importCarCatalogVehicles so
+ * platform-admin authorization cannot be bypassed by an API route.
+ */
+export async function upsertCarCatalogVehicles(
+  records: readonly CarCatalogImportVehicle[],
+  options: {replaceAssets?: boolean | undefined} = {},
+) {
   if (records.length < 1 || records.length > 100) badRequest("CAR_CATALOG_IMPORT_SIZE", "Import must contain between 1 and 100 vehicles");
 
   const db = database();

@@ -1,5 +1,6 @@
 import { database } from "@platform/database";
 import { badRequest, forbidden, notFound } from "../errors";
+import { resolveAutomaticCarVisual } from "./auto-visuals";
 
 export type CreateCarCompanyInput = Readonly<{
   name: string;
@@ -17,6 +18,8 @@ export type CreateCarVehicleInput = Readonly<{
   make: string;
   model: string;
   year: number;
+  trim?: string;
+  bodyType?: string;
   category: string;
   transmission: "AUTOMATIC" | "MANUAL";
   fuel: "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC";
@@ -169,8 +172,24 @@ export async function listCarCompanyVehicles(userId: string) {
 export async function createCarVehicle(userId: string, input: CreateCarVehicleInput) {
   const membership = await requireCompany(userId);
   const db = database();
-  const catalog = input.catalogVehicleId ? await db.carCatalogVehicle.findFirst({where: {id: input.catalogVehicleId, active: true}}) : null;
+  let catalog = input.catalogVehicleId ? await db.carCatalogVehicle.findFirst({where: {id: input.catalogVehicleId, active: true}}) : null;
   if (input.catalogVehicleId && !catalog) notFound("Car catalog vehicle");
+
+  const automaticVisual = await resolveAutomaticCarVisual({
+    preferredCatalogVehicleId: catalog?.id,
+    make: catalog?.make ?? input.make,
+    model: catalog ? [catalog.model, catalog.trim].filter(Boolean).join(" ") : input.model,
+    year: catalog?.year ?? input.year,
+    trim: catalog?.trim ?? input.trim,
+    bodyType: catalog?.bodyType ?? input.bodyType,
+    category: catalog?.category ?? input.category,
+    transmission: catalog?.transmission ?? input.transmission,
+    fuel: catalog?.fuel ?? input.fuel,
+    seats: catalog?.seats ?? input.seats,
+    bags: catalog?.bags ?? input.bags,
+    doors: catalog?.doors ?? input.doors,
+  });
+  if (automaticVisual?.catalog) catalog = automaticVisual.catalog;
 
   const year = catalog?.year ?? input.year;
   const seats = catalog?.seats ?? input.seats;
@@ -218,7 +237,13 @@ export async function createCarVehicle(userId: string, input: CreateCarVehicleIn
       include: {homeLocation: true},
     });
     if (catalog) {
-      await tx.carVehicleCatalogLink.create({data: {vehicleId: vehicle.id, catalogVehicleId: catalog.id, matchedBy: "PARTNER"}});
+      await tx.carVehicleCatalogLink.create({
+        data: {
+          vehicleId: vehicle.id,
+          catalogVehicleId: catalog.id,
+          matchedBy: input.catalogVehicleId ? "PARTNER" : automaticVisual?.matchedBy ?? "AUTO_EXACT",
+        },
+      });
     }
     return vehicle;
   });
