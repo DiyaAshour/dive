@@ -5,18 +5,28 @@
   padding-bottom: 128px !important;
   background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/ammancitybooking.png") !important;
   background-size: cover !important;
-  background-position: center center !important;
+  background-position: center bottom !important;
   background-repeat: no-repeat !important;
   background-color: #f5efe3 !important;
   overflow: visible !important;
+  isolation: isolate;
 }
 
 .heroScene::before {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
-  background: transparent !important;
+  background-image: url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/ammancitybooking.png") !important;
+  background-size: 92% auto !important;
+  background-position: center bottom !important;
+  background-repeat: no-repeat !important;
+}
+
+.heroScene > * {
+  position: relative;
+  z-index: 1;
 }
 
 .heroVisual {
@@ -45,7 +55,12 @@
 @media (max-width: 1180px) {
   .heroScene {
     height: clamp(585px, 51vw, 650px);
-    background-position: 56% center !important;
+    background-position: 56% bottom !important;
+  }
+
+  .heroScene::before {
+    background-size: 96% auto !important;
+    background-position: 58% bottom !important;
   }
 
   .heroVisual {
@@ -68,6 +83,10 @@
       url("https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/ammancitybooking.png") !important;
     background-size: auto 100% !important;
     background-position: 58% center !important;
+  }
+
+  .heroScene::before {
+    display: none;
   }
 
   .heroVisual {
