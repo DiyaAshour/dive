@@ -1,4 +1,47 @@
 @media (max-width: 640px) {
+  :global(body:has([data-cars-reference="true"]) .siteHeaderInner) {
+    width: calc(100% - 20px) !important;
+    max-width: none !important;
+    height: 60px !important;
+    margin-inline: 10px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .siteActions) {
+    display: flex !important;
+    align-items: center !important;
+    justify-self: end !important;
+    gap: 6px !important;
+    margin: 0 !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .compactMarketSwitcher) {
+    display: block !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .compactMarketSwitcher > div > button),
+  :global(body:has([data-cars-reference="true"]) .mobileSiteNav > summary) {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .mobileSiteNav > summary) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  :global(body:has([data-cars-reference="true"]) .mobileSiteNav > summary span) {
+    display: none !important;
+  }
+
   .heroScene {
     height: 560px !important;
     min-height: 560px !important;
