@@ -82,6 +82,42 @@ export async function getAdminCarCatalogOverview(adminUserId: string) {
   };
 }
 
+export async function getAdminCarCatalogCoverage(adminUserId: string) {
+  await requirePlatformAdmin(adminUserId);
+  const db = database();
+  const [fleet, links, catalog] = await Promise.all([
+    db.carVehicle.findMany({
+      select: {id: true, make: true, model: true, year: true, category: true, status: true},
+      orderBy: [{make: "asc"}, {model: "asc"}, {year: "desc"}],
+    }),
+    db.carVehicleCatalogLink.findMany({select: {vehicleId: true}}),
+    db.carCatalogVehicle.findMany({
+      where: {active: true},
+      select: {
+        id: true,
+        primaryImageUrl: true,
+        exterior360Available: true,
+        interior360Available: true,
+        assets: {where: {active: true}, select: {type: true}},
+      },
+    }),
+  ]);
+  const linkedIds = new Set(links.map((link) => link.vehicleId));
+  const unlinked = fleet.filter((vehicle) => !linkedIds.has(vehicle.id));
+  const heroReadyVehicles = catalog.filter((vehicle) => vehicle.primaryImageUrl || vehicle.assets.some((asset) => asset.type === "HERO" || asset.type === "EXTERIOR_FRONT_LEFT" || asset.type === "EXTERIOR_FRONT")).length;
+
+  return {
+    fleetVehicles: fleet.length,
+    linkedFleetVehicles: fleet.length - unlinked.length,
+    unlinkedFleetVehicles: unlinked.length,
+    catalogVehicles: catalog.length,
+    heroReadyVehicles,
+    exterior360Vehicles: catalog.filter((vehicle) => vehicle.exterior360Available).length,
+    interior360Vehicles: catalog.filter((vehicle) => vehicle.interior360Available).length,
+    pendingFleet: unlinked.slice(0, 100),
+  };
+}
+
 export async function importCarCatalogVehicles(
   adminUserId: string,
   records: readonly CarCatalogImportVehicle[],
