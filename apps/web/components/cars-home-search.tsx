@@ -8,9 +8,10 @@ import styles from "./cars-home-search.module.css";
 type Locale = "ar" | "en";
 type Props = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
 type ActiveDate = "pickup" | "return";
-type OpenPanel = "dates" | "pickupTime" | "returnTime" | null;
+type OpenPanel = "dates" | "pickupTime" | "returnTime" | "age" | null;
 
 const DRIVER_AGES = ["18-24", "25-29", "30-65", "66+"] as const;
+type DriverAge = (typeof DRIVER_AGES)[number];
 const MIN_RENTAL_DAYS = 3;
 const TIME_SLOTS = Array.from({length: 48}, (_, index) => `${String(Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "30" : "00"}`);
 
@@ -22,6 +23,7 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
   const [returnDate, setReturnDate] = useState(() => defaultReturnDate >= addDaysValue(defaultPickupDate, MIN_RENTAL_DAYS) ? defaultReturnDate : addDaysValue(defaultPickupDate, MIN_RENTAL_DAYS));
   const [pickupTime, setPickupTime] = useState("10:00");
   const [returnTime, setReturnTime] = useState("10:00");
+  const [driverAge, setDriverAge] = useState<DriverAge>("30-65");
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activeDate, setActiveDate] = useState<ActiveDate>("pickup");
   const [calendarCursor, setCalendarCursor] = useState(() => startOfMonth(parseDate(defaultPickupDate)));
@@ -42,6 +44,8 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
     chooseReturn: "اختر تاريخ الإعادة",
     choosePickupTime: "اختر وقت الاستلام",
     chooseReturnTime: "اختر وقت الإعادة",
+    chooseAge: "اختر عمر السائق",
+    ageHint: "اختر الفئة العمرية للسائق الرئيسي",
     localTime: "جميع الأوقات بالتوقيت المحلي",
     previousMonth: "الشهر السابق",
     nextMonth: "الشهر التالي",
@@ -60,6 +64,8 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
     chooseReturn: "Choose return date",
     choosePickupTime: "Choose pick-up time",
     chooseReturnTime: "Choose return time",
+    chooseAge: "Choose driver age",
+    ageHint: "Select the main driver's age group",
     localTime: "All times are local",
     previousMonth: "Previous month",
     nextMonth: "Next month",
@@ -110,6 +116,11 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
     setOpenPanel(null);
   }
 
+  function chooseAge(value: DriverAge) {
+    setDriverAge(value);
+    setOpenPanel(null);
+  }
+
   return <div className={`${stayStyles.root} ${styles.root}`} id="car-search" ref={rootRef}>
     <form className={`${stayStyles.dock} ${styles.form}`} action="/cars" method="get">
       <div className={`${stayStyles.field} ${stayStyles.whereField} ${styles.locationField}`}>
@@ -128,18 +139,19 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
       <MomentField locale={locale} label={copy.pickupMoment} date={pickupDate} time={pickupTime} active={openPanel === "dates" && activeDate === "pickup" || openPanel === "pickupTime"} dateActive={openPanel === "dates" && activeDate === "pickup"} timeActive={openPanel === "pickupTime"} onDate={() => showDates("pickup")} onTime={() => setOpenPanel("pickupTime")}/>
       <MomentField locale={locale} label={copy.returnMoment} date={returnDate} time={returnTime} active={openPanel === "dates" && activeDate === "return" || openPanel === "returnTime"} dateActive={openPanel === "dates" && activeDate === "return"} timeActive={openPanel === "returnTime"} onDate={() => showDates("return")} onTime={() => setOpenPanel("returnTime")}/>
 
-      <label className={`${stayStyles.field} ${stayStyles.guestField} ${styles.ageField}`}>
-        <span className={stayStyles.fieldLabel}><Users size={14}/>{copy.age}</span>
-        <select name="driverAge" defaultValue="30-65">
-          {DRIVER_AGES.map((value) => <option value={value} key={value}>{value} {copy.ageSuffix}</option>)}
-        </select>
+      <div className={`${stayStyles.field} ${stayStyles.guestField} ${styles.ageField} ${openPanel === "age" ? stayStyles.activeField : ""}`}>
+        <button type="button" className={styles.ageButton} onClick={() => setOpenPanel((current) => current === "age" ? null : "age")} aria-haspopup="dialog" aria-expanded={openPanel === "age"}>
+          <span className={stayStyles.fieldLabel}><Users size={14}/>{copy.age}</span>
+          <strong>{driverAge} {copy.ageSuffix}</strong>
+        </button>
         <ChevronDown size={16} className={stayStyles.fieldChevron}/>
-      </label>
+      </div>
 
       <input type="hidden" name="pickupDate" value={pickupDate}/>
       <input type="hidden" name="returnDate" value={returnDate}/>
       <input type="hidden" name="pickupTime" value={pickupTime}/>
       <input type="hidden" name="returnTime" value={returnTime}/>
+      <input type="hidden" name="driverAge" value={driverAge}/>
       <button className={`${stayStyles.searchButton} ${styles.searchButton}`} type="submit"><Search size={19}/><span>{copy.search}</span></button>
     </form>
 
@@ -160,6 +172,19 @@ export function CarsHomeSearch({locale, defaultPickupDate, defaultReturnDate}: P
         {TIME_SLOTS.map((value) => {
           const active = (openPanel === "pickupTime" ? pickupTime : returnTime) === value;
           return <button type="button" key={value} className={active ? styles.timeOptionActive : ""} onClick={() => chooseTime(value)}><span>{formatTime(value, locale)}</span>{active && <Check size={15}/>}</button>;
+        })}
+      </div>
+    </div>}
+
+    {openPanel === "age" && <div className={styles.agePanel} role="dialog" aria-label={copy.chooseAge}>
+      <div className={styles.agePanelHead}>
+        <div><strong>{copy.chooseAge}</strong><span>{copy.ageHint}</span></div>
+        <Users size={18}/>
+      </div>
+      <div className={styles.ageOptions}>
+        {DRIVER_AGES.map((value) => {
+          const active = driverAge === value;
+          return <button type="button" key={value} className={active ? styles.ageOptionActive : ""} onClick={() => chooseAge(value)}><span>{value} {copy.ageSuffix}</span>{active && <Check size={16}/>}</button>;
         })}
       </div>
     </div>}
