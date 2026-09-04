@@ -1,25 +1,18 @@
 import {readdir,readFile} from "node:fs/promises";
 import path from "node:path";
-import process from "node:process";
 import {fileURLToPath} from "node:url";
 import {blogPostInputSchema,type BlogPostInput} from "@platform/contracts";
 import {database} from "@platform/database";
-import {createAdminBlogPost,updateAdminBlogPost} from "../src/blog/service";
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const repoRoot=path.resolve(here,"../../..");
 const editorialDir=path.join(repoRoot,"content","editorial");
+const systemActor="system:editorial-sync";
 
 async function main(){
   const files=await listJsonFiles();
   if(files.length===0){
     console.log("[editorial-sync] no queued editorial JSON files; nothing to sync");
-    return;
-  }
-
-  const actorUserId=await resolveActorUserId();
-  if(!actorUserId){
-    console.log("[editorial-sync] no unambiguous platform-admin actor is available; skipping repository editorial sync");
     return;
   }
 
@@ -39,17 +32,63 @@ async function main(){
         continue;
       }
       if(existing){
-        await updateAdminBlogPost(actorUserId,existing.id,input);
+        await updateDraft(existing,input);
         updated++;
         console.log(`[editorial-sync] updated draft ${input.locale}/${input.slug}`);
       }else{
-        await createAdminBlogPost(actorUserId,input);
+        await createDraft(input);
         created++;
         console.log(`[editorial-sync] created draft ${input.locale}/${input.slug}`);
       }
     }
   }
   console.log(`[editorial-sync] complete: ${created} created, ${updated} updated, ${unchanged} unchanged, ${protectedCount} published/archived protected`);
+}
+
+async function createDraft(input:BlogPostInput){
+  const normalized=normalizeInput(input);
+  await database().$transaction(async(tx)=>{
+    const created=await tx.blogPost.create({data:{
+      ...normalized,
+      status:"DRAFT",
+      coverImageUrl:normalized.coverImageUrl||null,
+      coverImageAlt:normalized.coverImageAlt||null,
+      readingMinutes:estimateReadingMinutes(normalized.body),
+      createdByUserId:systemActor,
+      updatedByUserId:systemActor,
+      publishedAt:null,
+    }});
+    await tx.auditLog.create({data:{
+      actorUserId:null,
+      action:"BLOG_POST_EDITORIAL_SYNC_CREATED",
+      entityType:"BlogPost",
+      entityId:created.id,
+      after:{locale:created.locale,slug:created.slug,title:created.title,status:created.status,source:"repository-editorial-sync"},
+    }});
+  });
+}
+
+async function updateDraft(existing:{id:string;locale:string;slug:string;title:string;status:string},input:BlogPostInput){
+  const normalized=normalizeInput(input);
+  await database().$transaction(async(tx)=>{
+    const updated=await tx.blogPost.update({where:{id:existing.id},data:{
+      ...normalized,
+      status:"DRAFT",
+      coverImageUrl:normalized.coverImageUrl||null,
+      coverImageAlt:normalized.coverImageAlt||null,
+      readingMinutes:estimateReadingMinutes(normalized.body),
+      updatedByUserId:systemActor,
+      publishedAt:null,
+    }});
+    await tx.auditLog.create({data:{
+      actorUserId:null,
+      action:"BLOG_POST_EDITORIAL_SYNC_UPDATED",
+      entityType:"BlogPost",
+      entityId:updated.id,
+      before:{locale:existing.locale,slug:existing.slug,title:existing.title,status:existing.status},
+      after:{locale:updated.locale,slug:updated.slug,title:updated.title,status:updated.status,source:"repository-editorial-sync"},
+    }});
+  });
 }
 
 async function listJsonFiles(){
@@ -64,58 +103,11 @@ async function listJsonFiles(){
   }
 }
 
-async function resolveActorUserId(){
-  const configuredId=process.env.PLATFORM_OWNER_USER_ID?.trim();
-  if(configuredId)return configuredId;
-
-  const email=process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
-  if(email){
-    const user=await database().user.findUnique({where:{email},select:{id:true,platformRole:true}});
-    if(!user)throw new Error(`[editorial-sync] PLATFORM_OWNER_EMAIL does not match a user: ${email}`);
-    if(user.platformRole!=="PLATFORM_ADMIN")throw new Error(`[editorial-sync] configured platform owner is not PLATFORM_ADMIN: ${email}`);
-    return user.id;
-  }
-
-  // The first interactive platform owner is recorded authoritatively when admin
-  // bootstrap succeeds. Prefer that audit identity over guessing among later admins.
-  const bootstrap=await database().auditLog.findFirst({
-    where:{action:"PLATFORM_ADMIN_BOOTSTRAPPED",entityType:"User",actorUserId:{not:null}},
-    select:{actorUserId:true},
-    orderBy:{createdAt:"asc"},
-  });
-  if(bootstrap?.actorUserId){
-    const owner=await database().user.findUnique({
-      where:{id:bootstrap.actorUserId},
-      select:{id:true,platformRole:true},
-    });
-    if(owner?.platformRole==="PLATFORM_ADMIN"){
-      console.log("[editorial-sync] using bootstrap PLATFORM_ADMIN audit actor");
-      return owner.id;
-    }
-  }
-
-  // Last safe fallback: exactly one interactive platform admin.
-  const interactiveAdmins=await database().user.findMany({
-    where:{platformRole:"PLATFORM_ADMIN",credential:{isNot:null}},
-    select:{id:true},
-    orderBy:{createdAt:"asc"},
-    take:2,
-  });
-  if(interactiveAdmins.length===1){
-    console.log("[editorial-sync] using sole interactive PLATFORM_ADMIN audit actor");
-    return interactiveAdmins[0]!.id;
-  }
-  if(interactiveAdmins.length>1)console.log("[editorial-sync] multiple interactive PLATFORM_ADMIN users found and no bootstrap owner could be resolved; set PLATFORM_OWNER_USER_ID");
-  return null;
-}
-
 async function readArticles(file:string):Promise<BlogPostInput[]>{
   const raw=JSON.parse(await readFile(file,"utf8")) as unknown;
   const rows=Array.isArray(raw)?raw:[raw];
   return rows.map((row,index)=>{
     if(!row||typeof row!=="object")throw new Error(`[editorial-sync] invalid ${path.basename(file)} item ${index+1}: expected an object`);
-    // Repository-driven editorial content is deliberately forced to DRAFT.
-    // Publishing remains a conscious action in the HandMeKey admin editor.
     const parsed=blogPostInputSchema.safeParse({...row,status:"DRAFT"});
     if(!parsed.success){
       const detail=parsed.error.issues.map(issue=>`${issue.path.join(".")||"article"}: ${issue.message}`).join(" | ");
@@ -125,23 +117,45 @@ async function readArticles(file:string):Promise<BlogPostInput[]>{
   });
 }
 
+function normalizeInput(input:BlogPostInput){
+  return {
+    ...input,
+    title:input.title.trim(),
+    excerpt:input.excerpt.trim(),
+    body:input.body.trim(),
+    seoTitle:input.seoTitle.trim(),
+    seoDescription:input.seoDescription.trim(),
+    category:input.category.trim(),
+    authorName:input.authorName.trim(),
+    coverImageUrl:input.coverImageUrl?.trim()??"",
+    coverImageAlt:input.coverImageAlt?.trim()??"",
+    tags:[...new Set(input.tags.map(tag=>tag.trim()).filter(Boolean))].slice(0,12),
+  };
+}
+
+function estimateReadingMinutes(body:string){
+  const words=body.trim()?body.trim().split(/\s+/).length:0;
+  return Math.max(1,Math.ceil(words/220));
+}
+
 function sameArticle(existing:{
   locale:string;slug:string;title:string;excerpt:string;body:string;seoTitle:string;seoDescription:string;category:string;tags:string[];coverImageUrl:string|null;coverImageAlt:string|null;featured:boolean;status:string;authorName:string;
 },input:BlogPostInput){
-  return existing.locale===input.locale
-    && existing.slug===input.slug
-    && existing.title===input.title.trim()
-    && existing.excerpt===input.excerpt.trim()
-    && existing.body===input.body.trim()
-    && existing.seoTitle===input.seoTitle.trim()
-    && existing.seoDescription===input.seoDescription.trim()
-    && existing.category===input.category.trim()
-    && JSON.stringify(existing.tags)===JSON.stringify([...new Set(input.tags.map(tag=>tag.trim()).filter(Boolean))].slice(0,12))
-    && (existing.coverImageUrl??"")===(input.coverImageUrl?.trim()??"")
-    && (existing.coverImageAlt??"")===(input.coverImageAlt?.trim()??"")
-    && existing.featured===input.featured
+  const normalized=normalizeInput(input);
+  return existing.locale===normalized.locale
+    && existing.slug===normalized.slug
+    && existing.title===normalized.title
+    && existing.excerpt===normalized.excerpt
+    && existing.body===normalized.body
+    && existing.seoTitle===normalized.seoTitle
+    && existing.seoDescription===normalized.seoDescription
+    && existing.category===normalized.category
+    && JSON.stringify(existing.tags)===JSON.stringify(normalized.tags)
+    && (existing.coverImageUrl??"")===normalized.coverImageUrl
+    && (existing.coverImageAlt??"")===normalized.coverImageAlt
+    && existing.featured===normalized.featured
     && existing.status==="DRAFT"
-    && existing.authorName===input.authorName.trim();
+    && existing.authorName===normalized.authorName;
 }
 
 await main();
