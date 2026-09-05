@@ -104,6 +104,12 @@ export type HotelbedsHotelDetails = Readonly<{
   offers: readonly HotelbedsOffer[];
 }>;
 
+export type HotelbedsRateCheck = Readonly<{
+  offer: HotelbedsOffer;
+  hotel: Pick<HotelbedsHotelDetails, "providerHotelCode" | "name" | "city" | "countryCode" | "area" | "address" | "starRating" | "photos" | "amenities" | "reviewSummary">;
+  raw: unknown;
+}>;
+
 type HotelbedsAvailabilityResponse = Readonly<{
   hotels?: Readonly<{hotels?: readonly unknown[]}>;
 }>;
@@ -168,17 +174,37 @@ export async function getHotelbedsHotelDetails(code: string, input: HotelbedsSea
   return hotelDetails(hotel, code, input, offers, cheapest.currency);
 }
 
-export async function checkHotelbedsRate(rateKey: string, nights: number, expectedHotelCode?: string): Promise<{offer: HotelbedsOffer; raw: unknown} | null> {
+export async function checkHotelbedsRate(rateKey: string, nights: number, expectedHotelCode?: string): Promise<HotelbedsRateCheck | null> {
   const payload = await hotelbedsRequest<unknown>("/checkrates", {rooms: [{rateKey}]});
   const hotel = hotelFromPayload(payload);
   if (!hotel) return null;
   const returnedHotelCode = stringValue(hotel.code);
   if (expectedHotelCode && returnedHotelCode && returnedHotelCode !== expectedHotelCode) return null;
+  const providerHotelCode = returnedHotelCode ?? expectedHotelCode;
+  if (!providerHotelCode) return null;
   const offers = records(hotel.rooms)
     .flatMap((room) => records(room.rates).map((rate) => normalizeRate(room, rate, nights)))
     .filter((offer): offer is HotelbedsOffer => offer !== null);
   const offer = offers.find((item) => item.rateKey === rateKey);
-  return offer ? {offer, raw: payload} : null;
+  if (!offer) return null;
+  const name = stringValue(hotel.name) ?? `Hotelbeds hotel ${providerHotelCode}`;
+  const photos = hotelPhotos(hotel, name);
+  return {
+    offer,
+    hotel: {
+      providerHotelCode,
+      name,
+      city: stringValue(hotel.destinationName) ?? "Hotelbeds",
+      countryCode: stringValue(hotel.countryCode) ?? "",
+      area: stringValue(hotel.zoneName),
+      address: stringValue(hotel.address),
+      starRating: categoryStars(hotel.categoryCode),
+      photos,
+      amenities: hotelAmenities(hotel),
+      reviewSummary: hotelReviewSummary(hotel),
+    },
+    raw: payload,
+  };
 }
 
 export async function bookHotelbeds(input: HotelbedsBookingInput): Promise<HotelbedsBookingResult> {
