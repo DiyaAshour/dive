@@ -4,7 +4,7 @@ import {useState} from "react";
 
 type Locale = "ar" | string;
 
-type SyncResponse = {data?: {upserted?: number; requests?: number}; error?: {message?: string}};
+type SyncResponse = {data?: {mode?: string; completed?: boolean; differentialComplete?: boolean; inserted?: number; processed?: number; upserted?: number; requests?: number; nextFrom?: number}; error?: {message?: string}};
 type CancelResponse = {data?: unknown; error?: {message?: string}};
 
 export function HotelbedsContentSyncButton({locale}: {locale: Locale}) {
@@ -18,7 +18,21 @@ export function HotelbedsContentSyncButton({locale}: {locale: Locale}) {
       const response = await fetch("/api/v1/admin/hotelbeds-content-sync",{method:"POST"});
       const payload = await response.json().catch(()=>null) as SyncResponse | null;
       if (!response.ok || !payload?.data) throw new Error(payload?.error?.message ?? `Sync failed (${response.status})`);
-      setMessage(ar ? `تمت المزامنة: ${payload.data.upserted ?? 0} فندق · ${payload.data.requests ?? 0} طلب API` : `Synced ${payload.data.upserted ?? 0} hotels · ${payload.data.requests ?? 0} API requests`);
+      const data = payload.data;
+      const hotels = data.processed ?? data.upserted ?? data.inserted ?? 0;
+      if (data.mode === "bootstrap" && !data.completed) {
+        setMessage(ar
+          ? `تم تحميل ${hotels} فندق من الكتالوج العالمي في هذه الدفعة · ${data.requests ?? 0} طلب API · سيتم الاستكمال تلقائيًا من ${data.nextFrom ?? "—"}`
+          : `Loaded ${hotels} worldwide hotels in this batch · ${data.requests ?? 0} API requests · next run resumes from ${data.nextFrom ?? "—"}`);
+      } else if (data.mode === "bootstrap") {
+        setMessage(ar
+          ? `اكتمل كتالوج Hotelbeds العالمي · ${hotels} فندق في هذه الدفعة · ${data.requests ?? 0} طلب API`
+          : `Worldwide Hotelbeds catalogue completed · ${hotels} hotels in this batch · ${data.requests ?? 0} API requests`);
+      } else {
+        setMessage(ar
+          ? `تم تحديث الكتالوج العالمي: ${hotels} فندق · ${data.requests ?? 0} طلب API`
+          : `Worldwide catalogue refreshed: ${hotels} hotels · ${data.requests ?? 0} API requests`);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : (ar ? "فشلت المزامنة" : "Sync failed"));
     } finally {
@@ -26,7 +40,7 @@ export function HotelbedsContentSyncButton({locale}: {locale: Locale}) {
     }
   }
   return <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-    <button type="button" className="primary" onClick={sync} disabled={busy}>{busy ? (ar ? "جارٍ مزامنة Hotelbeds…" : "Syncing Hotelbeds…") : (ar ? "مزامنة كتالوج Hotelbeds الآن" : "Sync Hotelbeds catalogue now")}</button>
+    <button type="button" className="primary" onClick={sync} disabled={busy}>{busy ? (ar ? "جارٍ مزامنة فنادق العالم…" : "Syncing worldwide hotels…") : (ar ? "مزامنة فنادق Hotelbeds حول العالم" : "Sync worldwide Hotelbeds catalogue")}</button>
     {message&&<small className="muted">{message}</small>}
   </div>;
 }
