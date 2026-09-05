@@ -85,13 +85,21 @@ async function searchHotelbedsByHotelName(
       });
       if (!hotel) continue;
       return [{
-        ...hotel,
+        id: hotel.id,
+        slug: hotel.slug,
+        source: "HOTELBEDS_API",
+        providerHotelCode: hotel.providerHotelCode,
         name: candidate.name || hotel.name,
         city: candidate.destinationName ?? hotel.city,
         countryCode: candidate.countryCode ?? hotel.countryCode,
         area: candidate.zoneName ?? hotel.area,
         address: candidate.address ?? hotel.address,
-        description: candidate.description ?? hotel.description,
+        starRating: hotel.starRating,
+        currency: hotel.currency,
+        coverPhoto: hotel.coverPhoto,
+        photos: hotel.photos,
+        amenities: hotel.amenities,
+        reviewSummary: hotel.reviewSummary,
         availableOffers: hotel.offers.length,
         rates: hotel.offers,
         from: hotel.offers[0]!,
