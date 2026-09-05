@@ -4,9 +4,11 @@ import {database} from "@platform/database";
 import {ApplicationError} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
 import {bookHotelbeds, checkHotelbedsRate, HotelbedsConfigurationError, verifyHotelbedsQuote} from "../hotelbeds/client";
+import {paymentCapabilities} from "../payments/registry";
+import {initiateApiBookingPayment} from "../payments/api-bookings";
 
 export async function createApiBooking(input: ApiBookingInput) {
-  if (input.paymentMode === "PAY_NOW") throw new ApplicationError("API_PAYMENT_NOT_CONFIGURED", "Online payment is not enabled for Hotelbeds bookings yet", 400);
+  if (input.paymentMode === "PAY_NOW" && !paymentCapabilities().onlinePaymentAvailable) throw new ApplicationError("API_PAYMENT_NOT_CONFIGURED", "Online payment is not configured for Hotelbeds bookings yet", 503);
 
   const nights = Math.max(1, Math.round((Date.parse(input.departure) - Date.parse(input.arrival)) / 86_400_000));
   const reference = `HMK-API-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -64,13 +66,19 @@ export async function createApiBooking(input: ApiBookingInput) {
       markupAmount: Math.max(0, rate.total - rate.net),
       totalAmount: rate.total,
       paymentMode: input.paymentMode,
-      paymentState: "NOT_REQUIRED",
+      paymentState: input.paymentMode === "PAY_NOW" ? "PENDING" : "NOT_REQUIRED",
       status: "PENDING",
       cancellationPolicy: jsonSafe(checked?.offer.cancellationPolicy ?? input.cancellationPolicy ?? null),
       providerRequest: jsonSafe({hotelCode: input.hotelCode, rateKey: input.rateKey, clientReference, checked: Boolean(checked)}),
       providerResponse: checked ? jsonSafe(checked.raw) : null,
     }});
     pendingId = pending.id;
+
+    if (input.paymentMode === "PAY_NOW") {
+      const payment = await initiateApiBookingPayment(pending.id);
+      const current = await database().apiBooking.findUnique({where: {id: pending.id}});
+      return {...apiBookingView(current ?? pending), payment};
+    }
 
     const result = await bookHotelbeds({
       rateKey: input.rateKey,
