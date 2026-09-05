@@ -2,7 +2,12 @@ import {createPrivateKey, createPublicKey, X509Certificate} from "node:crypto";
 import {request} from "node:https";
 import {brotliDecompressSync, gunzipSync, inflateSync} from "node:zlib";
 
-const HOTELBEDS_HOSTS = new Set(["api.hotelbeds.com", "api.test.hotelbeds.com"]);
+const HOTELBEDS_MTLS_HOSTS = new Map<string, string>([
+  ["api.hotelbeds.com", "api-mtls.hotelbeds.com"],
+  ["api.test.hotelbeds.com", "api-mtls.test.hotelbeds.com"],
+  ["api-mtls.hotelbeds.com", "api-mtls.hotelbeds.com"],
+  ["api-mtls.test.hotelbeds.com", "api-mtls.test.hotelbeds.com"],
+]);
 const originalFetch = globalThis.fetch.bind(globalThis);
 let installed = false;
 
@@ -23,7 +28,9 @@ function requestUrl(input: RequestInfo | URL): URL {
 }
 
 function usesHotelbedsMtls(url: URL): boolean {
-  return HOTELBEDS_HOSTS.has(url.hostname.toLowerCase()) && envFlag("HOTELBEDS_MTLS_ENABLED");
+  return HOTELBEDS_MTLS_HOSTS.has(url.hostname.toLowerCase())
+    && url.pathname.startsWith("/hotel-api/")
+    && envFlag("HOTELBEDS_MTLS_ENABLED");
 }
 
 async function hotelbedsMtlsFetch(url: URL, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -35,8 +42,13 @@ async function hotelbedsMtlsFetch(url: URL, input: RequestInfo | URL, init?: Req
   const body = await requestBody(requestInput, init?.body);
   if (body && !headers.has("content-length")) headers.set("content-length", String(body.byteLength));
 
+  const targetUrl = new URL(url);
+  const mtlsHost = HOTELBEDS_MTLS_HOSTS.get(url.hostname.toLowerCase());
+  if (!mtlsHost) throw new Error("Unsupported Hotelbeds mTLS host");
+  targetUrl.hostname = mtlsHost;
+
   return new Promise<Response>((resolve, reject) => {
-    const req = request(url, {
+    const req = request(targetUrl, {
       method,
       headers: headersToObject(headers),
       cert: credentials.cert,
