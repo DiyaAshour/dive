@@ -40,10 +40,15 @@ for (const prefix of PREFIXES) {
 }
 
 const blobs = [...byPath.values()].sort((a,b)=>a.pathname.localeCompare(b.pathname));
-const folders = [...new Set(blobs.map((blob)=>carFolder(blob.pathname)).filter((value): value is string => Boolean(value)))].sort();
-console.log(`[car-blob-scan] store=${auth.storeId} blobs=${blobs.length} folders=${folders.length}`);
-console.log(`[car-blob-scan] folders=${JSON.stringify(folders)}`);
-for (const blob of blobs) console.log(`[car-blob-scan] blob=${JSON.stringify(blob.pathname)}`);
+const vehicleFolders = [...new Set(blobs.map((blob)=>carFolder(blob.pathname)).filter((value): value is string => Boolean(value) && /^2026-\d{2}-\d{2}_/.test(value)))].sort();
+console.log(`[car-blob-scan] store=${auth.storeId} blobs=${blobs.length} vehicleFolders=${vehicleFolders.length}`);
+console.log(`[car-blob-scan] vehicleFolders=${JSON.stringify(vehicleFolders)}`);
+
+for (const blob of blobs.filter((item)=>/(?:^|\/)(?:catalog-index\.json|vehicle_specs\.json|car-info\.json)$/i.test(item.pathname))) {
+  const response = await fetch(blob.url, {cache:"no-store"});
+  const text = response.ok ? await response.text() : `HTTP ${response.status}`;
+  console.log(`[car-blob-scan] json=${JSON.stringify(blob.pathname)} content=${text.slice(0,12000)}`);
+}
 
 function carFolder(pathname:string) {
   const normalized = pathname.replace(/^Cars images\s*\//i, "");
