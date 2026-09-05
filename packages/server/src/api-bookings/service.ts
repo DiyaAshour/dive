@@ -4,6 +4,7 @@ import {database} from "@platform/database";
 import {ApplicationError} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
 import {bookHotelbeds, checkHotelbedsRate, HotelbedsConfigurationError, verifyHotelbedsQuote} from "../hotelbeds/client";
+import {readHotelbedsCheckoutToken} from "../hotelbeds/checkout-token";
 import {paymentCapabilities} from "../payments/registry";
 import {initiateApiBookingPayment} from "../payments/api-bookings";
 
@@ -13,22 +14,33 @@ export async function createApiBooking(input: ApiBookingInput) {
   const nights = Math.max(1, Math.round((Date.parse(input.departure) - Date.parse(input.arrival)) / 86_400_000));
   const reference = `HMK-API-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
   const clientReference = `HMKAPI-${randomUUID().replaceAll("-", "").slice(0, 32).toUpperCase()}`;
+  const snapshot = input.checkoutQuote ? readHotelbedsCheckoutToken(input.checkoutQuote) : null;
+  if (input.checkoutQuote && !snapshot) throw new ApplicationError("HOTELBEDS_CHECKOUT_EXPIRED", "The Hotelbeds checkout quote is invalid or expired", 409);
+  if (snapshot && !snapshotMatchesInput(snapshot, input)) throw new ApplicationError("HOTELBEDS_CHECKOUT_MISMATCH", "The Hotelbeds checkout details changed after rate selection", 409);
   let pendingId: string | null = null;
   try {
-    // Hotelbeds' certified workflow is Availability -> CheckRate only for a
-    // RECHECK rate -> Booking. BOOKABLE rates go directly to Booking. A
-    // signed server quote protects the ledger fields for that direct path.
-    const rateType = input.rateType?.trim().toUpperCase();
-    const requiresCheckRate = !rateType || rateType === "RECHECK";
-    if (rateType && rateType !== "RECHECK" && rateType !== "BOOKABLE") throw new ApplicationError("HOTELBEDS_RATE_INVALID", "The selected Hotelbeds rate type is invalid", 409);
-    const checked = requiresCheckRate ? await checkHotelbedsRate(input.rateKey, nights, input.hotelCode) : null;
-    if (requiresCheckRate && !checked) throw new ApplicationError("HOTELBEDS_RATE_UNAVAILABLE", "The selected Hotelbeds rate is no longer available", 409);
+    // Certified workflow: Availability -> CheckRate only for RECHECK -> Booking.
+    // New checkout pages carry a signed server snapshot. RECHECK is completed
+    // once on the checkout page and the finalized BOOKABLE snapshot arrives here.
+    const snapshotRateType = snapshot?.offer.rateType.trim().toUpperCase();
+    if (snapshot) {
+      if (snapshotRateType !== "BOOKABLE") throw new ApplicationError("HOTELBEDS_RATE_NOT_FINAL", "The Hotelbeds rate must be BOOKABLE before confirmation", 409);
+      if (snapshot.sourceRateType === "RECHECK" && !snapshot.checked) throw new ApplicationError("HOTELBEDS_RECHECK_REQUIRED", "Hotelbeds requires CheckRate before this booking", 409);
+      if (!snapshot.offer.paymentModes.includes(input.paymentMode)) throw new ApplicationError("HOTELBEDS_PAYMENT_MODE_CHANGED", "The selected payment mode is no longer available for this rate", 409);
+    }
+
+    const legacyRateType = input.rateType?.trim().toUpperCase();
+    const requiresLegacyCheckRate = !snapshot && (!legacyRateType || legacyRateType === "RECHECK");
+    if (!snapshot && legacyRateType && legacyRateType !== "RECHECK" && legacyRateType !== "BOOKABLE") throw new ApplicationError("HOTELBEDS_RATE_INVALID", "The selected Hotelbeds rate type is invalid", 409);
+    const checked = requiresLegacyCheckRate ? await checkHotelbedsRate(input.rateKey, nights, input.hotelCode) : null;
+    if (requiresLegacyCheckRate && !checked) throw new ApplicationError("HOTELBEDS_RATE_UNAVAILABLE", "The selected Hotelbeds rate is no longer available", 409);
     if (checked && !checked.offer.paymentModes.includes(input.paymentMode)) throw new ApplicationError("HOTELBEDS_PAYMENT_MODE_CHANGED", "The selected payment mode is no longer available for this rate", 409);
+
     const quotePaymentModes = input.quotePaymentModes;
-    if (!checked && (!input.quoteSignature || !quotePaymentModes?.includes(input.paymentMode) || !verifyHotelbedsQuote({
+    if (!snapshot && !checked && (!input.quoteSignature || !quotePaymentModes?.includes(input.paymentMode) || !verifyHotelbedsQuote({
       hotelCode: input.hotelCode,
       rateKey: input.rateKey,
-      rateType: rateType ?? "BOOKABLE",
+      rateType: legacyRateType ?? "BOOKABLE",
       arrival: input.arrival,
       departure: input.departure,
       net: input.netAmount,
@@ -38,20 +50,30 @@ export async function createApiBooking(input: ApiBookingInput) {
       paymentModes: quotePaymentModes ?? [],
       quoteSignature: input.quoteSignature,
     }))) throw new ApplicationError("HOTELBEDS_QUOTE_INVALID", "The selected Hotelbeds quote is no longer valid", 409);
-    const rate = checked
-      ? {net: checked.offer.net, sellingRate: checked.offer.sellingRate, total: checked.offer.total, currency: checked.offer.currency}
+
+    const trustedOffer = snapshot?.offer ?? checked?.offer ?? null;
+    const hotelCode = snapshot?.hotel.providerHotelCode ?? input.hotelCode;
+    const hotelName = snapshot?.hotel.name ?? input.hotelName;
+    const city = snapshot?.hotel.city ?? input.city;
+    const roomName = trustedOffer?.roomName ?? input.roomName ?? null;
+    const boardName = trustedOffer?.boardName ?? trustedOffer?.boardCode ?? input.boardName ?? null;
+    const rateType = trustedOffer?.rateType ?? input.rateType ?? null;
+    const rateKey = trustedOffer?.rateKey ?? input.rateKey;
+    const rate = trustedOffer
+      ? {net: trustedOffer.net, sellingRate: trustedOffer.sellingRate, total: trustedOffer.total, currency: trustedOffer.currency}
       : {net: input.netAmount, sellingRate: input.sellingAmount ?? null, total: input.totalAmount, currency: input.currency};
+    const cancellationPolicy = trustedOffer?.cancellationPolicy ?? input.cancellationPolicy ?? null;
 
     const pending = await database().apiBooking.create({data: {
       reference,
       clientReference,
-      hotelCode: input.hotelCode,
-      hotelName: input.hotelName,
-      city: input.city,
-      roomName: input.roomName ?? null,
-      boardName: input.boardName ?? null,
-      rateType: input.rateType ?? null,
-      rateKey: input.rateKey,
+      hotelCode,
+      hotelName,
+      city,
+      roomName,
+      boardName,
+      rateType,
+      rateKey,
       guestName: input.guestName,
       guestEmail: input.guestEmail,
       phone: input.phone ?? null,
@@ -68,8 +90,16 @@ export async function createApiBooking(input: ApiBookingInput) {
       paymentMode: input.paymentMode,
       paymentState: input.paymentMode === "PAY_NOW" ? "PENDING" : "NOT_REQUIRED",
       status: "PENDING",
-      cancellationPolicy: jsonSafe(checked?.offer.cancellationPolicy ?? input.cancellationPolicy ?? null),
-      providerRequest: jsonSafe({hotelCode: input.hotelCode, rateKey: input.rateKey, clientReference, checked: Boolean(checked)}),
+      cancellationPolicy: jsonSafe(cancellationPolicy),
+      providerRequest: jsonSafe({
+        hotelCode,
+        rateKey,
+        clientReference,
+        checked: snapshot?.checked ?? Boolean(checked),
+        sourceRateType: snapshot?.sourceRateType ?? legacyRateType ?? null,
+        hotelAddress: snapshot?.hotel.address ?? null,
+        rateComments: snapshot?.rateComments ?? null,
+      }),
       providerResponse: checked ? jsonSafe(checked.raw) : null,
     }});
     pendingId = pending.id;
@@ -81,7 +111,7 @@ export async function createApiBooking(input: ApiBookingInput) {
     }
 
     const result = await bookHotelbeds({
-      rateKey: input.rateKey,
+      rateKey,
       adults: input.adults,
       holderName: holderFirstName(input.guestName),
       holderSurname: holderSurname(input.guestName),
@@ -95,7 +125,7 @@ export async function createApiBooking(input: ApiBookingInput) {
     const booking = await database().apiBooking.update({where: {id: pending.id}, data: {
       status: "CONFIRMED",
       providerReference: result.providerReference,
-      rateKey: input.rateKey,
+      rateKey,
       netAmount: rate.net,
       sellingAmount: rate.sellingRate,
       markupAmount: Math.max(0, rate.total - rate.net),
@@ -161,6 +191,13 @@ function apiBookingView(booking: {
     createdAt: booking.createdAt,
     updatedAt: booking.updatedAt,
   };
+}
+
+function snapshotMatchesInput(snapshot: NonNullable<ReturnType<typeof readHotelbedsCheckoutToken>>, input: ApiBookingInput): boolean {
+  if (snapshot.hotel.providerHotelCode !== input.hotelCode || snapshot.offer.rateKey !== input.rateKey) return false;
+  if (snapshot.stay.arrival !== input.arrival || snapshot.stay.departure !== input.departure || snapshot.stay.adults !== input.adults || snapshot.stay.children !== input.children) return false;
+  const expectedAges = [...snapshot.stay.childrenAges];
+  return expectedAges.length === input.childrenAges.length && expectedAges.every((age, index) => age === input.childrenAges[index]);
 }
 
 function holderFirstName(value: string): string { return value.trim().split(/\s+/)[0] ?? value.trim(); }
