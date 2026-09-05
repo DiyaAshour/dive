@@ -14,7 +14,7 @@ model HotelbedsContentHotel {
   phone            String?
   description      String?  @db.Text
   facilities       Json?
-  images           Json?
+  images            Json?
   issues           Json?
   raw              Json?
   providerUpdatedAt DateTime?
@@ -42,4 +42,16 @@ model HotelbedsRateCommentCache {
   @@index([incoming, code, rateCodes])
   @@index([hotelCode])
   @@index([syncedAt])
+}
+
+model HotelbedsContentSyncState {
+  id                     String   @id
+  language               String   @default("ENG")
+  nextFrom               Int      @default(1)
+  completed              Boolean  @default(false)
+  lastFullSyncAt         DateTime?
+  lastDifferentialSyncAt DateTime?
+  lastError              String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
