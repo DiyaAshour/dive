@@ -732,6 +732,7 @@ model ApiBooking {
   paymentMode       PaymentMode
   paymentState      PaymentState
   status            ApiBookingStatus  @default(PENDING)
+  paymentAttempts   ApiPaymentAttempt[]
   cancellationPolicy Json?
   providerRequest   Json?
   providerResponse  Json?
@@ -746,6 +747,29 @@ model ApiBooking {
   @@index([guestEmail, createdAt])
   @@index([arrival, departure])
   @@index([providerReference])
+}
+
+model ApiPaymentAttempt {
+  id                String               @id @default(cuid())
+  apiBookingId      String
+  apiBooking        ApiBooking           @relation(fields: [apiBookingId], references: [id], onDelete: Cascade)
+  provider          String
+  status            PaymentAttemptStatus @default(INITIATED)
+  amount            Decimal              @db.Decimal(12, 2)
+  currency          String               @db.Char(3)
+  idempotencyKey    String               @unique
+  requestFingerprint String
+  externalPaymentId String?
+  returnUrl         String
+  redirectUrl       String?
+  failureCode       String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  completedAt       DateTime?
+
+  @@unique([provider, externalPaymentId])
+  @@index([apiBookingId, createdAt])
+  @@index([provider, status, createdAt])
 }
 
 model BookingNight {
