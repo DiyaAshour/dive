@@ -68,7 +68,8 @@ async function hotelbedsMtlsFetch(url: URL, input: RequestInfo | URL, init?: Req
             responseHeaders.delete("content-encoding");
             responseHeaders.delete("content-length");
           }
-          resolve(new Response(decoded, {
+          const responseBody = Uint8Array.from(decoded).buffer;
+          resolve(new Response(responseBody, {
             status: res.statusCode ?? 500,
             statusText: res.statusMessage ?? "",
             headers: responseHeaders,
