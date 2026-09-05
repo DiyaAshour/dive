@@ -92,10 +92,13 @@ export async function syncHotelbedsContentCatalog(options: Readonly<{destination
       for (const raw of hotels) {
         const normalized = normalizeContentHotel(raw, destinationCode);
         if (!normalized) continue;
+        // Prisma's generated JSON input types distinguish SQL NULL from JSON
+        // values. normalizeContentHotel produces JSON-safe runtime values, so
+        // the cast is intentionally kept at this database boundary only.
         await database().hotelbedsContentHotel.upsert({
           where: {code: normalized.code},
-          create: normalized,
-          update: {...normalized, syncedAt: new Date()},
+          create: normalized as never,
+          update: {...normalized, syncedAt: new Date()} as never,
         });
         upserted += 1;
       }
