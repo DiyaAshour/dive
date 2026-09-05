@@ -5,6 +5,8 @@ import {ApplicationError} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
 import {bookHotelbeds, checkHotelbedsRate, HotelbedsConfigurationError, verifyHotelbedsQuote} from "../hotelbeds/client";
 import {readHotelbedsCheckoutToken} from "../hotelbeds/checkout-token";
+import {getHotelbedsContentHotel} from "../hotelbeds/catalog";
+import {cancelHotelbedsBooking, getHotelbedsBookingDetail, simulateHotelbedsBookingCancellation} from "../hotelbeds/post-booking";
 import {paymentCapabilities} from "../payments/registry";
 import {initiateApiBookingPayment} from "../payments/api-bookings";
 
@@ -53,8 +55,11 @@ export async function createApiBooking(input: ApiBookingInput) {
 
     const trustedOffer = snapshot?.offer ?? checked?.offer ?? null;
     const hotelCode = snapshot?.hotel.providerHotelCode ?? input.hotelCode;
-    const hotelName = snapshot?.hotel.name ?? input.hotelName;
-    const city = snapshot?.hotel.city ?? input.city;
+    const catalogHotel = await getHotelbedsContentHotel(hotelCode).catch(() => null);
+    const hotelName = catalogHotel?.name ?? snapshot?.hotel.name ?? input.hotelName;
+    const city = catalogHotel?.destinationName ?? snapshot?.hotel.city ?? input.city;
+    const hotelAddress = catalogHotel?.address ?? snapshot?.hotel.address ?? checked?.hotel.address ?? null;
+    if (!hotelAddress) throw new ApplicationError("HOTELBEDS_CONTENT_NOT_READY", "Hotelbeds hotel content is not cached yet; booking is blocked until the mandatory voucher address is available", 503);
     const roomName = trustedOffer?.roomName ?? input.roomName ?? null;
     const boardName = trustedOffer?.boardName ?? trustedOffer?.boardCode ?? input.boardName ?? null;
     const rateType = trustedOffer?.rateType ?? input.rateType ?? null;
@@ -97,7 +102,7 @@ export async function createApiBooking(input: ApiBookingInput) {
         clientReference,
         checked: snapshot?.checked ?? Boolean(checked),
         sourceRateType: snapshot?.sourceRateType ?? legacyRateType ?? null,
-        hotelAddress: snapshot?.hotel.address ?? null,
+        hotelAddress,
         rateComments: snapshot?.rateComments ?? null,
       }),
       providerResponse: checked ? jsonSafe(checked.raw) : null,
@@ -155,6 +160,42 @@ export async function listApiBookings(userId: string, limit = 200) {
   await requirePlatformAdmin(userId);
   const bookings = await database().apiBooking.findMany({orderBy: {createdAt: "desc"}, take: Math.max(1, Math.min(limit, 500))});
   return bookings.map(apiBookingView);
+}
+
+export async function simulateApiBookingCancellation(userId: string, id: string) {
+  await requirePlatformAdmin(userId);
+  const booking = await database().apiBooking.findUnique({where: {id}});
+  if (!booking) throw new ApplicationError("API_BOOKING_NOT_FOUND", "Hotelbeds booking was not found", 404);
+  if (!booking.providerReference) throw new ApplicationError("HOTELBEDS_REFERENCE_MISSING", "Hotelbeds booking reference is missing", 409);
+  if (booking.status === "CANCELLED") throw new ApplicationError("API_BOOKING_ALREADY_CANCELLED", "This Hotelbeds booking is already cancelled", 409);
+  await getHotelbedsBookingDetail(booking.providerReference);
+  const simulation = await simulateHotelbedsBookingCancellation(booking.providerReference);
+  return {booking: apiBookingView(booking), simulation: {reference: simulation.reference, status: simulation.status, currency: simulation.currency, amount: simulation.amount}};
+}
+
+export async function cancelApiBooking(userId: string, id: string) {
+  await requirePlatformAdmin(userId);
+  const booking = await database().apiBooking.findUnique({where: {id}});
+  if (!booking) throw new ApplicationError("API_BOOKING_NOT_FOUND", "Hotelbeds booking was not found", 404);
+  if (!booking.providerReference) throw new ApplicationError("HOTELBEDS_REFERENCE_MISSING", "Hotelbeds booking reference is missing", 409);
+  if (booking.status === "CANCELLED") return apiBookingView(booking);
+
+  // Retrieve first to verify the provider reference, then simulate charges before
+  // committing the cancellation. The calling admin UI must show/accept simulation.
+  await getHotelbedsBookingDetail(booking.providerReference);
+  const simulation = await simulateHotelbedsBookingCancellation(booking.providerReference);
+  const result = await cancelHotelbedsBooking(booking.providerReference);
+  const status = result.status?.trim().toUpperCase();
+  if (status && status !== "CANCELLED" && status !== "CANCELED") throw new ApplicationError("HOTELBEDS_CANCELLATION_NOT_CONFIRMED", "Hotelbeds did not confirm the cancellation", 502);
+
+  const updated = await database().apiBooking.update({where: {id}, data: {
+    status: "CANCELLED",
+    cancelledAt: new Date(),
+    providerResponse: jsonSafe({booking: booking.providerResponse, cancellationSimulation: simulation.raw, cancellation: result.raw}),
+    errorCode: null,
+    errorMessage: null,
+  }});
+  return apiBookingView(updated);
 }
 
 function apiBookingView(booking: {
