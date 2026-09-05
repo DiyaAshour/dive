@@ -1,6 +1,6 @@
 # Hotelbeds certification request email — draft
 
-> Status: READY AS A DRAFT ONLY. Do not send until the blockers in `HOTELBEDS_CERTIFICATION.md` are closed and the final test evidence is captured.
+> Status: READY AS A DRAFT ONLY. Do not send until the controlled TEST evidence run is complete and the payment-type scope below is finalized.
 
 ## To
 
@@ -30,6 +30,8 @@ HandMeKey combines direct partner-property inventory with Hotelbeds inventory. H
 - CheckRate only when the selected Availability rate returns `rateType=RECHECK`.
 - Direct Booking for `BOOKABLE` rates without an unnecessary CheckRate.
 - Booking confirmation and provider reference storage.
+- Booking detail retrieval.
+- Cancellation simulation followed by explicit cancellation when confirmed by an administrator.
 - Single-room bookings in the current customer-facing scope.
 - Child ages are collected and sent whenever children are included.
 - Cancellation policies and applicable provider remarks are shown before booking.
@@ -47,17 +49,24 @@ After the customer selects a rate, HandMeKey preserves the selected quote server
 **Commercial / implementation decisions to disclose**
 
 - The current public Hotelbeds booking scope is single-room booking.
-- We do not intend to sell Hotelbeds opaque/package-only rates as standalone hotel-only products.
-- [FINALIZE BEFORE SENDING: state the exact destination scope if it is still restricted, or remove this line if global Hotelbeds hotel discovery is complete.]
-- [FINALIZE BEFORE SENDING: describe how rates requiring Hotelbeds payment data are handled/excluded in the certified product scope.]
+- Current Hotelbeds content/name-discovery scope is Jordan-first: Amman, Aqaba, Petra and Dead Sea. We can expand the local catalogue scope without changing the booking workflow.
+- Hotelbeds rates marked `packaging=true` are excluded from HandMeKey standalone hotel sales.
+- Cancellation deadlines are shown with the provider/destination offset and are not converted through the customer's browser timezone.
+- [FINALIZE BEFORE SENDING: describe how `AT_WEB` and any rate requiring Hotelbeds/provider-specific payment data are supported or excluded in the certified product scope.]
 
 **Voucher**
 
-Our confirmed-booking voucher contains the Hotelbeds booking reference, agency reference, hotel and stay details, holder/passenger information, child ages where applicable, room type, board type, applicable rate comments, and the required supplier payment statement. It is available to the customer as a printable / Save PDF page.
+Our confirmed-booking voucher contains the Hotelbeds booking reference, agency reference, hotel name and address, stay details, holder/passenger information, child ages where applicable, room type, board type, applicable rate comments, and the required supplier payment statement. A Hotelbeds booking is blocked if the mandatory hotel address is not available in our local content catalogue. The voucher is available to the customer as a printable / Save PDF page.
 
 **Content**
 
-[FINALIZE BEFORE SENDING: describe the locally stored Hotelbeds Content API catalogue, refresh frequency, and the exact static fields implemented by HandMeKey.]
+HandMeKey persists Hotelbeds static hotel content in a local catalogue instead of retrieving static Content API data during the customer checkout request. The current catalogue stores the Hotelbeds hotel code, hotel name, destination, address, category, coordinates when supplied, phone, description, facilities, images and provider issues used by our product. The catalogue is refreshed by a scheduled daily sync and can also be bootstrapped manually by an authenticated platform administrator. Hotel-name discovery is performed against this local catalogue, and a Booking API Availability request is made only after a Hotelbeds hotel code has been resolved.
+
+Rate-comment identifiers are preserved. A local offline rate-comment cache and synchronization path are available so static rate-comment content does not need to be retrieved from Content API during checkout.
+
+**Post-booking**
+
+HandMeKey stores Hotelbeds bookings in a separate provider ledger. Booking detail retrieval, cancellation simulation and cancellation are implemented. The administrator is shown the simulation result before the real cancellation action is exposed, and the cancelled provider response/state is retained in HandMeKey.
 
 **Certification access**
 
@@ -67,7 +76,7 @@ No login is required for the public search and booking funnel unless you advise 
 
 **Test evidence**
 
-[FINALIZE BEFORE SENDING: add the date of the controlled test run and any test booking/reference or screenshots Hotelbeds requests. Do not include API secrets, private keys or certificate passphrases.]
+[FINALIZE BEFORE SENDING: add the date of the controlled TEST run, test booking/reference, voucher evidence, BOOKABLE/RECHECK evidence and cancellation-simulation evidence requested by Hotelbeds. Do not include API secrets, private keys or certificate passphrases.]
 
 Please let us know if you would like us to provide screenshots, a short booking-flow video, specific test cases, or any additional information for the certification review.
 
@@ -83,9 +92,10 @@ https://handmekey.com
 
 Before sending this email:
 
-- Close all blocker items in `HOTELBEDS_CERTIFICATION.md`.
-- Replace every `[FINALIZE BEFORE SENDING: ...]` placeholder.
+- Complete the initial local Content API bootstrap and verify a known hotel-name search.
+- Populate/test offline rate comments if needed by the selected certification rate.
+- Finalize the payment-type scope placeholder.
+- Replace the TEST evidence placeholder.
 - Confirm the production review URL is the intended certification URL.
 - Confirm the current Hotelbeds test API key/certificate association is valid.
-- Capture controlled test evidence after the Evaluation quota resets or the account is moved to certification quota.
 - Do not attach or paste the API Secret, mTLS private key, key passphrase, Vercel secrets, or payment credentials.
