@@ -43,6 +43,7 @@ export type HotelbedsRateSnapshot = Readonly<{
   total: number;
   currency: string;
   paymentType: string | null;
+  packaging: false;
   cancellationPolicies: readonly HotelbedsCancellation[];
   rateCommentsId: string | null;
   quoteSignature: string | null;
@@ -341,6 +342,9 @@ function bookingReference(payload: unknown): string | null {
 }
 
 function normalizeRate(room: RawRecord, rate: RawRecord, nights: number): HotelbedsOffer | null {
+  // Hotelbeds packaging=true denotes an opaque/package rate. HandMeKey's current
+  // product is hotel-only, so these rates must never enter search or checkout.
+  if (truthy(rate.packaging)) return null;
   const rateKey = stringValue(rate.rateKey);
   const net = numberValue(rate.net);
   if (!rateKey || net === null) return null;
@@ -351,7 +355,7 @@ function normalizeRate(room: RawRecord, rate: RawRecord, nights: number): Hotelb
     return amount === null ? [] : [{amount, from: stringValue(item.from)}];
   });
   const firstCancellation = cancellationPolicies[0];
-  const freeCancellationNow = Boolean(firstCancellation && firstCancellation.amount === 0 && (!firstCancellation.from || Date.parse(firstCancellation.from) > Date.now()));
+  const freeCancellationNow = Boolean(firstCancellation && firstCancellation.from && Date.parse(firstCancellation.from) > Date.now());
   const roomCode = stringValue(room.code) ?? "ROOM";
   const paymentModes = paymentModesFor(stringValue(rate.paymentType));
   if (paymentModes.length === 0 || (numberValue(rate.allotment) ?? 1) <= 0) return null;
@@ -367,6 +371,7 @@ function normalizeRate(room: RawRecord, rate: RawRecord, nights: number): Hotelb
     total,
     currency: stringValue(rate.currency) ?? "EUR",
     paymentType: stringValue(rate.paymentType),
+    packaging: false,
     cancellationPolicies,
     rateCommentsId: stringValue(rate.rateCommentsId),
     quoteSignature: null,
@@ -374,7 +379,7 @@ function normalizeRate(room: RawRecord, rate: RawRecord, nights: number): Hotelb
     averageNightlyTotal: roundMoney(total / nights),
     paymentModes,
     freeCancellationNow,
-    cancellationPolicy: {name: cancellationPolicies.length ? (freeCancellationNow ? "Free cancellation" : "Cancellation penalty may apply") : "See cancellation policy", rules: cancellationPolicies},
+    cancellationPolicy: {name: cancellationPolicies.length ? (freeCancellationNow ? "Free cancellation until provider deadline" : "Cancellation penalty may apply") : "See cancellation policy", rules: cancellationPolicies},
     promotion: promotionValue(rate),
   };
 }
@@ -417,9 +422,6 @@ function offerMatchesFilters(offer: HotelbedsOffer, input: HotelbedsSearchInput)
   if (input.paymentMode && !offer.paymentModes.includes(input.paymentMode)) return false;
   if (input.freeCancellation && !offer.freeCancellationNow) return false;
   const priceCurrency = input.priceCurrency?.trim().toUpperCase() || "JOD";
-  // The public search filter is explicitly nightly. Partner inventory uses the
-  // same averageNightlyTotal field, so Hotelbeds must use it as well instead of
-  // comparing a multi-night stay total to a nightly budget.
   const comparablePrice = convertCurrency(offer.averageNightlyTotal, offer.currency, priceCurrency);
   if (comparablePrice !== null) {
     if (input.minPrice !== undefined && comparablePrice < input.minPrice) return false;
@@ -552,6 +554,7 @@ export function destinationCodeFor(destination: string): string | null {
 function categoryStars(value: unknown): number | null { const stars = Number.parseInt(stringValue(value) ?? "", 10); return Number.isFinite(stars) && stars >= 1 && stars <= 5 ? stars : null; }
 function stayNights(arrival: string, departure: string): number { return Math.max(1, Math.round((Date.parse(departure) - Date.parse(arrival)) / 86_400_000)); }
 function roundMoney(value: number): number { return Math.round(value * 100) / 100; }
+function truthy(value: unknown): boolean { return value === true || value === 1 || String(value).trim().toLowerCase() === "true" || String(value).trim() === "1"; }
 function stringValue(value: unknown): string | null { return typeof value === "string" && value.trim() ? value.trim() : value === null || value === undefined ? null : String(value); }
 function numberValue(value: unknown): number | null { const number = typeof value === "number" ? value : Number(value); return Number.isFinite(number) ? number : null; }
 function asRecord(value: unknown): RawRecord { return value && typeof value === "object" && !Array.isArray(value) ? value as RawRecord : {}; }
