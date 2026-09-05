@@ -1,3 +1,5 @@
+import "./hotelbeds/mtls-fetch";
+
 export * from "./errors";
 export * from "./auth/service";
 export * from "./auth/session";
