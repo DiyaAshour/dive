@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {LockKeyhole, ShieldCheck} from "lucide-react";
-import {checkHotelbedsRate, getHotelbedsHotelDetails, type HotelbedsHotelDetails, type HotelbedsOffer} from "@platform/server";
+import {checkHotelbedsRate, getHotelbedsHotelDetails, paymentCapabilities, type HotelbedsHotelDetails, type HotelbedsOffer} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {defaultStayDates} from "@/lib/stay-dates";
 import {requestGuestMarket} from "@/lib/request-guest-market";
@@ -18,6 +18,7 @@ export default async function HotelbedsCheckoutPage({searchParams}: {searchParam
   const adults = number(first(query.adults), 2);
   const children = number(first(query.children), 0);
   const childrenAges = repeatedNumbers(query, "childrenAge");
+  const onlinePaymentAvailable = paymentCapabilities().onlinePaymentAvailable;
   const valid = Boolean(hotelCode && /^\d+$/.test(hotelCode) && rateKey && rateKey.length >= 20 && adults >= 1 && (children === 0 || childrenAges.length === children));
   let hotel: Awaited<ReturnType<typeof getHotelbedsHotelDetails>> = null;
   let offer: HotelbedsOffer | null = null;
@@ -41,7 +42,7 @@ export default async function HotelbedsCheckoutPage({searchParams}: {searchParam
     <CustomerHeader minimal/>
     <section className="checkoutBanner"><div className="shell"><div><span className="eyebrow">Hotelbeds API booking</span><h1>{ar ? "راجع سعر المزود المباشر" : "Review the live provider rate"}</h1><p>{ar ? "يتم تأكيد الحجز مع Hotelbeds ويبقى منفصلًا عن حجوزات فنادق الشركاء." : "The booking is confirmed with Hotelbeds and kept separate from HandMeKey partner-property bookings."}</p></div><div className="checkoutTrust"><span><LockKeyhole size={18}/>{ar ? "مفتاح السعر محفوظ على الخادم" : "Provider rate key secured server-side"}</span><span><ShieldCheck size={18}/>{ar ? "يتم حفظ مرجع Hotelbeds" : "Hotelbeds booking reference stored"}</span></div></div></section>
     <section className="shell checkoutSection">
-      {!valid || !hotel || !offer ? <div className="premiumEmpty"><h3>{ar ? "سعر Hotelbeds لم يعد متاحًا" : "This Hotelbeds rate is no longer available"}</h3><p>{children > 0 && childrenAges.length !== children ? (ar ? "يجب إرسال عمر كل طفل حتى يعرض Hotelbeds سعرًا صحيحًا." : "Hotelbeds requires the age of every child for this stay.") : (ar ? "ارجع إلى البحث واختر سعرًا مباشرًا جديدًا." : "Return to search and select a fresh provider rate.")}</p><Link href="/search" className="resultCta">{ar ? "العودة إلى البحث" : "Return to search"}</Link></div> : <HotelbedsCheckoutFlow hotel={hotel} offer={offer} arrival={arrival} departure={departure} adults={adults} children={children} childrenAges={childrenAges} locale={market.locale} currency={market.currency}/>}
+      {!valid || !hotel || !offer ? <div className="premiumEmpty"><h3>{ar ? "سعر Hotelbeds لم يعد متاحًا" : "This Hotelbeds rate is no longer available"}</h3><p>{children > 0 && childrenAges.length !== children ? (ar ? "يجب إرسال عمر كل طفل حتى يعرض Hotelbeds سعرًا صحيحًا." : "Hotelbeds requires the age of every child for this stay.") : (ar ? "ارجع إلى البحث واختر سعرًا مباشرًا جديدًا." : "Return to search and select a fresh provider rate.")}</p><Link href="/search" className="resultCta">{ar ? "العودة إلى البحث" : "Return to search"}</Link></div> : <HotelbedsCheckoutFlow hotel={hotel} offer={offer} arrival={arrival} departure={departure} adults={adults} children={children} childrenAges={childrenAges} locale={market.locale} currency={market.currency} onlinePaymentAvailable={onlinePaymentAvailable}/>}
     </section>
   </main>;
 }
