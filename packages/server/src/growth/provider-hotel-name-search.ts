@@ -11,8 +11,9 @@ const HOTELBEDS_JORDAN_DESTINATION_CODES = ["AMM", "AQJ", "PET", "DSE"] as const
 /**
  * Extends the normal destination search with a direct Hotelbeds hotel-name lookup.
  * Hotelbeds availability is destination-code based, so when the public query does not
- * resolve to a destination (for example "Signia") we search the supported Jordan
- * destinations and keep only hotels whose provider name matches the query.
+ * resolve to a destination (for example "Signia") we probe the supported Jordan
+ * destinations one at a time and stop as soon as a matching provider hotel is found.
+ * Sequential probing is deliberate: it avoids bursting the Hotelbeds request quota.
  */
 export async function searchHotelsV2WithVisibilityBoost(
   input: DiscoverySearchInput,
@@ -49,36 +50,54 @@ async function searchHotelbedsByHotelName(
   context: VisibilitySearchContext,
   normalizedQuery: string,
 ): Promise<HotelbedsSearchResult[]> {
-  try {
-    const batches = await Promise.all(HOTELBEDS_JORDAN_DESTINATION_CODES.map((destinationCode) => searchHotelbeds({
-      destination: input.destination,
-      destinationCode,
-      arrival: input.arrival,
-      departure: input.departure,
-      adults: input.adults,
-      children: input.children,
-      ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
-      ...(context.travelerCountry ? {sourceMarket: context.travelerCountry} : {}),
-      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
-      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
-      priceCurrency: "JOD",
-      stars: input.stars,
-      freeCancellation: input.freeCancellation,
-      ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
-      amenities: input.amenities,
-    })));
+  const seen = new Set<string>();
 
-    const seen = new Set<string>();
-    return batches.flat().filter((hotel) => {
-      if (!hotelNameMatchesQuery(hotel.name, hotel.city, hotel.area, normalizedQuery)) return false;
-      if (seen.has(hotel.id)) return false;
-      seen.add(hotel.id);
-      return true;
-    }).sort((left, right) => hotelMatchScore(right, normalizedQuery) - hotelMatchScore(left, normalizedQuery) || left.from.total - right.from.total);
-  } catch (error) {
-    console.error("Hotelbeds direct hotel-name search unavailable", error);
-    return [];
+  for (const destinationCode of HOTELBEDS_JORDAN_DESTINATION_CODES) {
+    try {
+      const rows = await searchHotelbeds({
+        destination: input.destination,
+        destinationCode,
+        arrival: input.arrival,
+        departure: input.departure,
+        adults: input.adults,
+        children: input.children,
+        ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
+        ...(context.travelerCountry ? {sourceMarket: context.travelerCountry} : {}),
+        ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
+        ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+        priceCurrency: "JOD",
+        stars: input.stars,
+        freeCancellation: input.freeCancellation,
+        ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
+        amenities: input.amenities,
+      });
+
+      const matches = rows.filter((hotel) => {
+        if (!hotelNameMatchesQuery(hotel.name, hotel.city, hotel.area, normalizedQuery)) return false;
+        if (seen.has(hotel.id)) return false;
+        seen.add(hotel.id);
+        return true;
+      }).sort((left, right) => hotelMatchScore(right, normalizedQuery) - hotelMatchScore(left, normalizedQuery) || left.from.total - right.from.total);
+
+      console.info("Hotelbeds hotel-name probe completed", {
+        query: input.destination,
+        destinationCode,
+        availabilityCount: rows.length,
+        matchCount: matches.length,
+      });
+
+      // A hotel name belongs to one destination. Stop immediately when found instead
+      // of spending more provider quota probing unrelated destinations.
+      if (matches.length) return matches;
+    } catch (error) {
+      console.error("Hotelbeds hotel-name probe unavailable", {destinationCode, error});
+      // A quota/authorization failure will not improve by immediately trying the next
+      // destination. Stop the probe so one user search cannot multiply the failure.
+      return [];
+    }
   }
+
+  return [];
 }
 
 function providerSearchItem(hotel: HotelbedsSearchResult): SearchItem {
