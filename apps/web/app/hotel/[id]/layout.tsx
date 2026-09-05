@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getPublicHotelGallery, getPublicHotelSeoDetails } from "@platform/server";
 import { requestLocale } from "@/lib/request-locale";
@@ -10,6 +11,10 @@ type Params = Promise<{id:string}>;
 
 export async function generateMetadata({params}:Readonly<{params:Params}>):Promise<Metadata> {
   const [{id},locale] = await Promise.all([params,requestLocale()]);
+  if (invalidHotelId(id)) {
+    const title = locale === "ar" ? "الفندق غير متاح | HandMeKey" : "Hotel unavailable | HandMeKey";
+    return {title:{absolute:title},robots:{index:false,follow:false}};
+  }
   if (id.startsWith("hotelbeds-")) {
     const providerCode = id.slice("hotelbeds-".length);
     const title = locale === "ar" ? `فندق Hotelbeds ${providerCode} | HandMeKey` : `Hotelbeds hotel ${providerCode} | HandMeKey`;
@@ -35,6 +40,7 @@ export async function generateMetadata({params}:Readonly<{params:Params}>):Promi
 
 export default async function HotelSeoLayout({children,params}:Readonly<{children:ReactNode;params:Params}>) {
   const [{id},locale] = await Promise.all([params,requestLocale()]);
+  if (invalidHotelId(id)) redirect("/search");
   if (id.startsWith("hotelbeds-")) return <>{children}</>;
   const [hotel,gallery] = await Promise.all([getPublicHotelSeoDetails(id),getPublicHotelGallery(id)]);
   const canonical = siteUrl(`/hotel/${hotel.slug}`);
@@ -68,4 +74,5 @@ export default async function HotelSeoLayout({children,params}:Readonly<{childre
   return <>{children}<HotelGalleryController photos={gallery} hotelName={hotel.name} locale={locale}/>{schemas.map((schema,index)=><script key={index} type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(schema).replace(/</g,"\\u003c")}}/>)}</>;
 }
 
+function invalidHotelId(id:string){const value=id.trim().toLowerCase();return !value||value==="null"||value==="undefined";}
 function countrySlug(code:string){return code.toUpperCase()==="JO"?"jordan":code.toLowerCase();}
