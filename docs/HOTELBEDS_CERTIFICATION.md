@@ -2,7 +2,7 @@
 
 Last audited: 2026-09-05
 
-This checklist tracks the current HandMeKey Hotelbeds Hotels API integration against the Hotelbeds certification review areas. It is intentionally conservative: an item is marked complete only when the implementation is present and we have enough evidence to defend it during certification.
+This checklist tracks the current HandMeKey Hotelbeds Hotels API integration against the Hotelbeds certification review areas. An item is marked complete only when the implementation is present; live/test evidence is tracked separately.
 
 ## Certification scope
 
@@ -11,7 +11,7 @@ This checklist tracks the current HandMeKey Hotelbeds Hotels API integration aga
 - Current Hotelbeds environment: `test` / Evaluation until Hotelbeds upgrades the account.
 - Hotelbeds product is labelled `Hotelbeds API` in the customer flow and stored separately from direct HandMeKey partner-property bookings.
 - Current Hotelbeds product scope is single-room booking.
-- Current destination/name-discovery code is Jordan-first. Do not describe global hotel-name search as complete yet.
+- Current content/discovery scope is Jordan-first (`AMM`, `AQJ`, `PET`, `DSE`) unless `HOTELBEDS_CONTENT_DESTINATIONS` is expanded.
 
 ## 1. Technical
 
@@ -23,7 +23,7 @@ This checklist tracks the current HandMeKey Hotelbeds Hotels API integration aga
 - [x] Certificate/private-key material is supplied through Vercel secrets and is not committed to the repository.
 - [x] Responses support gzip/deflate/br.
 - [x] Availability and CheckRate calls have bounded timeouts.
-- [x] Booking confirmation uses a 65-second timeout (Hotelbeds asks for at least 60 seconds).
+- [x] Booking confirmation uses a 65-second timeout.
 - [x] Unknown response properties are ignored and response-property order is not assumed.
 
 ## 2. Booking workflow
@@ -42,8 +42,8 @@ HandMeKey status:
 - [x] A signed server-side checkout snapshot protects the selected provider quote from client tampering.
 - [x] Child ages are mandatory whenever children are included.
 - [x] Current booking product sends the single room and all its paxes in one Booking request.
+- [x] Hotelbeds opaque/package-only rates (`packaging=true`) are filtered from standalone hotel sales.
 - [!] Multi-room booking is not exposed. Disclose this as current product scope during certification.
-- [ ] Filter out Hotelbeds opaque/package-only rates (`packaging=true`) from standalone hotel sales unless HandMeKey later sells them as a qualifying package.
 
 ## 3. Availability, CheckRate and presentation
 
@@ -51,10 +51,9 @@ HandMeKey status:
 - [x] `rateType` is preserved and drives the correct booking workflow.
 - [x] Cancellation policies from Hotelbeds are shown before confirmation.
 - [x] `sourceMarket` is derived from the requesting guest market when available.
-- [x] Hotelbeds allotment is preserved as `availableToSell` internally.
-- [ ] Display the Hotelbeds allotment / number of rooms in the Hotelbeds rate UI where appropriate for certification evidence.
-- [ ] Preserve cancellation penalty date/time without converting it through the guest browser timezone. Hotelbeds cancellation deadlines are based on the destination/hotel timezone.
-- [ ] Decide how to handle rates that require Hotelbeds payment data. Either implement the required secure payment-data flow or exclude those rates from the certification test/product scope.
+- [x] Hotelbeds allotment is preserved and displayed as `availableToSell` in checkout.
+- [x] Cancellation penalty date/time is displayed with the provider/destination offset instead of being converted through the guest browser timezone.
+- [ ] Finalize the certification scope for Hotelbeds payment types (especially `AT_WEB`) and confirm whether HandMeKey will support or exclude any rate requiring provider-specific payment data.
 - [ ] Capture final test-environment screenshots and request/response evidence after the Evaluation quota resets.
 
 ## 4. Voucher
@@ -76,10 +75,7 @@ Implemented:
 - [x] Rate comments when available in the stored booking snapshot/response.
 - [x] Supplier name, VAT number when supplied, and provider reference in the supplier payment statement.
 - [x] Print / Save PDF action.
-
-Certification blocker:
-
-- [ ] Hotel address is mandatory on the Hotelbeds voucher, but the current voucher can fall back to `Address unavailable`. Populate the address from locally stored Content API hotel data and snapshot it into the booking/voucher.
+- [x] Booking is blocked if the mandatory hotel address is not available from the local Content API catalogue, so a confirmed Hotelbeds booking cannot produce an address-less voucher.
 
 Recommended improvements before review:
 
@@ -88,48 +84,55 @@ Recommended improvements before review:
 
 ## 5. Content API
 
-Current implementation:
+Implemented:
 
-- [x] Booking response content is normalized into the live booking flow.
-- [x] Rate comment identifiers are preserved.
-- [!] `RateCommentDetails` is currently fetched from Content API in real time during checkout. Hotelbeds explicitly says static Content API information must not be retrieved in real time and warns that doing so can lead to credential blocking.
-- [!] Hotel-name discovery currently probes Booking API Availability across supported Jordan destination codes. This consumes booking quota and is not the scalable Hotelbeds content-search design.
+- [x] Local `HotelbedsContentHotel` catalogue is persisted in HandMeKey.
+- [x] Stored hotel fields include code, name, destination, address, category, coordinates, phone, description, facilities/images/issues and raw provider content.
+- [x] Hotel-name search uses the local catalogue rather than probing several Booking API destinations.
+- [x] After a local hotel-name match, Availability is requested only for the strongest matching provider hotel code(s), reducing Booking API quota consumption.
+- [x] Checkout no longer fetches static `RateCommentDetails` in real time.
+- [x] A local `HotelbedsRateCommentCache` and offline rate-comment sync path exist.
+- [x] Daily Content API hotel refresh is scheduled in `vercel.json` and protected by `CRON_SECRET`.
+- [x] An admin-only manual catalogue bootstrap/sync control is available at `/admin/api-bookings`.
 
-Required before certification submission:
+Evidence / bootstrap still required:
 
-- [ ] Build a local Hotelbeds Content API catalogue persisted in HandMeKey.
-- [ ] Use the local catalogue for hotel-name autocomplete/search (for example `Signia by Hilton`).
-- [ ] Store at minimum: Hotelbeds hotel code, name, destination, address, category, coordinates when available, phone, images/facilities used by HandMeKey, and other fields we explicitly claim in certification.
-- [ ] Move RateCommentDetails/static rate-comment content to the local content refresh path rather than fetching it in the live checkout request.
-- [ ] Implement a scheduled refresh strategy (at least weekly; preferably differential/daily where practical).
-- [ ] Document exactly which Content API fields are implemented before emailing Hotelbeds.
+- [ ] Run the initial Hotelbeds Content API bootstrap after the Evaluation quota window permits it and confirm the catalogue contains the expected Jordan hotels (including Signia if returned by Hotelbeds content).
+- [ ] Enable/populate/test the offline rate-comment catalogue for the certification test if the selected `BOOKABLE` rate depends on a `rateCommentsId`.
+- [ ] Confirm the exact Content API fields HandMeKey will claim in the certification email.
 
 ## 6. Post-booking / live readiness
 
 - [x] Confirmed Hotelbeds bookings are stored in a separate API booking ledger with provider reference and provider response.
 - [x] Confirmation page links to the voucher.
-- [ ] Implement Hotelbeds Booking cancellation (`DELETE /bookings/{reference}` with the correct cancellation flag) and persist the cancelled state/provider response.
-- [ ] Add a safe cancellation simulation path if used operationally before committing a cancellation.
+- [x] Booking detail retrieval is implemented.
+- [x] Cancellation simulation is implemented before commitment.
+- [x] Actual Hotelbeds cancellation is implemented and persists `CANCELLED`, `cancelledAt` and provider cancellation evidence.
+- [x] Admin UI requires simulation before exposing the real cancellation action and asks for confirmation before commitment.
+- [ ] Exercise cancellation simulation against a controlled TEST booking and capture evidence.
 
 Do not perform a live certification booking until Hotelbeds issues live credentials and explicitly coordinates the test.
 
 After live credentials are issued:
 
-- [ ] Make one refundable live test booking roughly six months ahead with the occupancy requested by Hotelbeds (their current certification page states 2 adults + 2 children).
+- [ ] Make the refundable live test booking requested by Hotelbeds.
 - [ ] Save/send the voucher and price evidence requested by Hotelbeds.
 - [ ] Confirm with Hotelbeds before cancellation.
 - [ ] Cancel the live test booking so it does not remain chargeable.
 
 ## Evidence still required
 
-The Evaluation key has returned `403 Quota exceeded`. Once the quota resets, perform one controlled certification smoke test rather than repeatedly refreshing public search:
+The Evaluation key has returned `403 Quota exceeded`. Once the quota resets, perform one controlled certification run rather than repeatedly refreshing public search:
 
-1. Availability with a known destination/hotel.
-2. A `BOOKABLE` rate path proving no CheckRate occurs.
-3. A `RECHECK` rate path proving exactly one CheckRate occurs.
-4. Test Booking confirmation.
-5. Voucher generated from the confirmed test booking.
-6. Error handling evidence for an unavailable/expired rate.
+1. Run one initial Content API catalogue bootstrap from `/admin/api-bookings`.
+2. Confirm a known hotel-name lookup (for example Signia) resolves locally.
+3. Availability with the selected provider hotel.
+4. A `BOOKABLE` rate path proving no CheckRate occurs.
+5. A `RECHECK` rate path proving exactly one CheckRate occurs.
+6. TEST Booking confirmation.
+7. Voucher generated from the confirmed TEST booking with hotel address.
+8. Cancellation simulation evidence; actual TEST cancellation only when appropriate.
+9. Error handling evidence for an unavailable/expired rate.
 
 Do not use a LIVE booking for this evidence until Hotelbeds authorizes the live test.
 
@@ -139,9 +142,9 @@ Before sending the request to `apitude@hotelbeds.com`, include:
 
 - HandMeKey business model and workflow.
 - Implemented operations.
-- Current commercial scope/exclusions (including single-room-only and any destination restrictions that still apply).
+- Current commercial scope/exclusions (single-room and Jordan-first discovery unless expanded before review).
 - Certification URL.
-- Login credentials only if Hotelbeds actually needs them to review the site.
+- Login details only if Hotelbeds actually needs them to review protected pages.
 - Payment test information only if required and safe to provide.
 - Clear instructions for identifying Hotelbeds product versus HandMeKey direct partner inventory.
 - Known limitations disclosed clearly.
@@ -150,15 +153,12 @@ Never email private keys, certificate passphrases, Hotelbeds API secrets, Vercel
 
 ## Current verdict
 
-**Do not send a “fully ready” certification request yet.**
+**Implementation blockers are substantially closed, but do not send the final certification request until the controlled TEST evidence run is complete.**
 
-The core Booking API workflow, mTLS transport, confirmation and voucher framework are in place. The remaining high-priority blockers are:
+Remaining actions before sending:
 
-1. Local Content API catalogue and removal of real-time static Content API lookup.
-2. Guaranteed hotel address on every Hotelbeds voucher.
-3. Filtering package-only/opaque rates for standalone hotel sale.
-4. Correct destination-timezone handling for cancellation deadlines.
-5. Post-booking Hotelbeds cancellation before the final live test.
-6. One controlled test-environment evidence run after quota reset.
-
-Once these are closed, the certification email draft in `docs/HOTELBEDS_CERTIFICATION_REQUEST_EMAIL.md` can be sent with final evidence details filled in.
+1. Initial local Content API catalogue bootstrap and Signia/name-search verification.
+2. Offline rate-comment cache evidence if needed by the selected certification rate.
+3. Final decision/documentation for Hotelbeds payment-type scope (`AT_WEB` and any provider-payment-data requirement).
+4. One controlled end-to-end TEST booking/voucher/cancellation-simulation evidence run after quota reset.
+5. Fill the final evidence and scope placeholders in `docs/HOTELBEDS_CERTIFICATION_REQUEST_EMAIL.md`.
