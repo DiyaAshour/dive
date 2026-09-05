@@ -3,11 +3,15 @@ import {database} from "@platform/database";
 
 const TEST_CONTENT_BASE = "https://api.test.hotelbeds.com/hotel-content-api/1.0";
 const LIVE_CONTENT_BASE = "https://api.hotelbeds.com/hotel-content-api/1.0";
-const DEFAULT_DESTINATIONS = ["AMM", "AQJ", "PET", "DSE"] as const;
 const PAGE_SIZE = 1000;
+const GLOBAL_SYNC_STATE_ID = "world";
+const DEFAULT_GLOBAL_MAX_PAGES = 50;
+const UPSERT_CONCURRENCY = 20;
 
 type JsonRecord = Record<string, unknown>;
 type CachedComment = Readonly<{dateStart: string | null; dateEnd: string | null; description: string}>;
+type CatalogSyncOptions = Readonly<{destinationCodes?: readonly string[]; language?: string; lastUpdateTime?: string; maxPages?: number}>;
+type NormalizedContentHotel = NonNullable<ReturnType<typeof normalizeContentHotel>>;
 
 export type HotelbedsCatalogHotel = Readonly<{
   code: string;
@@ -65,49 +69,164 @@ export async function getCachedHotelbedsRateComments(rateCommentsId: string, che
   return appendVoucherStaticContent(text, hotel?.issues, hotel?.facilities, checkIn);
 }
 
-export async function syncHotelbedsContentCatalog(options: Readonly<{destinationCodes?: readonly string[]; language?: string; lastUpdateTime?: string}> = {}) {
-  const configured = process.env.HOTELBEDS_CONTENT_DESTINATIONS?.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean);
-  const destinationCodes = options.destinationCodes ?? (configured?.length ? configured : DEFAULT_DESTINATIONS);
+/**
+ * Hotelbeds recommends loading the complete Hotels Content API portfolio into a
+ * local database and refreshing it incrementally rather than retrieving static
+ * content during customer requests. With no destinationCodes this function is
+ * intentionally WORLDWIDE. The initial load is resumable so an Evaluation quota
+ * or serverless timeout never forces us to restart from page 1.
+ */
+export async function syncHotelbedsContentCatalog(options: CatalogSyncOptions = {}) {
   const language = (options.language ?? process.env.HOTELBEDS_CONTENT_LANGUAGE ?? "ENG").trim().toUpperCase();
+  const destinationCodes = options.destinationCodes?.map((value) => value.trim().toUpperCase()).filter(Boolean);
+  const maxPages = Math.max(1, Math.min(options.maxPages ?? Number(process.env.HOTELBEDS_CONTENT_SYNC_MAX_PAGES ?? DEFAULT_GLOBAL_MAX_PAGES), 200));
   const startedAt = new Date();
+
+  // Explicit destination codes remain available for targeted maintenance, but
+  // the default customer catalogue is not Jordan-scoped anymore.
+  if (destinationCodes?.length) {
+    let requests = 0;
+    let upserted = 0;
+    for (const destinationCode of destinationCodes) {
+      let from = 1;
+      while (true) {
+        const url = contentUrl("/hotels", {
+          fields: "all",
+          language,
+          from: String(from),
+          to: String(from + PAGE_SIZE - 1),
+          useSecondaryLanguage: "true",
+          destinationCode,
+          ...(options.lastUpdateTime ? {lastUpdateTime: options.lastUpdateTime} : {}),
+        });
+        const payload = await hotelbedsContentRequest(url);
+        requests += 1;
+        const hotels = contentHotels(payload);
+        if (!hotels.length) break;
+        const rows = normalizeContentHotels(hotels, destinationCode);
+        await upsertCatalogRows(rows);
+        upserted += rows.length;
+        if (hotels.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+    }
+    return {ok: true, scope: destinationCodes, mode: "scoped" as const, completed: true, requests, upserted, startedAt, finishedAt: new Date()};
+  }
+
+  const db = database();
+  const state = await db.hotelbedsContentSyncState.upsert({
+    where: {id: GLOBAL_SYNC_STATE_ID},
+    create: {id: GLOBAL_SYNC_STATE_ID, language, nextFrom: 1, completed: false},
+    update: {language},
+  });
+
+  if (!state.completed) {
+    let from = Math.max(1, state.nextFrom);
+    let requests = 0;
+    let inserted = 0;
+    let processed = 0;
+
+    try {
+      for (let page = 0; page < maxPages; page += 1) {
+        const url = contentUrl("/hotels", {
+          fields: "all",
+          language,
+          from: String(from),
+          to: String(from + PAGE_SIZE - 1),
+          useSecondaryLanguage: "true",
+        });
+        const payload = await hotelbedsContentRequest(url);
+        requests += 1;
+        const hotels = contentHotels(payload);
+
+        if (!hotels.length) {
+          await db.hotelbedsContentSyncState.update({
+            where: {id: GLOBAL_SYNC_STATE_ID},
+            data: {completed: true, nextFrom: from, lastFullSyncAt: new Date(), lastError: null},
+          });
+          return {ok: true, scope: "WORLD" as const, mode: "bootstrap" as const, completed: true, nextFrom: from, requests, inserted, processed, startedAt, finishedAt: new Date()};
+        }
+
+        const rows = normalizeContentHotels(hotels, null);
+        const created = await db.hotelbedsContentHotel.createMany({data: rows as never, skipDuplicates: true});
+        inserted += created.count;
+        processed += rows.length;
+
+        const completed = hotels.length < PAGE_SIZE;
+        const nextFrom = from + PAGE_SIZE;
+        await db.hotelbedsContentSyncState.update({
+          where: {id: GLOBAL_SYNC_STATE_ID},
+          data: {
+            completed,
+            nextFrom,
+            lastError: null,
+            ...(completed ? {lastFullSyncAt: new Date()} : {}),
+          },
+        });
+
+        if (completed) {
+          return {ok: true, scope: "WORLD" as const, mode: "bootstrap" as const, completed: true, nextFrom, requests, inserted, processed, startedAt, finishedAt: new Date()};
+        }
+        from = nextFrom;
+      }
+
+      return {ok: true, scope: "WORLD" as const, mode: "bootstrap" as const, completed: false, nextFrom: from, requests, inserted, processed, startedAt, finishedAt: new Date()};
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 2000) : "Unknown Hotelbeds global content sync error";
+      await db.hotelbedsContentSyncState.update({where: {id: GLOBAL_SYNC_STATE_ID}, data: {nextFrom: from, lastError: message}}).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  // Once the worldwide bootstrap is complete, every subsequent run becomes a
+  // differential global refresh. Hotelbeds recommends a daily lastUpdateTime
+  // refresh; the cron route supplies yesterday explicitly.
+  const lastUpdateTime = options.lastUpdateTime ?? new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  let from = 1;
   let requests = 0;
   let upserted = 0;
+  let differentialComplete = false;
 
-  for (const destinationCode of destinationCodes) {
-    let from = 1;
-    while (true) {
+  try {
+    for (let page = 0; page < maxPages; page += 1) {
       const url = contentUrl("/hotels", {
         fields: "all",
         language,
         from: String(from),
         to: String(from + PAGE_SIZE - 1),
         useSecondaryLanguage: "true",
-        destinationCode,
-        ...(options.lastUpdateTime ? {lastUpdateTime: options.lastUpdateTime} : {}),
+        lastUpdateTime,
       });
       const payload = await hotelbedsContentRequest(url);
       requests += 1;
       const hotels = contentHotels(payload);
-      if (!hotels.length) break;
-      for (const raw of hotels) {
-        const normalized = normalizeContentHotel(raw, destinationCode);
-        if (!normalized) continue;
-        // Prisma's generated JSON input types distinguish SQL NULL from JSON
-        // values. normalizeContentHotel produces JSON-safe runtime values, so
-        // the cast is intentionally kept at this database boundary only.
-        await database().hotelbedsContentHotel.upsert({
-          where: {code: normalized.code},
-          create: normalized as never,
-          update: {...normalized, syncedAt: new Date()} as never,
-        });
-        upserted += 1;
+      if (!hotels.length) {
+        differentialComplete = true;
+        break;
       }
-      if (hotels.length < PAGE_SIZE) break;
+      const rows = normalizeContentHotels(hotels, null);
+      await upsertCatalogRows(rows);
+      upserted += rows.length;
+      if (hotels.length < PAGE_SIZE) {
+        differentialComplete = true;
+        break;
+      }
       from += PAGE_SIZE;
     }
-  }
 
-  return {ok: true, scope: destinationCodes, requests, upserted, startedAt, finishedAt: new Date()};
+    await db.hotelbedsContentSyncState.update({
+      where: {id: GLOBAL_SYNC_STATE_ID},
+      data: {
+        lastError: differentialComplete ? null : `Differential sync page cap reached at ${from}`,
+        ...(differentialComplete ? {lastDifferentialSyncAt: new Date()} : {}),
+      },
+    });
+    return {ok: true, scope: "WORLD" as const, mode: "differential" as const, completed: true, differentialComplete, lastUpdateTime, requests, upserted, startedAt, finishedAt: new Date()};
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 2000) : "Unknown Hotelbeds differential content sync error";
+    await db.hotelbedsContentSyncState.update({where: {id: GLOBAL_SYNC_STATE_ID}, data: {lastError: message}}).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function syncHotelbedsRateCommentCatalog(options: Readonly<{language?: string; lastUpdateTime?: string; maxPages?: number}> = {}) {
@@ -157,7 +276,7 @@ export async function syncHotelbedsRateCommentCatalog(options: Readonly<{languag
   return {ok: true, requests, upserted};
 }
 
-function normalizeContentHotel(raw: JsonRecord, fallbackDestination: string) {
+function normalizeContentHotel(raw: JsonRecord, fallbackDestination: string | null) {
   const code = stringValue(raw.code);
   const name = contentText(raw.name) ?? stringValue(raw.name);
   if (!code || !name) return null;
@@ -191,6 +310,25 @@ function normalizeContentHotel(raw: JsonRecord, fallbackDestination: string) {
     providerUpdatedAt,
     syncedAt: new Date(),
   };
+}
+
+function normalizeContentHotels(hotels: readonly JsonRecord[], fallbackDestination: string | null): NormalizedContentHotel[] {
+  return hotels.flatMap((raw) => {
+    const normalized = normalizeContentHotel(raw, fallbackDestination);
+    return normalized ? [normalized] : [];
+  });
+}
+
+async function upsertCatalogRows(rows: readonly NormalizedContentHotel[]): Promise<void> {
+  const db = database();
+  for (let index = 0; index < rows.length; index += UPSERT_CONCURRENCY) {
+    const chunk = rows.slice(index, index + UPSERT_CONCURRENCY);
+    await Promise.all(chunk.map((normalized) => db.hotelbedsContentHotel.upsert({
+      where: {code: normalized.code},
+      create: normalized as never,
+      update: {...normalized, syncedAt: new Date()} as never,
+    })));
+  }
 }
 
 function appendVoucherStaticContent(base: string, issuesValue: unknown, facilitiesValue: unknown, checkIn: string): string {
