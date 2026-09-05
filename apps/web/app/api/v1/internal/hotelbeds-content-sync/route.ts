@@ -14,9 +14,11 @@ export async function GET(request: NextRequest) {
     return Response.json({ok:true,skipped:true,reason:"HOTELBEDS_CONTENT_SYNC_ENABLED=false",ranAt:new Date().toISOString()});
   }
 
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0,10);
-  const hotels = await syncHotelbedsContentCatalog({lastUpdateTime: yesterday});
+  // Jordan is the current certified product scope, so a full destination-scoped
+  // refresh is only a few Content API calls and also bootstraps an empty DB.
+  const hotels = await syncHotelbedsContentCatalog();
   const syncRateComments = ["1","true","yes","on"].includes((process.env.HOTELBEDS_RATE_COMMENT_SYNC_ENABLED ?? "false").trim().toLowerCase());
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0,10);
   const rateComments = syncRateComments ? await syncHotelbedsRateCommentCatalog({lastUpdateTime: yesterday}) : null;
 
   return Response.json({ok:true,hotels,rateComments,ranAt:new Date().toISOString()});
