@@ -23,7 +23,7 @@ export default async function HotelbedsCheckoutPage({searchParams}: {searchParam
   let offer: HotelbedsOffer | null = null;
   if (valid) {
     try {
-      hotel = await getHotelbedsHotelDetails(hotelCode!, {arrival, departure, adults, children, childrenAges});
+      hotel = await getHotelbedsHotelDetails(hotelCode!, {arrival, departure, adults, children, childrenAges, ...(market.countryCode ? {sourceMarket: market.countryCode} : {})});
       offer = hotel?.offers.find((item) => item.rateKey === rateKey) ?? null;
     } catch (error) {
       console.error("Hotelbeds checkout rate load failed", error);

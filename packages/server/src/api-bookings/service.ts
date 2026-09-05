@@ -3,7 +3,7 @@ import type {ApiBookingInput} from "@platform/contracts";
 import {database} from "@platform/database";
 import {ApplicationError} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
-import {bookHotelbeds, checkHotelbedsRate, HotelbedsConfigurationError} from "../hotelbeds/client";
+import {bookHotelbeds, checkHotelbedsRate, HotelbedsConfigurationError, verifyHotelbedsQuote} from "../hotelbeds/client";
 
 export async function createApiBooking(input: ApiBookingInput) {
   if (input.paymentMode === "PAY_NOW") throw new ApplicationError("API_PAYMENT_NOT_CONFIGURED", "Online payment is not enabled for Hotelbeds bookings yet", 400);
@@ -13,12 +13,32 @@ export async function createApiBooking(input: ApiBookingInput) {
   const clientReference = `HMKAPI-${randomUUID().replaceAll("-", "").slice(0, 32).toUpperCase()}`;
   let pendingId: string | null = null;
   try {
-    // The browser only selects a rate. The provider response is the source of truth
-    // for the booking amount, payment mode, cancellation terms and rate key.
-    const checked = await checkHotelbedsRate(input.rateKey, nights, input.hotelCode);
-    if (!checked) throw new ApplicationError("HOTELBEDS_RATE_UNAVAILABLE", "The selected Hotelbeds rate is no longer available", 409);
-    if (!checked.offer.paymentModes.includes(input.paymentMode)) throw new ApplicationError("HOTELBEDS_PAYMENT_MODE_CHANGED", "The selected payment mode is no longer available for this rate", 409);
-    const rate = {net: checked.offer.net, sellingRate: checked.offer.sellingRate, total: checked.offer.total, currency: checked.offer.currency};
+    // Hotelbeds' certified workflow is Availability -> CheckRate only for a
+    // RECHECK rate -> Booking. BOOKABLE rates go directly to Booking. A
+    // signed server quote protects the ledger fields for that direct path.
+    const rateType = input.rateType?.trim().toUpperCase();
+    const requiresCheckRate = !rateType || rateType === "RECHECK";
+    if (rateType && rateType !== "RECHECK" && rateType !== "BOOKABLE") throw new ApplicationError("HOTELBEDS_RATE_INVALID", "The selected Hotelbeds rate type is invalid", 409);
+    const checked = requiresCheckRate ? await checkHotelbedsRate(input.rateKey, nights, input.hotelCode) : null;
+    if (requiresCheckRate && !checked) throw new ApplicationError("HOTELBEDS_RATE_UNAVAILABLE", "The selected Hotelbeds rate is no longer available", 409);
+    if (checked && !checked.offer.paymentModes.includes(input.paymentMode)) throw new ApplicationError("HOTELBEDS_PAYMENT_MODE_CHANGED", "The selected payment mode is no longer available for this rate", 409);
+    const quotePaymentModes = input.quotePaymentModes;
+    if (!checked && (!input.quoteSignature || !quotePaymentModes?.includes(input.paymentMode) || !verifyHotelbedsQuote({
+      hotelCode: input.hotelCode,
+      rateKey: input.rateKey,
+      rateType: rateType ?? "BOOKABLE",
+      arrival: input.arrival,
+      departure: input.departure,
+      net: input.netAmount,
+      sellingRate: input.sellingAmount ?? null,
+      total: input.totalAmount,
+      currency: input.currency,
+      paymentModes: quotePaymentModes ?? [],
+      quoteSignature: input.quoteSignature,
+    }))) throw new ApplicationError("HOTELBEDS_QUOTE_INVALID", "The selected Hotelbeds quote is no longer valid", 409);
+    const rate = checked
+      ? {net: checked.offer.net, sellingRate: checked.offer.sellingRate, total: checked.offer.total, currency: checked.offer.currency}
+      : {net: input.netAmount, sellingRate: input.sellingAmount ?? null, total: input.totalAmount, currency: input.currency};
 
     const pending = await database().apiBooking.create({data: {
       reference,
@@ -29,7 +49,7 @@ export async function createApiBooking(input: ApiBookingInput) {
       roomName: input.roomName ?? null,
       boardName: input.boardName ?? null,
       rateType: input.rateType ?? null,
-      rateKey: checked.offer.rateKey,
+      rateKey: input.rateKey,
       guestName: input.guestName,
       guestEmail: input.guestEmail,
       phone: input.phone ?? null,
@@ -46,14 +66,14 @@ export async function createApiBooking(input: ApiBookingInput) {
       paymentMode: input.paymentMode,
       paymentState: "NOT_REQUIRED",
       status: "PENDING",
-      cancellationPolicy: jsonSafe(checked.offer.cancellationPolicy),
-      providerRequest: jsonSafe({hotelCode: input.hotelCode, rateKey: checked.offer.rateKey, clientReference, checked: true}),
-      providerResponse: jsonSafe(checked.raw),
+      cancellationPolicy: jsonSafe(checked?.offer.cancellationPolicy ?? input.cancellationPolicy ?? null),
+      providerRequest: jsonSafe({hotelCode: input.hotelCode, rateKey: input.rateKey, clientReference, checked: Boolean(checked)}),
+      providerResponse: checked ? jsonSafe(checked.raw) : null,
     }});
     pendingId = pending.id;
 
     const result = await bookHotelbeds({
-      rateKey: checked.offer.rateKey,
+      rateKey: input.rateKey,
       adults: input.adults,
       holderName: holderFirstName(input.guestName),
       holderSurname: holderSurname(input.guestName),
@@ -67,7 +87,7 @@ export async function createApiBooking(input: ApiBookingInput) {
     const booking = await database().apiBooking.update({where: {id: pending.id}, data: {
       status: "CONFIRMED",
       providerReference: result.providerReference,
-      rateKey: checked.offer.rateKey,
+      rateKey: input.rateKey,
       netAmount: rate.net,
       sellingAmount: rate.sellingRate,
       markupAmount: Math.max(0, rate.total - rate.net),
@@ -138,4 +158,4 @@ function apiBookingView(booking: {
 function holderFirstName(value: string): string { return value.trim().split(/\s+/)[0] ?? value.trim(); }
 function holderSurname(value: string): string { const parts = value.trim().split(/\s+/); return parts.slice(1).join(" ") || parts[0] || "Guest"; }
 function dateKey(value: Date): string { return value.toISOString().slice(0, 10); }
-function jsonSafe(value: unknown) { return JSON.parse(JSON.stringify(value)); }
+function jsonSafe(value: unknown) { return value === undefined ? null : JSON.parse(JSON.stringify(value)); }

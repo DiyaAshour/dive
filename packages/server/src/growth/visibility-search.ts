@@ -130,6 +130,11 @@ async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2
       ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
       amenities: input.amenities,
     });
+    console.info("Hotelbeds search completed", {
+      destination: base.resolvedDestination?.nameEn ?? input.destination,
+      destinationCode,
+      resultCount: rows.length,
+    });
     return rows.map((hotel) => ({
       id: hotel.id,
       slug: hotel.slug,
@@ -139,8 +144,8 @@ async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2
       area: hotel.area,
       starRating: hotel.starRating,
       currency: hotel.currency,
-      coverPhoto: null,
-      amenities: [],
+      coverPhoto: hotel.coverPhoto,
+      amenities: hotel.amenities,
       reviewSummary: hotel.reviewSummary,
       availableOffers: hotel.availableOffers,
       from: hotel.from,
@@ -159,10 +164,22 @@ function mergeProviderResults(partnerResults: SearchV2Item[], providerResults: S
     seen.add(item.id);
     return true;
   });
-  return all
+  const ranked = all
     .map((item, index) => ({item, index}))
     .sort((left, right) => compareUnifiedResults(left.item, right.item, sort) || left.index - right.index)
-    .slice(0, pageSize)
+    .map((entry) => entry.item);
+  const visible = ranked.slice(0, pageSize);
+  if (!providerResults.length || visible.some((item) => item.slug.startsWith("hotelbeds-"))) return visible;
+
+  // Keep unified ranking, but do not let a full partner page hide a working
+  // provider completely. This is the explicit “beside partner inventory”
+  // rule for the first page; later cursored pages remain partner-only.
+  const provider = ranked.find((item) => item.slug.startsWith("hotelbeds-"));
+  if (!provider || !visible.length) return visible;
+  visible[visible.length - 1] = provider;
+  return visible
+    .map((item, index) => ({item, index}))
+    .sort((left, right) => compareUnifiedResults(left.item, right.item, sort) || left.index - right.index)
     .map((entry) => entry.item);
 }
 

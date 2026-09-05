@@ -24,7 +24,7 @@ export function HotelbedsCheckoutFlow({hotel, offer, arrival, departure, adults,
     setError(null);
     try {
       const response = await fetch("/api/v1/api-bookings", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({
-        hotelCode: hotel.providerHotelCode, hotelName: hotel.name, city: hotel.city, roomName: offer.roomName, boardName: offer.boardName ?? offer.boardCode ?? undefined, rateType: offer.rateType, rateKey: offer.rateKey,
+        hotelCode: hotel.providerHotelCode, hotelName: hotel.name, city: hotel.city, roomName: offer.roomName, boardName: offer.boardName ?? offer.boardCode ?? undefined, rateType: offer.rateType, rateKey: offer.rateKey, quoteSignature: offer.quoteSignature ?? undefined, quotePaymentModes: offer.paymentModes,
         guestName: guestName.trim(), guestEmail: guestEmail.trim(), phone: phone.trim() || undefined, arrival, departure, adults, children, childrenAges, currency: offer.currency, netAmount: offer.net,
         sellingAmount: offer.sellingRate, totalAmount: offer.total, paymentMode, cancellationPolicy: offer.cancellationPolicy,
       })});

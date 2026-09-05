@@ -1,9 +1,10 @@
-import {createHash} from "node:crypto";
+import {createHash, createHmac, timingSafeEqual} from "node:crypto";
 import {convertCurrency} from "@platform/core";
 
 const TEST_API_BASE = "https://api.test.hotelbeds.com/hotel-api/1.0";
 const LIVE_API_BASE = "https://api.hotelbeds.com/hotel-api/1.0";
 const REQUEST_TIMEOUT_MS = 12_000;
+const HOTELBEDS_PHOTO_BASE = "https://photos.hotelbeds.com/giata/";
 
 export type HotelbedsSearchInput = Readonly<{
   destination?: string;
@@ -44,6 +45,7 @@ export type HotelbedsRateSnapshot = Readonly<{
   paymentType: string | null;
   cancellationPolicies: readonly HotelbedsCancellation[];
   rateCommentsId: string | null;
+  quoteSignature: string | null;
 }>;
 
 export type HotelbedsOffer = Readonly<HotelbedsRateSnapshot & {
@@ -53,6 +55,12 @@ export type HotelbedsOffer = Readonly<HotelbedsRateSnapshot & {
   freeCancellationNow: boolean;
   cancellationPolicy: {name: string; rules: readonly HotelbedsCancellation[]};
   promotion: {name: string; discountPercent: number} | null;
+}>;
+
+export type HotelbedsPhoto = Readonly<{
+  url: string;
+  alt: string;
+  sortOrder: number;
 }>;
 
 export type HotelbedsSearchResult = Readonly<{
@@ -67,7 +75,8 @@ export type HotelbedsSearchResult = Readonly<{
   address: string | null;
   starRating: number | null;
   currency: string;
-  coverPhoto: null;
+  coverPhoto: HotelbedsPhoto | null;
+  photos: readonly HotelbedsPhoto[];
   amenities: ReadonlyArray<{code: string; name: string; category: string | null}>;
   reviewSummary: {count: number; overall: number | null};
   availableOffers: number;
@@ -88,6 +97,10 @@ export type HotelbedsHotelDetails = Readonly<{
   description: string | null;
   starRating: number | null;
   currency: string;
+  coverPhoto: HotelbedsPhoto | null;
+  photos: readonly HotelbedsPhoto[];
+  amenities: ReadonlyArray<{code: string; name: string; category: string | null}>;
+  reviewSummary: {count: number; overall: number | null};
   offers: readonly HotelbedsOffer[];
 }>;
 
@@ -109,6 +122,20 @@ export type HotelbedsBookingInput = Readonly<{
 export type HotelbedsBookingResult = Readonly<{
   providerReference: string | null;
   raw: unknown;
+}>;
+
+export type HotelbedsQuoteVerificationInput = Readonly<{
+  hotelCode: string;
+  rateKey: string;
+  rateType: string;
+  arrival: string;
+  departure: string;
+  net: number;
+  sellingRate: number | null;
+  total: number;
+  currency: string;
+  paymentModes: readonly string[];
+  quoteSignature?: string;
 }>;
 
 export class HotelbedsConfigurationError extends Error {
@@ -167,6 +194,16 @@ export async function bookHotelbeds(input: HotelbedsBookingInput): Promise<Hotel
   return {providerReference: bookingReference(payload), raw: payload};
 }
 
+export function verifyHotelbedsQuote(input: HotelbedsQuoteVerificationInput): boolean {
+  const supplied = input.quoteSignature?.trim().toLowerCase();
+  const secret = process.env.HOTELBEDS_SECRET?.trim();
+  if (!secret || !supplied || !/^[a-f0-9]{64}$/.test(supplied)) return false;
+  const expected = quoteSignature(input, secret);
+  const expectedBuffer = Buffer.from(expected, "hex");
+  const suppliedBuffer = Buffer.from(supplied, "hex");
+  return expectedBuffer.length === suppliedBuffer.length && timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
 async function hotelbedsRequest<T>(path: string, body: RawRecord, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
   const apiKey = process.env.HOTELBEDS_API_KEY;
   const secret = process.env.HOTELBEDS_SECRET;
@@ -223,6 +260,7 @@ function normalizeHotelbedsHotel(hotel: RawRecord, input: HotelbedsSearchInput):
 }
 
 function hotelDetails(hotel: RawRecord, code: string, input: HotelbedsSearchInput, offers: readonly HotelbedsOffer[], currency: string): HotelbedsHotelDetails & Pick<HotelbedsSearchResult, "coverPhoto" | "amenities" | "reviewSummary" | "availableOffers" | "rates" | "from"> {
+  const photos = hotelPhotos(hotel, stringValue(hotel.name) ?? `Hotelbeds hotel ${code}`);
   return {
     id: `hotelbeds:${code}`,
     slug: `hotelbeds-${code}`,
@@ -237,7 +275,8 @@ function hotelDetails(hotel: RawRecord, code: string, input: HotelbedsSearchInpu
     starRating: categoryStars(hotel.categoryCode),
     currency,
     offers,
-    coverPhoto: null,
+    coverPhoto: photos[0] ?? null,
+    photos,
     amenities: hotelAmenities(hotel),
     reviewSummary: hotelReviewSummary(hotel),
     availableOffers: offers.length,
@@ -248,10 +287,12 @@ function hotelDetails(hotel: RawRecord, code: string, input: HotelbedsSearchInpu
 
 function hotelOffers(hotel: RawRecord, input: HotelbedsSearchInput): HotelbedsOffer[] {
   const nights = stayNights(input.arrival, input.departure);
+  const hotelCode = stringValue(hotel.code);
   return records(hotel.rooms)
     .flatMap((room) => records(room.rates).map((rate) => normalizeRate(room, rate, nights)))
     .filter((offer): offer is HotelbedsOffer => offer !== null)
     .filter((offer) => offerMatchesFilters(offer, input))
+    .map((offer) => hotelCode ? {...offer, quoteSignature: quoteSignatureForOffer(offer, input, hotelCode)} : offer)
     .sort((a, b) => a.total - b.total);
 }
 
@@ -302,6 +343,7 @@ function normalizeRate(room: RawRecord, rate: RawRecord, nights: number): Hotelb
     paymentType: stringValue(rate.paymentType),
     cancellationPolicies,
     rateCommentsId: stringValue(rate.rateCommentsId),
+    quoteSignature: null,
     availableToSell: numberValue(rate.allotment) ?? 1,
     averageNightlyTotal: roundMoney(total / nights),
     paymentModes,
@@ -349,7 +391,10 @@ function offerMatchesFilters(offer: HotelbedsOffer, input: HotelbedsSearchInput)
   if (input.paymentMode && !offer.paymentModes.includes(input.paymentMode)) return false;
   if (input.freeCancellation && !offer.freeCancellationNow) return false;
   const priceCurrency = input.priceCurrency?.trim().toUpperCase() || "JOD";
-  const comparablePrice = convertCurrency(offer.total, offer.currency, priceCurrency);
+  // The public search filter is explicitly nightly. Partner inventory uses the
+  // same averageNightlyTotal field, so Hotelbeds must use it as well instead of
+  // comparing a multi-night stay total to a nightly budget.
+  const comparablePrice = convertCurrency(offer.averageNightlyTotal, offer.currency, priceCurrency);
   if (comparablePrice !== null) {
     if (input.minPrice !== undefined && comparablePrice < input.minPrice) return false;
     if (input.maxPrice !== undefined && comparablePrice > input.maxPrice) return false;
@@ -409,6 +454,63 @@ function promotionValue(rate: RawRecord): HotelbedsOffer["promotion"] {
   const name = stringValue(promotion.name) ?? stringValue(promotion.code);
   const discountPercent = numberValue(promotion.discountPercent) ?? numberValue(promotion.discount);
   return name && discountPercent !== null ? {name, discountPercent} : null;
+}
+
+function hotelPhotos(hotel: RawRecord, hotelName: string): HotelbedsPhoto[] {
+  const containers = [hotel.images, hotel.photos, hotel.hotelImages, hotel.image].flatMap((value) => {
+    if (Array.isArray(value)) return value.map(asRecord);
+    const record = asRecord(value);
+    return [record, ...records(record.image), ...records(record.images)];
+  });
+  const seen = new Set<string>();
+  const photos: HotelbedsPhoto[] = [];
+  for (const [index, image] of containers.entries()) {
+    const rawPath = stringValue(image.path) ?? stringValue(image.imagePath) ?? stringValue(image.url) ?? stringValue(image.name);
+    if (!rawPath) continue;
+    const url = rawPath.startsWith("http://") || rawPath.startsWith("https://")
+      ? rawPath
+      : `${HOTELBEDS_PHOTO_BASE}${rawPath.replace(/^\/+/, "")}`;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    photos.push({
+      url,
+      alt: stringValue(image.description) ?? stringValue(image.alt) ?? `${hotelName} photo ${index + 1}`,
+      sortOrder: numberValue(image.order) ?? numberValue(image.sortOrder) ?? index,
+    });
+  }
+  return photos.sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
+function quoteSignatureForOffer(offer: HotelbedsOffer, input: HotelbedsSearchInput, hotelCode: string): string | null {
+  const secret = process.env.HOTELBEDS_SECRET?.trim();
+  return secret ? quoteSignature({
+    hotelCode,
+    rateKey: offer.rateKey,
+    rateType: offer.rateType,
+    arrival: input.arrival,
+    departure: input.departure,
+    net: offer.net,
+    sellingRate: offer.sellingRate,
+    total: offer.total,
+    currency: offer.currency,
+    paymentModes: offer.paymentModes,
+  }, secret) : null;
+}
+
+function quoteSignature(input: Omit<HotelbedsQuoteVerificationInput, "quoteSignature">, secret: string): string {
+  const material = [
+    input.hotelCode,
+    input.rateKey,
+    input.rateType,
+    input.arrival,
+    input.departure,
+    input.net.toFixed(2),
+    input.sellingRate === null ? "" : input.sellingRate.toFixed(2),
+    input.total.toFixed(2),
+    input.currency.trim().toUpperCase(),
+    [...input.paymentModes].join(","),
+  ].join("|");
+  return createHmac("sha256", secret).update(material).digest("hex");
 }
 
 function normalizeFilterText(value: string): string { return value.trim().replace(/\s+/g, " ").toUpperCase(); }

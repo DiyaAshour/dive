@@ -32,7 +32,7 @@ export default async function HotelPage({params, searchParams}: {params: Promise
     const code = id.slice("hotelbeds-".length);
     let hotelbeds = null;
     try {
-      hotelbeds = await getHotelbedsHotelDetails(code, stay);
+      hotelbeds = await getHotelbedsHotelDetails(code, {...stay, ...(market.countryCode ? {sourceMarket: market.countryCode} : {})});
     } catch (error) {
       console.error("Hotelbeds detail unavailable", error);
     }

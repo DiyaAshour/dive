@@ -93,6 +93,7 @@ export function MobileSearchResultsControls() {
           <input type="hidden" name="departure" value={departure}/>
           <input type="hidden" name="adults" value={adults}/>
           <input type="hidden" name="children" value={children}/>
+          {params.getAll("childrenAge").map((age, index) => <input key={`filter-child-age-${index}`} type="hidden" name="childrenAge" value={age}/>)}
           <input type="hidden" name="pageSize" value={params.get("pageSize") || "20"}/>
 
           <div className="mobileFilterSection">
