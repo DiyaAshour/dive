@@ -48,7 +48,7 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
   };
   const marketplaceCars = liveCars.map((car) => {
     const isCorolla2026 = car.id === "toyota-corolla" || (
-      car.make?.trim().toLowerCase() === "toyota" &&
+      car.brand?.trim().toLowerCase() === "toyota" &&
       car.model?.trim().toLowerCase() === "corolla" &&
       car.year === 2026
     );
