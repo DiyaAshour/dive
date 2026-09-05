@@ -140,7 +140,7 @@ async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2
       slug: hotel.slug,
       name: hotel.name,
       city: hotel.city,
-      countryCode: hotel.countryCode,
+      countryCode: hotel.countryCode || base.resolvedDestination?.countryCode || "",
       area: hotel.area,
       starRating: hotel.starRating,
       currency: hotel.currency,
