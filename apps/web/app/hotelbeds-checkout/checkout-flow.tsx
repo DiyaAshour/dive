@@ -5,9 +5,9 @@ import type {HotelbedsHotelDetails, HotelbedsOffer} from "@platform/server";
 import {guestMoney} from "@/lib/guest-currency";
 import type {GuestCurrency, GuestLocale} from "@/lib/guest-market";
 
-type Props = Readonly<{hotel: HotelbedsHotelDetails; offer: HotelbedsOffer; arrival: string; departure: string; adults: number; children: number; locale: GuestLocale; currency: GuestCurrency}>;
+type Props = Readonly<{hotel: HotelbedsHotelDetails; offer: HotelbedsOffer; arrival: string; departure: string; adults: number; children: number; childrenAges: readonly number[]; locale: GuestLocale; currency: GuestCurrency}>;
 
-export function HotelbedsCheckoutFlow({hotel, offer, arrival, departure, adults, children, locale, currency}: Props) {
+export function HotelbedsCheckoutFlow({hotel, offer, arrival, departure, adults, children, childrenAges, locale, currency}: Props) {
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -25,7 +25,7 @@ export function HotelbedsCheckoutFlow({hotel, offer, arrival, departure, adults,
     try {
       const response = await fetch("/api/v1/api-bookings", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({
         hotelCode: hotel.providerHotelCode, hotelName: hotel.name, city: hotel.city, roomName: offer.roomName, boardName: offer.boardName ?? offer.boardCode ?? undefined, rateType: offer.rateType, rateKey: offer.rateKey,
-        guestName: guestName.trim(), guestEmail: guestEmail.trim(), phone: phone.trim() || undefined, arrival, departure, adults, children, childrenAges: [], currency: offer.currency, netAmount: offer.net,
+        guestName: guestName.trim(), guestEmail: guestEmail.trim(), phone: phone.trim() || undefined, arrival, departure, adults, children, childrenAges, currency: offer.currency, netAmount: offer.net,
         sellingAmount: offer.sellingRate, totalAmount: offer.total, paymentMode, cancellationPolicy: offer.cancellationPolicy,
       })});
       const payload = await response.json().catch(() => null) as {data?: {id: string}; error?: {message?: string}} | null;

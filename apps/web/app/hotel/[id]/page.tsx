@@ -26,7 +26,7 @@ export default async function HotelPage({params, searchParams}: {params: Promise
   const fxCopy=guestMarketCopy(locale);
   const roomUi=hotelRoomUiCopy(locale);
   const defaults=defaultStayDates();
-  const parsed=publicStaySchema.safeParse({arrival:first(query.arrival)??defaults.arrival,departure:first(query.departure)??defaults.departure,adults:first(query.adults)??"2",children:first(query.children)??"0"});
+  const parsed=publicStaySchema.safeParse({arrival:first(query.arrival)??defaults.arrival,departure:first(query.departure)??defaults.departure,adults:first(query.adults)??"2",children:first(query.children)??"0",childrenAges:values(query.childrenAge)});
   const stay=parsed.success?parsed.data:{arrival:defaults.arrival,departure:defaults.departure,adults:2,children:0};
   if (id.startsWith("hotelbeds-")) {
     const code = id.slice("hotelbeds-".length);
@@ -104,6 +104,7 @@ export default async function HotelPage({params, searchParams}: {params: Promise
 }
 
 function first(value:string|string[]|undefined):string|undefined{return Array.isArray(value)?value[0]:value;}
+function values(value:string|string[]|undefined):string[]{return (Array.isArray(value)?value:value?[value]:[]).flatMap((item)=>item.split(",")).map((item)=>item.trim()).filter(Boolean);}
 function checkoutHref(hotelId:string,roomTypeId:string,ratePlanId:string,arrival:string,departure:string,adults:number,children:number){const query=new URLSearchParams({hotelId,roomTypeId,ratePlanId,arrival,departure,adults:String(adults),children:String(children)});return `/checkout?${query.toString()}`;}
 function mealPlan(value:string,locale:GuestLocale){const copy=guestDictionary(locale).hotel;if(value==="BREAKFAST")return copy.breakfast;if(value==="HALF_BOARD")return copy.halfBoard;if(value==="FULL_BOARD")return copy.fullBoard;return copy.roomOnly;}
 type Offer = Awaited<ReturnType<typeof getPublicHotelDetails>>["offers"][number];

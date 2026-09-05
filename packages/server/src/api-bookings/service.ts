@@ -3,7 +3,7 @@ import type {ApiBookingInput} from "@platform/contracts";
 import {database} from "@platform/database";
 import {ApplicationError} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
-import {bookHotelbeds, checkHotelbedsRate} from "../hotelbeds/client";
+import {bookHotelbeds, checkHotelbedsRate, HotelbedsConfigurationError} from "../hotelbeds/client";
 
 export async function createApiBooking(input: ApiBookingInput) {
   if (input.paymentMode === "PAY_NOW") throw new ApplicationError("API_PAYMENT_NOT_CONFIGURED", "Online payment is not enabled for Hotelbeds bookings yet", 400);
@@ -11,59 +11,49 @@ export async function createApiBooking(input: ApiBookingInput) {
   const nights = Math.max(1, Math.round((Date.parse(input.departure) - Date.parse(input.arrival)) / 86_400_000));
   const reference = `HMK-API-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
   const clientReference = `HMKAPI-${randomUUID().replaceAll("-", "").slice(0, 32).toUpperCase()}`;
-  const pending = await database().apiBooking.create({data: {
-    reference,
-    clientReference,
-    hotelCode: input.hotelCode,
-    hotelName: input.hotelName,
-    city: input.city,
-    roomName: input.roomName ?? null,
-    boardName: input.boardName ?? null,
-    rateType: input.rateType ?? null,
-    rateKey: input.rateKey,
-    guestName: input.guestName,
-    guestEmail: input.guestEmail,
-    phone: input.phone ?? null,
-    arrival: new Date(`${input.arrival}T00:00:00.000Z`),
-    departure: new Date(`${input.departure}T00:00:00.000Z`),
-    adults: input.adults,
-    children: input.children,
-    childrenAges: input.childrenAges,
-    currency: input.currency,
-    netAmount: input.netAmount,
-    sellingAmount: input.sellingAmount ?? null,
-    markupAmount: Math.max(0, input.totalAmount - input.netAmount),
-    totalAmount: input.totalAmount,
-    paymentMode: input.paymentMode,
-    paymentState: "NOT_REQUIRED",
-    status: "PENDING",
-    cancellationPolicy: input.cancellationPolicy ? jsonSafe(input.cancellationPolicy) : null,
-    providerRequest: jsonSafe({rateKey: input.rateKey, clientReference}),
-  }});
-
+  let pendingId: string | null = null;
   try {
-    let bookingRateKey = input.rateKey;
-    let rate = {net: input.netAmount, sellingRate: input.sellingAmount ?? null, total: input.totalAmount, currency: input.currency};
-    if (input.rateType?.toUpperCase() === "RECHECK") {
-      const checked = await checkHotelbedsRate(input.rateKey, nights);
-      if (!checked) throw new ApplicationError("HOTELBEDS_RATE_UNAVAILABLE", "The selected Hotelbeds rate is no longer available", 409);
-      bookingRateKey = checked.offer.rateKey;
-      rate = {net: checked.offer.net, sellingRate: checked.offer.sellingRate, total: checked.offer.total, currency: checked.offer.currency};
-      await database().apiBooking.update({where: {id: pending.id}, data: {
-        rateKey: bookingRateKey,
-        netAmount: rate.net,
-        sellingAmount: rate.sellingRate,
-        markupAmount: Math.max(0, rate.total - rate.net),
-        totalAmount: rate.total,
-        currency: rate.currency,
-        cancellationPolicy: jsonSafe(checked.offer.cancellationPolicy),
-        providerResponse: jsonSafe(checked.raw),
-        providerRequest: jsonSafe({rateKey: bookingRateKey, clientReference, checked: true}),
-      }});
-    }
+    // The browser only selects a rate. The provider response is the source of truth
+    // for the booking amount, payment mode, cancellation terms and rate key.
+    const checked = await checkHotelbedsRate(input.rateKey, nights, input.hotelCode);
+    if (!checked) throw new ApplicationError("HOTELBEDS_RATE_UNAVAILABLE", "The selected Hotelbeds rate is no longer available", 409);
+    if (!checked.offer.paymentModes.includes(input.paymentMode)) throw new ApplicationError("HOTELBEDS_PAYMENT_MODE_CHANGED", "The selected payment mode is no longer available for this rate", 409);
+    const rate = {net: checked.offer.net, sellingRate: checked.offer.sellingRate, total: checked.offer.total, currency: checked.offer.currency};
+
+    const pending = await database().apiBooking.create({data: {
+      reference,
+      clientReference,
+      hotelCode: input.hotelCode,
+      hotelName: input.hotelName,
+      city: input.city,
+      roomName: input.roomName ?? null,
+      boardName: input.boardName ?? null,
+      rateType: input.rateType ?? null,
+      rateKey: checked.offer.rateKey,
+      guestName: input.guestName,
+      guestEmail: input.guestEmail,
+      phone: input.phone ?? null,
+      arrival: new Date(`${input.arrival}T00:00:00.000Z`),
+      departure: new Date(`${input.departure}T00:00:00.000Z`),
+      adults: input.adults,
+      children: input.children,
+      childrenAges: input.childrenAges,
+      currency: rate.currency,
+      netAmount: rate.net,
+      sellingAmount: rate.sellingRate,
+      markupAmount: Math.max(0, rate.total - rate.net),
+      totalAmount: rate.total,
+      paymentMode: input.paymentMode,
+      paymentState: "NOT_REQUIRED",
+      status: "PENDING",
+      cancellationPolicy: jsonSafe(checked.offer.cancellationPolicy),
+      providerRequest: jsonSafe({hotelCode: input.hotelCode, rateKey: checked.offer.rateKey, clientReference, checked: true}),
+      providerResponse: jsonSafe(checked.raw),
+    }});
+    pendingId = pending.id;
 
     const result = await bookHotelbeds({
-      rateKey: bookingRateKey,
+      rateKey: checked.offer.rateKey,
       adults: input.adults,
       holderName: holderFirstName(input.guestName),
       holderSurname: holderSurname(input.guestName),
@@ -77,7 +67,7 @@ export async function createApiBooking(input: ApiBookingInput) {
     const booking = await database().apiBooking.update({where: {id: pending.id}, data: {
       status: "CONFIRMED",
       providerReference: result.providerReference,
-      rateKey: bookingRateKey,
+      rateKey: checked.offer.rateKey,
       netAmount: rate.net,
       sellingAmount: rate.sellingRate,
       markupAmount: Math.max(0, rate.total - rate.net),
@@ -88,8 +78,12 @@ export async function createApiBooking(input: ApiBookingInput) {
     }});
     return apiBookingView(booking);
   } catch (error) {
-    const failure = error instanceof ApplicationError ? error : new ApplicationError("HOTELBEDS_BOOKING_FAILED", "Hotelbeds could not confirm this booking", 502);
-    await database().apiBooking.update({where: {id: pending.id}, data: {status: "FAILED", errorCode: failure.code, errorMessage: failure.message}}).catch((updateError) => console.error("Could not record API booking failure", updateError));
+    const failure = error instanceof ApplicationError
+      ? error
+      : error instanceof HotelbedsConfigurationError
+        ? new ApplicationError("HOTELBEDS_NOT_CONFIGURED", "Hotelbeds API is not configured for this deployment", 503)
+        : new ApplicationError("HOTELBEDS_BOOKING_FAILED", "Hotelbeds could not confirm this booking", 502);
+    if (pendingId) await database().apiBooking.update({where: {id: pendingId}, data: {status: "FAILED", errorCode: failure.code, errorMessage: failure.message}}).catch((updateError) => console.error("Could not record API booking failure", updateError));
     throw failure;
   }
 }

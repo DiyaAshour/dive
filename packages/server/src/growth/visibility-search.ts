@@ -1,9 +1,10 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
+import {convertCurrency} from "@platform/core";
 import { database } from "@platform/database";
 import { demoSearchFallback } from "../discovery/demo-fallback";
 import { searchHotels } from "../discovery/service";
 import { searchHotelsV2 } from "../discovery/search-v2";
-import { searchHotelbeds } from "../hotelbeds/client";
+import {destinationCodeFor, searchHotelbeds} from "../hotelbeds/client";
 
 type CampaignSnapshot = Readonly<{
   id: string;
@@ -107,17 +108,27 @@ type SearchV2Result = Awaited<ReturnType<typeof searchHotelsV2>>;
 type SearchV2Item = SearchV2Result["results"][number];
 
 async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2Result, context: VisibilitySearchContext): Promise<SearchV2Item[]> {
-  // Hotelbeds requires every child's age. The current public search form does not
-  // collect those ages yet, so keep the partner search complete for family queries.
-  if (input.children > 0) return [];
+  // Hotelbeds requires every child's age. If a caller has not supplied them yet,
+  // keep the partner search complete instead of sending an invalid provider request.
+  if (input.children > 0 && input.childrenAges.length !== input.children) return [];
   try {
+    const destinationCode = destinationCodeFor(base.resolvedDestination?.nameEn ?? input.destination);
     const rows = await searchHotelbeds({
       destination: base.resolvedDestination?.nameEn ?? input.destination,
+      ...(destinationCode ? {destinationCode} : {}),
       arrival: input.arrival,
       departure: input.departure,
       adults: input.adults,
       children: input.children,
+      ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
       ...(context.travelerCountry ? {sourceMarket: context.travelerCountry} : {}),
+      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      priceCurrency: "JOD",
+      stars: input.stars,
+      freeCancellation: input.freeCancellation,
+      ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
+      amenities: input.amenities,
     });
     return rows.map((hotel) => ({
       id: hotel.id,
@@ -133,6 +144,7 @@ async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2
       reviewSummary: hotel.reviewSummary,
       availableOffers: hotel.availableOffers,
       from: hotel.from,
+      source: "HOTELBEDS_API",
     } as unknown as SearchV2Item));
   } catch (error) {
     console.error("Hotelbeds search unavailable; continuing with HandMeKey inventory", error);
@@ -140,21 +152,36 @@ async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2
   }
 }
 
-function mergeProviderResults(partnerResults: SearchV2Item[], providerResults: SearchV2Item[], pageSize: number): SearchV2Item[] {
-  if (!providerResults.length) return partnerResults;
-  if (!partnerResults.length) return providerResults.slice(0, pageSize);
-  const providerQuota = Math.min(providerResults.length, Math.max(2, Math.floor(pageSize / 5)));
-  const partnerQuota = Math.max(0, pageSize - providerQuota);
-  const partners = partnerResults.slice(0, partnerQuota);
-  const merged: SearchV2Item[] = [];
-  const interval = Math.max(1, Math.ceil(partners.length / providerQuota));
-  let providerIndex = 0;
-  for (let index = 0; index < partners.length || providerIndex < providerQuota; index += 1) {
-    if (index < partners.length) merged.push(partners[index]!);
-    if ((index + 1) % interval === 0 && providerIndex < providerQuota) merged.push(providerResults[providerIndex++]!);
-  }
-  while (providerIndex < providerQuota) merged.push(providerResults[providerIndex++]!);
-  return merged.slice(0, pageSize);
+function mergeProviderResults(partnerResults: SearchV2Item[], providerResults: SearchV2Item[], pageSize: number, sort: DiscoverySearchInput["sort"]): SearchV2Item[] {
+  const seen = new Set<string>();
+  const all = [...partnerResults, ...providerResults].filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+  return all
+    .map((item, index) => ({item, index}))
+    .sort((left, right) => compareUnifiedResults(left.item, right.item, sort) || left.index - right.index)
+    .slice(0, pageSize)
+    .map((entry) => entry.item);
+}
+
+function compareUnifiedResults(left: SearchV2Item, right: SearchV2Item, sort: DiscoverySearchInput["sort"]): number {
+  const leftPrice = convertCurrency(left.from.total, left.currency, "JOD") ?? left.from.total;
+  const rightPrice = convertCurrency(right.from.total, right.currency, "JOD") ?? right.from.total;
+  if (sort === "PRICE_ASC") return leftPrice - rightPrice || (right.starRating ?? 0) - (left.starRating ?? 0);
+  if (sort === "PRICE_DESC") return rightPrice - leftPrice || (right.starRating ?? 0) - (left.starRating ?? 0);
+  if (sort === "STARS_DESC") return (right.starRating ?? 0) - (left.starRating ?? 0) || rightPrice - leftPrice;
+  if (sort === "RATING_DESC") return (right.reviewSummary.overall ?? -1) - (left.reviewSummary.overall ?? -1) || right.reviewSummary.count - left.reviewSummary.count || rightPrice - leftPrice;
+  return recommendedScore(right) - recommendedScore(left) || leftPrice - rightPrice;
+}
+
+function recommendedScore(result: SearchV2Item): number {
+  const reviews = result.reviewSummary.overall ?? 0;
+  const volume = Math.min(3, Math.log10(result.reviewSummary.count + 1));
+  const stars = (result.starRating ?? 0) * 0.4;
+  const providerAvailability = result.slug.startsWith("hotelbeds-") ? 0.25 : 0;
+  return reviews * 2 + volume + stars + providerAvailability;
 }
 
 export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
@@ -172,8 +199,10 @@ export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchIn
     base = demoSearchFallback(input) as unknown as SearchV2Result;
   }
 
-  const providerResults = await searchHotelbedsSafely(input, base, context);
-  const combined = mergeProviderResults(base.results, providerResults, input.pageSize);
+  // The provider stream is joined on the first page only. Partner pagination remains
+  // untouched on later pages, so the same Hotelbeds hotel cannot reappear as a duplicate.
+  const providerResults = input.cursor ? [] : await searchHotelbedsSafely(input, base, context);
+  const combined = mergeProviderResults(base.results, providerResults, input.pageSize, input.sort);
   return {
     ...base,
     count: combined.length,

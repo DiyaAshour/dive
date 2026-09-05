@@ -28,7 +28,7 @@ type Props = Readonly<{
 }>;
 
 type GuestKey = "adults" | "children" | "infants" | "pets";
-type Guests = Record<GuestKey, number>;
+type Guests = Record<GuestKey, number> & {childrenAges: number[]};
 
 type GuestRow = Readonly<{
   key: GuestKey;
@@ -46,7 +46,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activeDate, setActiveDate] = useState<ActiveDate>("checkIn");
   const [calendarCursor, setCalendarCursor] = useState(() => startOfMonth(parseDate(defaultArrival)));
-  const [guests, setGuests] = useState<Guests>({adults: 2, children: 0, infants: 0, pets: 0});
+  const [guests, setGuests] = useState<Guests>({adults: 2, children: 0, infants: 0, pets: 0, childrenAges: []});
   const rootRef = useRef<HTMLDivElement>(null);
 
   const dictionary = locale === "ar" ? {
@@ -54,6 +54,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
     adultsHint: "13 سنة فأكثر",
     children: "الأطفال",
     childrenHint: "من 2 إلى 12 سنة",
+    childAge: "عمر الطفل",
     infants: "الرضّع",
     infantsHint: "أقل من سنتين",
     pets: "الحيوانات الأليفة",
@@ -73,6 +74,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
     adultsHint: "Ages 13 or above",
     children: "Children",
     childrenHint: "Ages 2–12",
+    childAge: "Child age",
     infants: "Infants",
     infantsHint: "Under 2",
     pets: "Pets",
@@ -137,7 +139,14 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
   }
 
   function updateGuest(key: GuestKey, delta: number, min: number, max: number) {
-    setGuests((current) => ({...current, [key]: Math.min(max, Math.max(min, current[key] + delta))}));
+    setGuests((current) => {
+      const nextCount = Math.min(max, Math.max(min, current[key] + delta));
+      if (key !== "children") return {...current, [key]: nextCount};
+      const childrenAges = nextCount > current.children
+        ? [...current.childrenAges, 7]
+        : current.childrenAges.slice(0, nextCount);
+      return {...current, children: nextCount, childrenAges};
+    });
   }
 
   return <div className={styles.root} ref={rootRef}>
@@ -194,6 +203,7 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
       <input type="hidden" name="departure" value={departure}/>
       <input type="hidden" name="adults" value={guests.adults}/>
       <input type="hidden" name="children" value={guests.children}/>
+      {guests.childrenAges.map((age, index) => <input key={`child-age-${index}`} type="hidden" name="childrenAge" value={age}/>)}
       <input type="hidden" name="infants" value={guests.infants}/>
       <input type="hidden" name="pets" value={guests.pets}/>
 
@@ -237,6 +247,12 @@ export function HomeBookingSearch({locale, defaultDestination, defaultArrival, d
           <button type="button" aria-label={`${dictionary.increase} ${row.title}`} disabled={guests[row.key] >= row.max} onClick={() => updateGuest(row.key, 1, row.min, row.max)}><Plus size={17}/></button>
         </div>
       </div>)}
+      {guests.childrenAges.length > 0 && <div style={{marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(11, 39, 68, .12)"}}>
+        <strong style={{display: "block", marginBottom: 8}}>{dictionary.childAge}</strong>
+        <div style={{display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8}}>
+          {guests.childrenAges.map((age, index) => <label key={`child-age-select-${index}`} style={{display: "grid", gap: 4, fontSize: 12}}><span>{dictionary.childAge} {index + 1}</span><select value={age} onChange={(event) => setGuests((current) => ({...current, childrenAges: current.childrenAges.map((currentAge, ageIndex) => ageIndex === index ? Number(event.target.value) : currentAge)}))}><option value="0">0</option>{Array.from({length: 17}, (_, ageValue) => <option key={ageValue + 1} value={ageValue + 1}>{ageValue + 1}</option>)}</select></label>)}
+        </div>
+      </div>}
     </div>}
   </div>;
 }
