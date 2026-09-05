@@ -1,0 +1,45 @@
+model HotelbedsContentHotel {
+  code             String   @id
+  name             String
+  destinationCode  String?
+  destinationName  String?
+  countryCode      String?  @db.Char(2)
+  zoneName         String?
+  address          String?
+  postalCode       String?
+  categoryCode     String?
+  categoryName     String?
+  latitude         Decimal? @db.Decimal(10, 7)
+  longitude        Decimal? @db.Decimal(10, 7)
+  phone            String?
+  description      String?  @db.Text
+  facilities       Json?
+  images           Json?
+  issues           Json?
+  raw              Json?
+  providerUpdatedAt DateTime?
+  syncedAt         DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([name])
+  @@index([destinationCode])
+  @@index([countryCode, destinationCode])
+  @@index([syncedAt])
+}
+
+model HotelbedsRateCommentCache {
+  id          String   @id
+  incoming    String
+  code        String
+  rateCodes   String
+  hotelCode   String?
+  comments    Json
+  syncedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([incoming, code, rateCodes])
+  @@index([hotelCode])
+  @@index([syncedAt])
+}
