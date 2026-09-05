@@ -1,19 +1,17 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
-import {searchHotelbeds, type HotelbedsSearchResult} from "../hotelbeds/client";
+import {getHotelbedsHotelDetails, type HotelbedsSearchResult} from "../hotelbeds/client";
+import {searchHotelbedsContentHotels} from "../hotelbeds/catalog";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
 type SearchResult = Awaited<ReturnType<typeof searchHotelsV2WithVisibilityBoostBase>>;
 type SearchItem = SearchResult["results"][number];
 
-const HOTELBEDS_JORDAN_DESTINATION_CODES = ["AMM", "AQJ", "PET", "DSE"] as const;
-
 /**
- * Extends the normal destination search with a direct Hotelbeds hotel-name lookup.
- * Hotelbeds availability is destination-code based, so when the public query does not
- * resolve to a destination (for example "Signia") we probe the supported Jordan
- * destinations one at a time and stop as soon as a matching provider hotel is found.
- * Sequential probing is deliberate: it avoids bursting the Hotelbeds request quota.
+ * Extends destination search with Hotelbeds hotel-name lookup backed by the
+ * local Content API catalogue. Static Hotelbeds content is never fetched in
+ * real time from the customer request. Once a name resolves locally we make
+ * one Availability request for the best matching provider hotel code.
  */
 export async function searchHotelsV2WithVisibilityBoost(
   input: DiscoverySearchInput,
@@ -32,7 +30,7 @@ export async function searchHotelsV2WithVisibilityBoost(
   const existingMatches = base.results.filter((hotel) => hotelNameMatchesQuery(hotel.name, hotel.city, hotel.area, query));
   const combined = dedupeResults([...providerItems, ...existingMatches]).slice(0, input.pageSize);
 
-  console.info("Hotelbeds direct hotel-name search completed", {
+  console.info("Hotelbeds local-catalog hotel-name search completed", {
     query: input.destination,
     resultCount: providerItems.length,
   });
@@ -50,13 +48,27 @@ async function searchHotelbedsByHotelName(
   context: VisibilitySearchContext,
   normalizedQuery: string,
 ): Promise<HotelbedsSearchResult[]> {
-  const seen = new Set<string>();
+  if (input.children > 0 && input.childrenAges.length !== input.children) return [];
+  let candidates;
+  try {
+    candidates = await searchHotelbedsContentHotels(input.destination, 6);
+  } catch (error) {
+    console.error("Hotelbeds local content catalogue unavailable", error);
+    return [];
+  }
+  if (!candidates.length) return [];
 
-  for (const destinationCode of HOTELBEDS_JORDAN_DESTINATION_CODES) {
+  const ranked = candidates
+    .filter((hotel) => hotelNameMatchesQuery(hotel.name, hotel.destinationName ?? "", hotel.zoneName, normalizedQuery))
+    .sort((left, right) => hotelCatalogMatchScore(right.name, normalizedQuery) - hotelCatalogMatchScore(left.name, normalizedQuery));
+
+  // Name discovery is local; availability is requested only for the strongest
+  // matching provider code, preventing one typed hotel name from burning quota.
+  for (const candidate of ranked.slice(0, 2)) {
     try {
-      const rows = await searchHotelbeds({
-        destination: input.destination,
-        destinationCode,
+      const hotel = await getHotelbedsHotelDetails(candidate.code, {
+        destination: candidate.destinationName ?? input.destination,
+        ...(candidate.destinationCode ? {destinationCode: candidate.destinationCode} : {}),
         arrival: input.arrival,
         departure: input.departure,
         adults: input.adults,
@@ -71,32 +83,24 @@ async function searchHotelbedsByHotelName(
         ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
         amenities: input.amenities,
       });
-
-      const matches = rows.filter((hotel) => {
-        if (!hotelNameMatchesQuery(hotel.name, hotel.city, hotel.area, normalizedQuery)) return false;
-        if (seen.has(hotel.id)) return false;
-        seen.add(hotel.id);
-        return true;
-      }).sort((left, right) => hotelMatchScore(right, normalizedQuery) - hotelMatchScore(left, normalizedQuery) || left.from.total - right.from.total);
-
-      console.info("Hotelbeds hotel-name probe completed", {
-        query: input.destination,
-        destinationCode,
-        availabilityCount: rows.length,
-        matchCount: matches.length,
-      });
-
-      // A hotel name belongs to one destination. Stop immediately when found instead
-      // of spending more provider quota probing unrelated destinations.
-      if (matches.length) return matches;
+      if (!hotel) continue;
+      return [{
+        ...hotel,
+        name: candidate.name || hotel.name,
+        city: candidate.destinationName ?? hotel.city,
+        countryCode: candidate.countryCode ?? hotel.countryCode,
+        area: candidate.zoneName ?? hotel.area,
+        address: candidate.address ?? hotel.address,
+        description: candidate.description ?? hotel.description,
+        availableOffers: hotel.offers.length,
+        rates: hotel.offers,
+        from: hotel.offers[0]!,
+      }];
     } catch (error) {
-      console.error("Hotelbeds hotel-name probe unavailable", {destinationCode, error});
-      // A quota/authorization failure will not improve by immediately trying the next
-      // destination. Stop the probe so one user search cannot multiply the failure.
+      console.error("Hotelbeds hotel-code availability lookup unavailable", {hotelCode: candidate.code, error});
       return [];
     }
   }
-
   return [];
 }
 
@@ -129,14 +133,13 @@ function hotelNameMatchesQuery(name: string, city: string, area: string | null, 
   return terms.length > 0 && terms.every((term) => searchable.includes(term));
 }
 
-function hotelMatchScore(hotel: Pick<HotelbedsSearchResult, "name" | "city" | "area">, normalizedQuery: string): number {
-  const name = normalizeHotelQuery(hotel.name);
-  if (name === normalizedQuery) return 100;
-  if (name.startsWith(normalizedQuery)) return 80;
-  if (name.includes(normalizedQuery)) return 60;
-  const searchable = normalizeHotelQuery(`${hotel.name} ${hotel.city} ${hotel.area ?? ""}`);
+function hotelCatalogMatchScore(name: string, normalizedQuery: string): number {
+  const normalizedName = normalizeHotelQuery(name);
+  if (normalizedName === normalizedQuery) return 100;
+  if (normalizedName.startsWith(normalizedQuery)) return 80;
+  if (normalizedName.includes(normalizedQuery)) return 60;
   const terms = normalizedQuery.split(" ").filter((term) => term.length >= 2);
-  return terms.reduce((score, term) => score + (searchable.includes(term) ? 5 : 0), 0);
+  return terms.reduce((score, term) => score + (normalizedName.includes(term) ? 5 : 0), 0);
 }
 
 function normalizeHotelQuery(value: string): string {
