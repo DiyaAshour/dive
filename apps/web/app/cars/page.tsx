@@ -47,14 +47,19 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
     brand: query.brand?.trim() || "",
   };
   const marketplaceCars = liveCars.map((car) => {
+    const isHandMeKeyCatalogCar = car.visualProvider === "HANDMEKEY";
+    const fullSearchImage = isHandMeKeyCatalogCar && car.imageUrl?.endsWith("/view-280.webp")
+      ? car.imageUrl.replace(/\/view-280\.webp$/, "/front.webp")
+      : car.imageUrl;
     const isCorolla2026 = car.id === "toyota-corolla" || (
       car.brand?.trim().toLowerCase() === "toyota" &&
       car.model?.trim().toLowerCase() === "corolla" &&
       car.year === 2026
     );
-    return isCorolla2026
-      ? {...car, imageUrl: TOYOTA_COROLLA_2026_HERO, imageAlt: "Toyota Corolla Sedan 2026"}
-      : car;
+    if (isCorolla2026) {
+      return {...car, imageUrl: TOYOTA_COROLLA_2026_HERO, imageAlt: "Toyota Corolla Sedan 2026"};
+    }
+    return {...car, imageUrl: fullSearchImage};
   });
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
