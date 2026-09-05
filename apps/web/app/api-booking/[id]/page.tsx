@@ -1,0 +1,20 @@
+import Link from "next/link";
+import {BadgeCheck, CheckCircle2, ShieldCheck} from "lucide-react";
+import {getApiBooking} from "@platform/server";
+import {CustomerHeader} from "@/components/customer-header";
+import {guestMoney} from "@/lib/guest-currency";
+import {requestGuestMarket} from "@/lib/request-guest-market";
+
+export default async function ApiBookingPage({params}: {params: Promise<{id: string}>}) {
+  const [{id},market] = await Promise.all([params,requestGuestMarket()]);
+  const booking = await getApiBooking(id);
+  const ar = market.locale === "ar";
+  if (!booking) return <main className="checkoutExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader minimal/><section className="shell checkoutSection"><div className="premiumEmpty"><h3>{ar ? "الحجز غير موجود" : "Booking not found"}</h3><Link href="/search" className="resultCta">{ar ? "العودة إلى البحث" : "Return to search"}</Link></div></section></main>;
+  const total = guestMoney(booking.amounts.total,booking.currency,market.currency,market.locale);
+  const paymentSummary = booking.paymentMode === "PAY_NOW"
+    ? booking.paymentState === "CAPTURED"
+      ? (ar ? "تم الدفع إلكترونياً." : "Paid online.")
+      : (ar ? "الدفع الإلكتروني بانتظار الإكمال." : "Online payment is pending.")
+    : (ar ? "طريقة الدفع: الدفع في الفندق. لا يتم تحصيل مبلغ إلكتروني من خلال هذه الشاشة." : "Payment mode: pay at hotel. No online amount is collected by this screen.");
+  return <main className="checkoutExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader minimal/><section className="checkoutBanner"><div className="shell"><div><span className="eyebrow">{ar ? "تأكيد حجز API" : "API booking confirmation"}</span><h1>{booking.status === "CONFIRMED" ? (ar ? "تم تأكيد الحجز" : "Booking confirmed") : (ar ? "حالة الحجز" : "Booking status")}</h1><p>{ar ? "هذا الحجز محفوظ في سجل Hotelbeds المنفصل داخل مركز التحكم." : "This reservation is stored in the separate Hotelbeds ledger inside Control Center."}</p></div><div className="checkoutTrust"><span><CheckCircle2 size={18}/>{booking.status}</span><span><ShieldCheck size={18}/>{booking.providerBooking.reference ?? booking.clientReference}</span></div></div></section><section className="shell checkoutSection"><div className="checkout"><div className="panel"><span className="eyebrow">{ar ? "مرجع HandMeKey" : "HandMeKey reference"}</span><h2>{booking.reference}</h2><p><BadgeCheck size={15}/> Hotelbeds API · {booking.providerBooking.reference ?? (ar ? "بانتظار مرجع المزود" : "provider reference pending")}</p><div className="breakdown"><span>{ar ? "الفندق" : "Hotel"}</span><strong>{booking.hotel.name}</strong></div><div className="breakdown"><span>{ar ? "الإقامة" : "Stay"}</span><strong>{booking.arrival} → {booking.departure}</strong></div><div className="breakdown"><span>{ar ? "الضيف" : "Guest"}</span><strong>{booking.guest.name}</strong><small>{booking.guest.email}</small></div><Link className="resultCta" href="/search">{ar ? "بحث عن إقامة أخرى" : "Search another stay"}</Link></div><aside className="panel"><span className="eyebrow">{ar ? "الملخص المالي" : "Financial summary"}</span><h2>{total.text}</h2>{total.converted&&<p className="muted">{total.sourceText} · {ar ? "عملة المصدر" : "provider currency"}</p>}<div className="breakdown"><span>{ar ? "الصافي" : "Net"}</span><strong>{guestMoney(booking.amounts.net,booking.currency,market.currency,market.locale).text}</strong></div><div className="breakdown"><span>{ar ? "هامش HandMeKey" : "HandMeKey margin"}</span><strong>{guestMoney(booking.amounts.markup,booking.currency,market.currency,market.locale).text}</strong></div><div className="breakdown total"><span>{ar ? "الإجمالي" : "Total"}</span><strong>{total.text}</strong></div><p className="muted">{paymentSummary}</p></aside></div></section></main>;
+}

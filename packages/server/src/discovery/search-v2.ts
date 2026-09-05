@@ -163,6 +163,7 @@ async function evaluateCandidate(candidate: SearchCandidate, input: DiscoverySea
 
 function buildSearchResult(hotel: Awaited<ReturnType<typeof getPublicHotelDetails>>, availableOffers: number, from: Awaited<ReturnType<typeof getPublicHotelDetails>>["offers"][number]) {
   return {
+    source: "PARTNER" as const,
     id: hotel.id,
     slug: hotel.slug,
     name: hotel.name,

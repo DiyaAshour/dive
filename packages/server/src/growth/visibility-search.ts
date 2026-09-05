@@ -1,8 +1,10 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
+import {convertCurrency} from "@platform/core";
 import { database } from "@platform/database";
 import { demoSearchFallback } from "../discovery/demo-fallback";
 import { searchHotels } from "../discovery/service";
 import { searchHotelsV2 } from "../discovery/search-v2";
+import {destinationCodeFor, searchHotelbeds} from "../hotelbeds/client";
 
 type CampaignSnapshot = Readonly<{
   id: string;
@@ -102,6 +104,103 @@ export async function searchHotelsWithVisibilityBoost(input: DiscoverySearchInpu
   return {...base, results: await safeVisibilityBoost(base.results,input,context.travelerCountry)};
 }
 
+type SearchV2Result = Awaited<ReturnType<typeof searchHotelsV2>>;
+type SearchV2Item = SearchV2Result["results"][number];
+
+async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2Result, context: VisibilitySearchContext): Promise<SearchV2Item[]> {
+  // Hotelbeds requires every child's age. If a caller has not supplied them yet,
+  // keep the partner search complete instead of sending an invalid provider request.
+  if (input.children > 0 && input.childrenAges.length !== input.children) return [];
+  try {
+    const destinationCode = destinationCodeFor(base.resolvedDestination?.nameEn ?? input.destination);
+    const rows = await searchHotelbeds({
+      destination: base.resolvedDestination?.nameEn ?? input.destination,
+      ...(destinationCode ? {destinationCode} : {}),
+      arrival: input.arrival,
+      departure: input.departure,
+      adults: input.adults,
+      children: input.children,
+      ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
+      ...(context.travelerCountry ? {sourceMarket: context.travelerCountry} : {}),
+      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      priceCurrency: "JOD",
+      stars: input.stars,
+      freeCancellation: input.freeCancellation,
+      ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
+      amenities: input.amenities,
+    });
+    console.info("Hotelbeds search completed", {
+      destination: base.resolvedDestination?.nameEn ?? input.destination,
+      destinationCode,
+      resultCount: rows.length,
+    });
+    return rows.map((hotel) => ({
+      id: hotel.id,
+      slug: hotel.slug,
+      name: hotel.name,
+      city: hotel.city,
+      countryCode: hotel.countryCode || base.resolvedDestination?.countryCode || "",
+      area: hotel.area,
+      starRating: hotel.starRating,
+      currency: hotel.currency,
+      coverPhoto: hotel.coverPhoto,
+      amenities: hotel.amenities,
+      reviewSummary: hotel.reviewSummary,
+      availableOffers: hotel.availableOffers,
+      from: hotel.from,
+      source: "HOTELBEDS_API",
+    } as unknown as SearchV2Item));
+  } catch (error) {
+    console.error("Hotelbeds search unavailable; continuing with HandMeKey inventory", error);
+    return [];
+  }
+}
+
+function mergeProviderResults(partnerResults: SearchV2Item[], providerResults: SearchV2Item[], pageSize: number, sort: DiscoverySearchInput["sort"]): SearchV2Item[] {
+  const seen = new Set<string>();
+  const all = [...partnerResults, ...providerResults].filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+  const ranked = all
+    .map((item, index) => ({item, index}))
+    .sort((left, right) => compareUnifiedResults(left.item, right.item, sort) || left.index - right.index)
+    .map((entry) => entry.item);
+  const visible = ranked.slice(0, pageSize);
+  if (!providerResults.length || visible.some((item) => item.slug.startsWith("hotelbeds-"))) return visible;
+
+  // Keep unified ranking, but do not let a full partner page hide a working
+  // provider completely. This is the explicit “beside partner inventory”
+  // rule for the first page; later cursored pages remain partner-only.
+  const provider = ranked.find((item) => item.slug.startsWith("hotelbeds-"));
+  if (!provider || !visible.length) return visible;
+  visible[visible.length - 1] = provider;
+  return visible
+    .map((item, index) => ({item, index}))
+    .sort((left, right) => compareUnifiedResults(left.item, right.item, sort) || left.index - right.index)
+    .map((entry) => entry.item);
+}
+
+function compareUnifiedResults(left: SearchV2Item, right: SearchV2Item, sort: DiscoverySearchInput["sort"]): number {
+  const leftPrice = convertCurrency(left.from.total, left.currency, "JOD") ?? left.from.total;
+  const rightPrice = convertCurrency(right.from.total, right.currency, "JOD") ?? right.from.total;
+  if (sort === "PRICE_ASC") return leftPrice - rightPrice || (right.starRating ?? 0) - (left.starRating ?? 0);
+  if (sort === "PRICE_DESC") return rightPrice - leftPrice || (right.starRating ?? 0) - (left.starRating ?? 0);
+  if (sort === "STARS_DESC") return (right.starRating ?? 0) - (left.starRating ?? 0) || rightPrice - leftPrice;
+  if (sort === "RATING_DESC") return (right.reviewSummary.overall ?? -1) - (left.reviewSummary.overall ?? -1) || right.reviewSummary.count - left.reviewSummary.count || rightPrice - leftPrice;
+  return recommendedScore(right) - recommendedScore(left) || leftPrice - rightPrice;
+}
+
+function recommendedScore(result: SearchV2Item): number {
+  const reviews = result.reviewSummary.overall ?? 0;
+  const volume = Math.min(3, Math.log10(result.reviewSummary.count + 1));
+  const stars = (result.starRating ?? 0) * 0.4;
+  const providerAvailability = result.slug.startsWith("hotelbeds-") ? 0.25 : 0;
+  return reviews * 2 + volume + stars + providerAvailability;
+}
+
 export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
   type SearchV2Result = Awaited<ReturnType<typeof searchHotelsV2>>;
   let base: SearchV2Result;
@@ -117,5 +216,14 @@ export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchIn
     base = demoSearchFallback(input) as unknown as SearchV2Result;
   }
 
-  return {...base, results: await safeVisibilityBoost(base.results,input,context.travelerCountry)};
+  // The provider stream is joined on the first page only. Partner pagination remains
+  // untouched on later pages, so the same Hotelbeds hotel cannot reappear as a duplicate.
+  const providerResults = input.cursor ? [] : await searchHotelbedsSafely(input, base, context);
+  const combined = mergeProviderResults(base.results, providerResults, input.pageSize, input.sort);
+  return {
+    ...base,
+    count: combined.length,
+    candidateCount: base.candidateCount + providerResults.length,
+    results: await safeVisibilityBoost(combined,input,context.travelerCountry),
+  };
 }

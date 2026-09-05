@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Baby, BadgeCheck, Bath, BedDouble, ChevronLeft, CircleCheck, CreditCard, Gift, Home, Image as ImageIcon, MapPin, Ruler, ShieldCheck, Star, UserRound, Utensils } from "lucide-react";
 import { calculateLoyaltyPoints } from "@platform/core";
 import { publicStaySchema } from "@platform/contracts";
-import { getPublicHotelDetails, getPublicHotelReviews } from "@platform/server";
+import { getHotelbedsHotelDetails, getPublicHotelDetails, getPublicHotelReviews } from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { guestMoney } from "@/lib/guest-currency";
 import { guestDictionary, guestMarketCopy } from "@/lib/guest-i18n";
@@ -14,6 +14,7 @@ import { requestGuestMarket } from "@/lib/request-guest-market";
 import { interpolate } from "@/lib/i18n";
 import { defaultStayDates } from "@/lib/stay-dates";
 import { HotelTrustLayer } from "./hotel-trust-layer";
+import { HotelbedsHotelPage } from "./hotelbeds-page";
 import { PriceWatch } from "./price-watch";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -25,8 +26,19 @@ export default async function HotelPage({params, searchParams}: {params: Promise
   const fxCopy=guestMarketCopy(locale);
   const roomUi=hotelRoomUiCopy(locale);
   const defaults=defaultStayDates();
-  const parsed=publicStaySchema.safeParse({arrival:first(query.arrival)??defaults.arrival,departure:first(query.departure)??defaults.departure,adults:first(query.adults)??"2",children:first(query.children)??"0"});
+  const parsed=publicStaySchema.safeParse({arrival:first(query.arrival)??defaults.arrival,departure:first(query.departure)??defaults.departure,adults:first(query.adults)??"2",children:first(query.children)??"0",childrenAges:values(query.childrenAge)});
   const stay=parsed.success?parsed.data:{arrival:defaults.arrival,departure:defaults.departure,adults:2,children:0};
+  if (id.startsWith("hotelbeds-")) {
+    const code = id.slice("hotelbeds-".length);
+    let hotelbeds = null;
+    try {
+      hotelbeds = await getHotelbedsHotelDetails(code, {...stay, ...(market.countryCode ? {sourceMarket: market.countryCode} : {})});
+    } catch (error) {
+      console.error("Hotelbeds detail unavailable", error);
+    }
+    if (!hotelbeds) return <main className="hotelExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader/><section className="shell hotelDetailSection"><div className="premiumEmpty"><h3>{locale === "ar" ? "السعر لم يعد متاحًا" : "This provider rate is no longer available"}</h3><p>{locale === "ar" ? "ارجع إلى البحث واختر سعرًا مباشرًا جديدًا." : "Return to search and select a fresh Hotelbeds rate."}</p><Link className="resultCta" href="/search">{locale === "ar" ? "العودة إلى البحث" : "Return to search"}</Link></div></section></main>;
+    return <HotelbedsHotelPage hotel={hotelbeds} stay={stay} market={market}/>;
+  }
   const [hotel,reviewData]=await Promise.all([getPublicHotelDetails(id,stay),getPublicHotelReviews(id,6)]);
   const cheapest=hotel.offers.length?hotel.offers.reduce((best,offer)=>offer.total<best.total?offer:best):null;
   const roomGroups=groupOffers(hotel.offers);
@@ -92,6 +104,7 @@ export default async function HotelPage({params, searchParams}: {params: Promise
 }
 
 function first(value:string|string[]|undefined):string|undefined{return Array.isArray(value)?value[0]:value;}
+function values(value:string|string[]|undefined):string[]{return (Array.isArray(value)?value:value?[value]:[]).flatMap((item)=>item.split(",")).map((item)=>item.trim()).filter(Boolean);}
 function checkoutHref(hotelId:string,roomTypeId:string,ratePlanId:string,arrival:string,departure:string,adults:number,children:number){const query=new URLSearchParams({hotelId,roomTypeId,ratePlanId,arrival,departure,adults:String(adults),children:String(children)});return `/checkout?${query.toString()}`;}
 function mealPlan(value:string,locale:GuestLocale){const copy=guestDictionary(locale).hotel;if(value==="BREAKFAST")return copy.breakfast;if(value==="HALF_BOARD")return copy.halfBoard;if(value==="FULL_BOARD")return copy.fullBoard;return copy.roomOnly;}
 type Offer = Awaited<ReturnType<typeof getPublicHotelDetails>>["offers"][number];

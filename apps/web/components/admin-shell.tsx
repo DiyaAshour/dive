@@ -8,7 +8,7 @@ import {LanguageSwitcher} from "./language-switcher";
 import {SiteBrand} from "./site-brand";
 import styles from "./admin-shell.module.css";
 
-type Active = "overview" | "verification" | "properties" | "cars" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
+type Active = "overview" | "verification" | "properties" | "api-bookings" | "cars" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
 type Principal = Readonly<{
   user: {displayName: string; email: string};
 }>;
@@ -36,6 +36,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const launchLabel = locale === "ar" ? "هوية البراند والإطلاق" : "Brand identity & launch";
   const accessLabel = locale === "ar" ? "المستخدمون والصلاحيات" : "Users & access";
   const staysLabel = locale === "ar" ? "الإقامة" : "Stays";
+  const apiBookingsLabel = locale === "ar" ? "حجوزات API" : "API bookings";
   const carsLabel = locale === "ar" ? "السيارات" : "Cars";
   const carBookingsLabel = locale === "ar" ? "حجوزات السيارات" : "Car reservations";
   const rentalCompaniesLabel = locale === "ar" ? "شركات التأجير" : "Rental companies";
@@ -66,6 +67,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <Link className={active === "overview" ? "active" : ""} href={dashboardHref("overview")}><LayoutDashboard size={17}/>{admin.overview}</Link>
         <Link className={active === "verification" ? "active" : ""} href={dashboardHref("verification")}><FileCheck2 size={17}/>{admin.verification}{counts.verification > 0 && <b>{counts.verification}</b>}</Link>
         <Link className={active === "properties" ? "active" : ""} href="/admin/properties"><Building2 size={17}/>{admin.properties}</Link>
+        <Link className={active === "api-bookings" ? "active" : ""} href="/admin/api-bookings"><Globe2 size={17}/>{apiBookingsLabel}</Link>
         <Link className={active === "reviews" ? "active" : ""} href="/admin/reviews"><MessageSquareWarning size={17}/>{admin.reviews}{counts.hiddenReviews > 0 && <b>{counts.hiddenReviews}</b>}</Link>
         <Link className={active === "blog" ? "active" : ""} href="/admin/blog"><BookOpenText size={17}/>{blogLabel}</Link>
         <span>{communicationsLabel}</span>

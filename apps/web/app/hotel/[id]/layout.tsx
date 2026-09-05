@@ -10,6 +10,12 @@ type Params = Promise<{id:string}>;
 
 export async function generateMetadata({params}:Readonly<{params:Params}>):Promise<Metadata> {
   const [{id},locale] = await Promise.all([params,requestLocale()]);
+  if (id.startsWith("hotelbeds-")) {
+    const providerCode = id.slice("hotelbeds-".length);
+    const title = locale === "ar" ? `فندق Hotelbeds ${providerCode} | HandMeKey` : `Hotelbeds hotel ${providerCode} | HandMeKey`;
+    const description = locale === "ar" ? "توافر وأسعار Hotelbeds المباشرة مع إعادة التحقق قبل تأكيد الحجز." : "Live Hotelbeds availability and rates with a provider recheck before booking.";
+    return {title: {absolute: title}, description, robots: {index: false, follow: true}};
+  }
   const hotel = await getPublicHotelSeoDetails(id);
   const canonical = siteUrl(`/hotel/${hotel.slug}`);
   const place = hotel.area ? `${hotel.area}, ${hotel.city}` : hotel.city;
@@ -29,6 +35,7 @@ export async function generateMetadata({params}:Readonly<{params:Params}>):Promi
 
 export default async function HotelSeoLayout({children,params}:Readonly<{children:ReactNode;params:Params}>) {
   const [{id},locale] = await Promise.all([params,requestLocale()]);
+  if (id.startsWith("hotelbeds-")) return <>{children}</>;
   const [hotel,gallery] = await Promise.all([getPublicHotelSeoDetails(id),getPublicHotelGallery(id)]);
   const canonical = siteUrl(`/hotel/${hotel.slug}`);
   const destination = hotel.primaryDestination;
