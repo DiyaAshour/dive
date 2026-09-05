@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { database } from "@platform/database";
 import { ApplicationError } from "../errors";
 import { recordPaymentCaptured } from "../bookings/service";
+import { confirmApiBookingAfterPayment } from "../api-bookings/payment";
 import type { PaymentProvider, ProviderCreatePaymentRequest, ProviderCreatePaymentResult, ProviderRefundRequest, ProviderRefundResult } from "./provider";
 
 export function createPayTabsProviderFromEnv(): PaymentProvider | null {
@@ -27,7 +28,30 @@ export async function handlePayTabsCallback(rawBody: string, signature: string |
   if (!attemptId || !transactionRef) throw new ApplicationError("PAYTABS_CALLBACK_INCOMPLETE", "Payment callback is missing transaction identifiers", 400);
 
   const attempt = await database().paymentAttempt.findUnique({where: {id: attemptId}});
-  if (!attempt || attempt.provider !== "paytabs") throw new ApplicationError("PAYMENT_ATTEMPT_NOT_FOUND", "Payment attempt does not match this callback", 404);
+  if (attempt && attempt.provider === "paytabs") return handlePartnerPaymentCallback(attempt, responseStatus, transactionRef, payload);
+
+  const apiAttempt = await database().apiPaymentAttempt.findUnique({where: {id: attemptId}});
+  if (!apiAttempt || apiAttempt.provider !== "paytabs") throw new ApplicationError("PAYMENT_ATTEMPT_NOT_FOUND", "Payment attempt does not match this callback", 404);
+  if (responseStatus === "A") {
+    await database().$transaction(async (tx) => {
+      await tx.apiPaymentAttempt.updateMany({where: {id: apiAttempt.id, status: {not: "CAPTURED"}}, data: {status: "CAPTURED", externalPaymentId: transactionRef, completedAt: new Date(), failureCode: null}});
+      await tx.apiBooking.updateMany({where: {id: apiAttempt.apiBookingId, paymentState: {not: "CAPTURED"}}, data: {paymentState: "CAPTURED"}});
+    });
+    await confirmApiBookingAfterPayment(apiAttempt.apiBookingId);
+    return {accepted: true, status: "CAPTURED" as const};
+  }
+
+  if (apiAttempt.status !== "CAPTURED") {
+    const code = stringValue(payload.payment_result?.response_code) || "PAYTABS_DECLINED";
+    await database().$transaction(async (tx) => {
+      await tx.apiPaymentAttempt.updateMany({where: {id: apiAttempt.id, status: {not: "CAPTURED"}}, data: {status: "FAILED", externalPaymentId: transactionRef, failureCode: code.slice(0,120), completedAt: new Date()}});
+      await tx.apiBooking.updateMany({where: {id: apiAttempt.apiBookingId, paymentState: {not: "CAPTURED"}}, data: {paymentState: "FAILED", status: "FAILED", errorCode: code.slice(0,120), errorMessage: "PayTabs declined the API booking payment"}});
+    });
+  }
+  return {accepted: true, status: "FAILED" as const};
+}
+
+async function handlePartnerPaymentCallback(attempt: {id: string; bookingId: string; provider: string; status: string}, responseStatus: string | null, transactionRef: string, payload: PayTabsResponse) {
   if (responseStatus === "A") {
     await database().paymentAttempt.update({where: {id: attempt.id}, data: {status: "CAPTURED", externalPaymentId: transactionRef, completedAt: new Date(), failureCode: null}});
     await recordPaymentCaptured(attempt.bookingId, transactionRef, null, attempt.id);
@@ -126,4 +150,8 @@ function providerRejected(response: PayTabsResponse): ApplicationError {
   return new ApplicationError(code.slice(0,120), message.slice(0,500), 402);
 }
 function stringValue(value: unknown): string | null {return typeof value === "string" && value.trim() ? value.trim() : typeof value === "number" ? String(value) : null;}
-function siteOrigin(): string {return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").trim().replace(/\/$/, "");}
+function siteOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.VERCEL_URL?.trim();
+  const origin = configured ? (/^https?:\/\//i.test(configured) ? configured : "https://" + configured) : "https://handmekey.com";
+  return origin.replace(/\/$/, "");
+}
