@@ -12,6 +12,7 @@ export const apiBookingSchema = z.object({
   rateKey: z.string().trim().min(20).max(1000),
   quoteSignature: z.string().trim().regex(/^[a-f0-9]{64}$/i).optional(),
   quotePaymentModes: z.array(z.enum(["PAY_NOW", "PAY_AT_HOTEL"])).max(2).optional(),
+  checkoutQuote: z.string().trim().min(40).max(24000).optional(),
   guestName: z.string().trim().min(2).max(120),
   guestEmail: z.string().trim().email().max(240),
   phone: z.string().trim().max(40).optional(),
