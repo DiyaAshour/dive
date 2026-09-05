@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {LockKeyhole, ShieldCheck} from "lucide-react";
-import {getHotelbedsHotelDetails, type HotelbedsOffer} from "@platform/server";
+import {checkHotelbedsRate, getHotelbedsHotelDetails, type HotelbedsHotelDetails, type HotelbedsOffer} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {defaultStayDates} from "@/lib/stay-dates";
 import {requestGuestMarket} from "@/lib/request-guest-market";
@@ -25,6 +25,13 @@ export default async function HotelbedsCheckoutPage({searchParams}: {searchParam
     try {
       hotel = await getHotelbedsHotelDetails(hotelCode!, {arrival, departure, adults, children, childrenAges, ...(market.countryCode ? {sourceMarket: market.countryCode} : {})});
       offer = hotel?.offers.find((item) => item.rateKey === rateKey) ?? null;
+      if (!offer) {
+        const checked = await checkHotelbedsRate(rateKey!, stayNights(arrival, departure), hotelCode);
+        if (checked) {
+          offer = checked.offer;
+          hotel = hotel ? {...hotel, currency: checked.offer.currency, offers: [checked.offer, ...hotel.offers.filter((item) => item.rateKey !== checked.offer.rateKey)]} : checkoutHotelFromRate(checked.hotel, checked.offer);
+        }
+      }
     } catch (error) {
       console.error("Hotelbeds checkout rate load failed", error);
     }
@@ -42,3 +49,25 @@ export default async function HotelbedsCheckoutPage({searchParams}: {searchParam
 function first(value: string | string[] | undefined): string | undefined { return Array.isArray(value) ? value[0] : value; }
 function number(value: string | undefined, fallback: number): number { const parsed = Number(value); return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback; }
 function repeatedNumbers(query: SearchParams, name: string): number[] { return (Array.isArray(query[name]) ? query[name] : query[name] ? [query[name]] : []).flatMap((value) => String(value).split(",")).map(Number).filter((value) => Number.isInteger(value) && value >= 0 && value <= 17); }
+function stayNights(arrival: string, departure: string): number { return Math.max(1, Math.round((Date.parse(`${departure}T00:00:00.000Z`) - Date.parse(`${arrival}T00:00:00.000Z`)) / 86_400_000)); }
+function checkoutHotelFromRate(summary: Pick<HotelbedsHotelDetails, "providerHotelCode" | "name" | "city" | "countryCode" | "area" | "address" | "starRating" | "photos" | "amenities" | "reviewSummary">, offer: HotelbedsOffer): HotelbedsHotelDetails {
+  return {
+    id: `hotelbeds:${summary.providerHotelCode}`,
+    slug: `hotelbeds-${summary.providerHotelCode}`,
+    source: "HOTELBEDS_API",
+    providerHotelCode: summary.providerHotelCode,
+    name: summary.name,
+    city: summary.city,
+    countryCode: summary.countryCode,
+    area: summary.area,
+    address: summary.address,
+    description: null,
+    starRating: summary.starRating,
+    currency: offer.currency,
+    coverPhoto: summary.photos[0] ?? null,
+    photos: summary.photos,
+    amenities: summary.amenities,
+    reviewSummary: summary.reviewSummary,
+    offers: [offer],
+  };
+}
