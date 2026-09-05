@@ -27,7 +27,7 @@ export async function searchHotelsV2WithVisibilityBoost(
   const providerMatches = await searchHotelbedsByHotelName(input, context, query);
   if (!providerMatches.length) return base;
 
-  const providerItems = providerMatches.map((hotel) => providerSearchItem(hotel)) as SearchItem[];
+  const providerItems = providerMatches.map((hotel) => providerSearchItem(hotel));
   const existingMatches = base.results.filter((hotel) => hotelNameMatchesQuery(hotel.name, hotel.city, hotel.area, query));
   const combined = dedupeResults([...providerItems, ...existingMatches]).slice(0, input.pageSize);
 
@@ -98,7 +98,7 @@ function providerSearchItem(hotel: HotelbedsSearchResult): SearchItem {
     from: hotel.from,
     source: "HOTELBEDS_API",
     visibilityBoost: null,
-  } as SearchItem;
+  } as unknown as SearchItem;
 }
 
 function hotelNameMatchesQuery(name: string, city: string, area: string | null, normalizedQuery: string): boolean {
