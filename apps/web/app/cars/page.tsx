@@ -13,6 +13,8 @@ export const metadata = {
   robots: {index: false, follow: false},
 };
 
+const TOYOTA_COROLLA_2026_HERO = "https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Cars%20images%20/Toyota%20Corolla%20Sedan%202026/280%20image%20car.png";
+
 type Params = Promise<{
   pickup?: string;
   dropoff?: string;
@@ -44,6 +46,16 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
     driverAge: query.driverAge || "30-65",
     brand: query.brand?.trim() || "",
   };
+  const marketplaceCars = liveCars.map((car) => {
+    const isCorolla2026 = car.id === "toyota-corolla" || (
+      car.make?.trim().toLowerCase() === "toyota" &&
+      car.model?.trim().toLowerCase() === "corolla" &&
+      car.year === 2026
+    );
+    return isCorolla2026
+      ? {...car, imageUrl: TOYOTA_COROLLA_2026_HERO, imageAlt: "Toyota Corolla Sedan 2026"}
+      : car;
+  });
 
   return <main className="searchExperience" lang={market.intlLocale} dir={market.direction}>
     <CustomerHeader/>
@@ -56,8 +68,8 @@ export default async function CarsPage({searchParams}: {searchParams: Params}) {
         />
       </div>
       <div className="carsInlineResults">
-        {liveCars.length > 0
-          ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={liveCars as LiveCar[]}/>
+        {marketplaceCars.length > 0
+          ? <CarsLiveMarketplace locale={market.baseLocale} initialSearch={initialSearch} cars={marketplaceCars as LiveCar[]}/>
           : <CarsMarketplace locale={market.baseLocale} initialSearch={initialSearch}/>} 
       </div>
     </div>
