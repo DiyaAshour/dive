@@ -36,6 +36,8 @@ export * from "./publishing/service";
 export {listFeaturedHotels, searchHotels} from "./discovery/service";
 export * from "./discovery/destinations";
 export * from "./discovery/search-v2";
+export * from "./hotelbeds/client";
+export * from "./api-bookings/service";
 export {resolvePublicHotelIdentifier, listHotelSitemapEntries} from "./discovery/seo";
 export * from "./distribution/google-hotels";
 export * from "./connectivity/oracle-ohip";

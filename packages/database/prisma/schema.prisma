@@ -123,6 +123,13 @@ enum BookingStatus {
   EXPIRED
 }
 
+enum ApiBookingStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
 enum ArrivalStatus {
   NOT_PROVIDED
   EXPECTED
@@ -694,6 +701,51 @@ model Booking {
   @@index([hotelId, arrival, arrivalStatus, status])
   @@index([guestEmail, createdAt])
   @@index([status, holdExpiresAt])
+}
+
+model ApiBooking {
+  id                String           @id @default(cuid())
+  reference         String           @unique
+  provider          String           @default("HOTELBEDS")
+  providerReference String?
+  clientReference   String           @unique
+  hotelCode         String
+  hotelName         String
+  city              String
+  roomName          String?
+  boardName         String?
+  rateType          String?
+  rateKey           String           @db.Text
+  guestName         String
+  guestEmail        String
+  phone             String?
+  arrival           DateTime         @db.Date
+  departure         DateTime         @db.Date
+  adults            Int              @default(1)
+  children          Int              @default(0)
+  childrenAges      Json?
+  currency          String           @db.Char(3)
+  netAmount         Decimal          @db.Decimal(12, 2)
+  sellingAmount     Decimal?         @db.Decimal(12, 2)
+  markupAmount      Decimal          @db.Decimal(12, 2)
+  totalAmount       Decimal          @db.Decimal(12, 2)
+  paymentMode       PaymentMode
+  paymentState      PaymentState
+  status            ApiBookingStatus  @default(PENDING)
+  cancellationPolicy Json?
+  providerRequest   Json?
+  providerResponse  Json?
+  errorCode         String?
+  errorMessage      String?          @db.Text
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([guestEmail, createdAt])
+  @@index([arrival, departure])
+  @@index([providerReference])
 }
 
 model BookingNight {

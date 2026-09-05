@@ -3,6 +3,7 @@ import { database } from "@platform/database";
 import { demoSearchFallback } from "../discovery/demo-fallback";
 import { searchHotels } from "../discovery/service";
 import { searchHotelsV2 } from "../discovery/search-v2";
+import { searchHotelbeds } from "../hotelbeds/client";
 
 type CampaignSnapshot = Readonly<{
   id: string;
@@ -102,6 +103,60 @@ export async function searchHotelsWithVisibilityBoost(input: DiscoverySearchInpu
   return {...base, results: await safeVisibilityBoost(base.results,input,context.travelerCountry)};
 }
 
+type SearchV2Result = Awaited<ReturnType<typeof searchHotelsV2>>;
+type SearchV2Item = SearchV2Result["results"][number];
+
+async function searchHotelbedsSafely(input: DiscoverySearchInput, base: SearchV2Result, context: VisibilitySearchContext): Promise<SearchV2Item[]> {
+  // Hotelbeds requires every child's age. The current public search form does not
+  // collect those ages yet, so keep the partner search complete for family queries.
+  if (input.children > 0) return [];
+  try {
+    const rows = await searchHotelbeds({
+      destination: base.resolvedDestination?.nameEn ?? input.destination,
+      arrival: input.arrival,
+      departure: input.departure,
+      adults: input.adults,
+      children: input.children,
+      ...(context.travelerCountry ? {sourceMarket: context.travelerCountry} : {}),
+    });
+    return rows.map((hotel) => ({
+      id: hotel.id,
+      slug: hotel.slug,
+      name: hotel.name,
+      city: hotel.city,
+      countryCode: hotel.countryCode,
+      area: hotel.area,
+      starRating: hotel.starRating,
+      currency: hotel.currency,
+      coverPhoto: null,
+      amenities: [],
+      reviewSummary: hotel.reviewSummary,
+      availableOffers: hotel.availableOffers,
+      from: hotel.from,
+    } as unknown as SearchV2Item));
+  } catch (error) {
+    console.error("Hotelbeds search unavailable; continuing with HandMeKey inventory", error);
+    return [];
+  }
+}
+
+function mergeProviderResults(partnerResults: SearchV2Item[], providerResults: SearchV2Item[], pageSize: number): SearchV2Item[] {
+  if (!providerResults.length) return partnerResults;
+  if (!partnerResults.length) return providerResults.slice(0, pageSize);
+  const providerQuota = Math.min(providerResults.length, Math.max(2, Math.floor(pageSize / 5)));
+  const partnerQuota = Math.max(0, pageSize - providerQuota);
+  const partners = partnerResults.slice(0, partnerQuota);
+  const merged: SearchV2Item[] = [];
+  const interval = Math.max(1, Math.ceil(partners.length / providerQuota));
+  let providerIndex = 0;
+  for (let index = 0; index < partners.length || providerIndex < providerQuota; index += 1) {
+    if (index < partners.length) merged.push(partners[index]!);
+    if ((index + 1) % interval === 0 && providerIndex < providerQuota) merged.push(providerResults[providerIndex++]!);
+  }
+  while (providerIndex < providerQuota) merged.push(providerResults[providerIndex++]!);
+  return merged.slice(0, pageSize);
+}
+
 export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchInput, context: VisibilitySearchContext = {}) {
   type SearchV2Result = Awaited<ReturnType<typeof searchHotelsV2>>;
   let base: SearchV2Result;
@@ -117,5 +172,12 @@ export async function searchHotelsV2WithVisibilityBoost(input: DiscoverySearchIn
     base = demoSearchFallback(input) as unknown as SearchV2Result;
   }
 
-  return {...base, results: await safeVisibilityBoost(base.results,input,context.travelerCountry)};
+  const providerResults = await searchHotelbedsSafely(input, base, context);
+  const combined = mergeProviderResults(base.results, providerResults, input.pageSize);
+  return {
+    ...base,
+    count: combined.length,
+    candidateCount: base.candidateCount + providerResults.length,
+    results: await safeVisibilityBoost(combined,input,context.travelerCountry),
+  };
 }

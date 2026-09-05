@@ -19,3 +19,4 @@ export * from "./communications";
 export * from "./finance";
 export * from "./loyalty-admin";
 export * from "./cars";
+export * from "./api-bookings";
