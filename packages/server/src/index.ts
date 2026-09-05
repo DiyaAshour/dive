@@ -31,6 +31,7 @@ export * from "./cars/booking";
 export * from "./cars/demo-booking";
 export * from "./cars/reservation-management";
 export * from "./cars/media";
+export {listPublicCarVehiclePhotosWithDemo as listPublicCarVehiclePhotos} from "./cars/blob-demo-media";
 export * from "./publishing/service";
 export {listFeaturedHotels, searchHotels} from "./discovery/service";
 export * from "./discovery/destinations";
