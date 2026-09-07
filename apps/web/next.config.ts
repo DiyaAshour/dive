@@ -29,5 +29,6 @@ const nextConfig:NextConfig={
   transpilePackages:["@platform/core","@platform/contracts","@platform/server","@platform/database"],
   poweredByHeader:false,
   async headers(){return [{source:"/:path*",headers:securityHeaders}]},
+  async rewrites(){return [{source:"/hotel/nuitee-:id",destination:"/nuitee-hotel/:id"}]},
 };
 export default nextConfig;
