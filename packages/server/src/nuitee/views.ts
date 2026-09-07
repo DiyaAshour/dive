@@ -91,6 +91,8 @@ export function prebookView(payload: unknown, fallbackOfferId: string, sandbox: 
   const refundable = text(policies.refundableTag)?.toUpperCase() === "RFN";
   return {
     prebookId: text(data.prebookId) ?? "",
+    transactionId: text(data.transactionId),
+    secretKey: text(data.secretKey),
     offerId: text(data.offerId) ?? fallbackOfferId,
     hotelId: text(data.hotelId) ?? "",
     price: number(data.price) ?? number(total.amount) ?? number(retail.amount) ?? 0,
