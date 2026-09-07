@@ -38,6 +38,20 @@ export type NuiteeOffer = Readonly<{
 
 export type NuiteePhoto = Readonly<{url: string; alt: string; sortOrder: number}>;
 
+export type NuiteeRoom = Readonly<{
+  id: string;
+  name: string;
+  description: string | null;
+  maxAdults: number | null;
+  maxChildren: number | null;
+  maxOccupancy: number | null;
+  sizeValue: number | null;
+  sizeUnit: string | null;
+  beds: ReadonlyArray<{quantity: number; type: string; size: string | null}>;
+  amenities: ReadonlyArray<{code: string; name: string}>;
+  photos: readonly NuiteePhoto[];
+}>;
+
 export type NuiteeSearchResult = Readonly<{
   id: string;
   slug: string;
@@ -74,6 +88,7 @@ export type NuiteeHotelDetails = Readonly<{
   currency: string;
   coverPhoto: NuiteePhoto | null;
   photos: readonly NuiteePhoto[];
+  rooms: readonly NuiteeRoom[];
   amenities: ReadonlyArray<{code: string; name: string; category: string | null}>;
   reviewSummary: {count: number; overall: number | null};
   checkInTime: string | null;

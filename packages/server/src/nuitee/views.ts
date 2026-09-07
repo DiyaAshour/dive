@@ -1,4 +1,4 @@
-import type {NuiteeHotelDetails, NuiteePhoto, NuiteePrebook, NuiteeSearchInput, NuiteeSearchResult} from "./types";
+import type {NuiteeHotelDetails, NuiteePhoto, NuiteePrebook, NuiteeRoom, NuiteeSearchInput, NuiteeSearchResult} from "./types";
 import {number, offersFromHotel, record, records, text} from "./normalize";
 
 type RawRecord = Record<string, unknown>;
@@ -67,6 +67,7 @@ export function hotelView(code: string, contentPayload: unknown, ratesPayload: u
     currency: offers[0]!.currency,
     coverPhoto: photos[0] ?? null,
     photos,
+    rooms: roomDetails(content),
     amenities: amenities(content),
     reviewSummary: reviewSummary(content),
     checkInTime: text(times.checkin) ?? text(times.checkinStart),
@@ -120,6 +121,53 @@ function hotelPhotos(content: RawRecord, hotelName: string): NuiteePhoto[] {
   return photos.sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
+function roomDetails(content: RawRecord): NuiteeRoom[] {
+  return records(content.rooms).flatMap((room, roomIndex) => {
+    const id = text(room.id) ?? text(room.roomId);
+    if (!id) return [];
+    const name = text(room.roomName) ?? text(room.name) ?? `Room ${roomIndex + 1}`;
+    const seen = new Set<string>();
+    const photos = records(room.photos).flatMap((photo, index) => {
+      const url = text(photo.url) ?? text(photo.failoverPhoto);
+      if (!url || seen.has(url)) return [];
+      seen.add(url);
+      const order = photo.mainPhoto === true ? 0 : number(photo.classOrder) ?? number(photo.order) ?? index + 1;
+      return [{
+        url,
+        alt: text(photo.imageDescription) ?? text(photo.imageClass1) ?? name,
+        sortOrder: order,
+      }];
+    }).sort((left, right) => left.sortOrder - right.sortOrder);
+    const beds = records(room.bedTypes).flatMap((bed) => {
+      const type = text(bed.bedType) ?? text(bed.type);
+      if (!type) return [];
+      return [{
+        quantity: Math.max(1, Math.round(number(bed.quantity) ?? 1)),
+        type,
+        size: text(bed.bedSize),
+      }];
+    });
+    const roomAmenities = records(room.roomAmenities).flatMap((amenity, index) => {
+      const label = text(amenity.name);
+      if (!label) return [];
+      return [{code: String(number(amenity.amenitiesId) ?? text(amenity.code) ?? index), name: label}];
+    });
+    return [{
+      id,
+      name,
+      description: plainText(text(room.description)),
+      maxAdults: integerOrNull(room.maxAdults),
+      maxChildren: integerOrNull(room.maxChildren),
+      maxOccupancy: integerOrNull(room.maxOccupancy),
+      sizeValue: number(room.roomSizeSquare) ?? number(room.roomSize),
+      sizeUnit: text(room.roomSizeUnit),
+      beds,
+      amenities: roomAmenities,
+      photos,
+    }];
+  });
+}
+
 function amenities(content: RawRecord): Array<{code: string; name: string; category: string | null}> {
   const rich = records(content.facilities).flatMap((item, index) => {
     const name = text(item.name);
@@ -136,5 +184,6 @@ function reviewSummary(content: RawRecord): {count: number; overall: number | nu
   const rating = number(content.rating);
   return {count, overall: rating === null ? null : Math.max(0, Math.min(10, rating))};
 }
+function integerOrNull(value: unknown): number | null { const parsed = number(value); return parsed === null ? null : Math.max(0, Math.round(parsed)); }
 function stars(value: number | null): number | null { return value === null ? null : Math.max(0, Math.min(5, value)); }
 function plainText(value: string | null): string | null { return value ? value.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim() || null : null; }
