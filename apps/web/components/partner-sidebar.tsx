@@ -14,7 +14,7 @@ type PartnerSidebarProps = Readonly<{
   city?: string;
   status?: string;
   locale: Locale;
-  active: "overview" | "rooms" | "rates" | "connectivity" | "reservations" | "finance" | "performance" | "promotions" | "visibility" | "messages" | "reviews";
+  active: "overview" | "property" | "rooms" | "rates" | "connectivity" | "reservations" | "finance" | "performance" | "promotions" | "visibility" | "messages" | "reviews";
 }>;
 
 export async function PartnerSidebar({hotelId, hotelName, city, status, active, locale}: PartnerSidebarProps) {
@@ -52,8 +52,8 @@ export async function PartnerSidebar({hotelId, hotelName, city, status, active, 
     </nav>
     <div className="partnerSidebarFooter">
       <LanguageSwitcher locale={locale} compact/>
-      {can("hotel:edit") && <Link href={href("/hotel-dashboard/property")}><Settings2 size={16}/>{locale === "ar" ? "إعدادات الفندق" : "Property settings"}</Link>}
-      {can("hotel:edit") && <Link href={href("/hotel-dashboard/connectivity")}><Cable size={16}/>{locale === "ar" ? "الربط والتكاملات" : "Integrations"}</Link>}
+      {can("hotel:edit") && <Link className={active === "property" ? "active" : ""} href={href("/hotel-dashboard/property")}><Settings2 size={16}/>{locale === "ar" ? "إعدادات الفندق" : "Property settings"}</Link>}
+      {can("hotel:edit") && <Link className={active === "connectivity" ? "active" : ""} href={href("/hotel-dashboard/connectivity")}><Cable size={16}/>{locale === "ar" ? "الربط والتكاملات" : "Integrations"}</Link>}
       {can("hotel:edit") && <Link href="/partner/onboarding"><Settings2 size={16}/>{copy.addProperty}</Link>}
       <Link href="/">{copy.openMarketplace}</Link>
     </div>
