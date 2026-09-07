@@ -16,6 +16,7 @@ export class NuiteeConfigurationError extends Error {
 }
 
 export async function searchNuitee(input: NuiteeSearchInput): Promise<NuiteeSearchResult[]> {
+  if (!isNuiteeConfigured()) return [];
   if (input.paymentMode === "PAY_AT_HOTEL") return [];
   if (input.children > 0 && input.childrenAges?.length !== input.children) return [];
   const countryCode = (input.countryCode ?? "JO").trim().toUpperCase();
