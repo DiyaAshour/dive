@@ -84,6 +84,8 @@ export type NuiteeHotelDetails = Readonly<{
 
 export type NuiteePrebook = Readonly<{
   prebookId: string;
+  transactionId: string | null;
+  secretKey: string | null;
   offerId: string;
   hotelId: string;
   price: number;
@@ -98,6 +100,7 @@ export type NuiteePrebook = Readonly<{
 
 export type NuiteeBookingInput = Readonly<{
   prebookId: string;
+  transactionId: string;
   holderFirstName: string;
   holderLastName: string;
   email: string;
