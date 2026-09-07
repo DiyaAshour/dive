@@ -69,15 +69,18 @@ export async function getNuiteeHotelDetails(code: string, input: NuiteeSearchInp
 export async function prebookNuitee(offerId: string): Promise<NuiteePrebook> {
   const clean = offerId.trim();
   if (!clean) throw new Error("Nuitee offerId is required");
-  const payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", {offerId: clean, usePaymentSdk: false}, 35_000);
+  const payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", {offerId: clean, usePaymentSdk: true}, 35_000);
   const view = prebookView(payload, clean, isNuiteeSandbox());
   if (!view.prebookId) throw new Error("Nuitee did not return a prebookId");
+  if (!view.transactionId || !view.secretKey) throw new Error("Nuitee Payment SDK data was not returned by prebook");
   return view;
 }
 
 export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBookingResult> {
   const prebookId = input.prebookId.trim();
+  const transactionId = input.transactionId.trim();
   if (!prebookId) throw new Error("Nuitee prebookId is required");
+  if (!transactionId) throw new Error("Nuitee transactionId is required");
   const payload = await request<unknown>(`${BOOK_BASE}/rates/book`, "POST", {
     prebookId,
     holder: {
@@ -87,7 +90,7 @@ export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBooki
       ...(input.phone?.trim() ? {phone: input.phone.trim()} : {}),
     },
     guests: [{occupancyNumber: 1, firstName: input.holderFirstName.trim(), lastName: input.holderLastName.trim(), email: input.email.trim()}],
-    payment: {method: bookingPaymentMethod()},
+    payment: {method: "TRANSACTION_ID", transactionId},
   }, 70_000);
   const data = record(record(payload).data);
   return {
@@ -120,12 +123,6 @@ async function request<T>(url: string, method: "GET" | "POST", body?: RawRecord,
 function marginBody(): RawRecord {
   const margin = Number(process.env.NUITEE_MARGIN_PERCENT ?? "");
   return Number.isFinite(margin) && margin >= 0 && margin <= 50 ? {margin} : {};
-}
-function bookingPaymentMethod(): string {
-  const configured = process.env.NUITEE_BOOKING_PAYMENT_METHOD?.trim().toUpperCase();
-  if (configured) return configured;
-  if (isNuiteeSandbox()) return "ACC_CREDIT_CARD";
-  throw new Error("NUITEE_BOOKING_PAYMENT_METHOD must be configured before production bookings are enabled");
 }
 export function isNuiteeConfigured(): boolean { return Boolean(process.env.NUITEE_API_KEY?.trim()); }
 export function isNuiteeSandbox(): boolean {
