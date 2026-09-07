@@ -6,6 +6,22 @@ import {listHotelReservationCenter} from "./reservation-management";
 
 const DAY_MS = 86_400_000;
 
+type InventoryRow = Readonly<{
+  roomTypeId: string;
+  date: Date;
+  available: number;
+  overbookingLimit: number;
+}>;
+
+type InventoryAlert = Readonly<{
+  roomTypeId: string;
+  roomName: string;
+  date: string;
+  available: number | null;
+  quantity: number;
+  kind: "LOW" | "SOLD_OUT" | "MISSING";
+}>;
+
 export async function getPartnerTodayDashboard(actorUserId: string, hotelId: string) {
   await requireHotelPermission(actorUserId, hotelId, "hotel:view");
   const db = database();
@@ -29,6 +45,13 @@ export async function getPartnerTodayDashboard(actorUserId: string, hotelId: str
   const rangeEnd = new Date(rangeStart.getTime() + (6 * DAY_MS));
   const roomIds = hotel.roomTypes.map((room) => room.id);
   const last24Hours = new Date(Date.now() - DAY_MS);
+  const inventoryPromise: Promise<InventoryRow[]> = roomIds.length
+    ? db.inventoryDay.findMany({
+        where: {roomTypeId: {in: roomIds}, date: {gte: rangeStart, lte: rangeEnd}},
+        select: {roomTypeId: true, date: true, available: true, overbookingLimit: true},
+        orderBy: [{date: "asc"}, {roomTypeId: "asc"}],
+      })
+    : Promise.resolve([]);
 
   const [report, unreadMessages, newBookings, inventoryRows] = await Promise.all([
     listHotelReservationCenter(actorUserId, hotelId, {date: today, scope: "ALL", q: ""}),
@@ -38,18 +61,12 @@ export async function getPartnerTodayDashboard(actorUserId: string, hotelId: str
     db.booking.count({
       where: {hotelId, status: {in: ["CONFIRMED", "MODIFIED"]}, createdAt: {gte: last24Hours}},
     }),
-    roomIds.length
-      ? db.inventoryDay.findMany({
-          where: {roomTypeId: {in: roomIds}, date: {gte: rangeStart, lte: rangeEnd}},
-          select: {roomTypeId: true, date: true, available: true, overbookingLimit: true},
-          orderBy: [{date: "asc"}, {roomTypeId: "asc"}],
-        })
-      : Promise.resolve([]),
+    inventoryPromise,
   ]);
 
   const roomById = new Map(hotel.roomTypes.map((room) => [room.id, room]));
   const seenToday = new Set<string>();
-  const inventoryAlerts = inventoryRows.flatMap((row) => {
+  const inventoryAlerts: InventoryAlert[] = inventoryRows.flatMap((row): InventoryAlert[] => {
     const room = roomById.get(row.roomTypeId);
     if (!room) return [];
     const date = row.date.toISOString().slice(0, 10);
@@ -63,7 +80,7 @@ export async function getPartnerTodayDashboard(actorUserId: string, hotelId: str
       date,
       available: sellable,
       quantity: room.quantity,
-      kind: sellable <= 0 ? "SOLD_OUT" as const : "LOW" as const,
+      kind: sellable <= 0 ? "SOLD_OUT" : "LOW",
     }];
   });
 
@@ -75,7 +92,7 @@ export async function getPartnerTodayDashboard(actorUserId: string, hotelId: str
         date: today,
         available: null,
         quantity: room.quantity,
-        kind: "MISSING" as const,
+        kind: "MISSING",
       });
     }
   }
