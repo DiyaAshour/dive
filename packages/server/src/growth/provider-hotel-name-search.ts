@@ -1,4 +1,5 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
+import {demoSearchFallback} from "../discovery/demo-fallback";
 import {getHotelbedsHotelDetails, type HotelbedsSearchResult} from "../hotelbeds/client";
 import {searchHotelbedsContentHotels} from "../hotelbeds/catalog";
 import {searchNuitee, type NuiteeSearchResult} from "../nuitee/client";
@@ -18,7 +19,11 @@ export async function searchHotelsV2WithVisibilityBoost(
   context: VisibilitySearchContext = {},
 ): Promise<SearchResult> {
   const rawBase = await searchHotelsV2WithVisibilityBoostBase(input, context);
-  const base = withoutDemoHotels(rawBase);
+  const cleanedBase = withoutDemoHotels(rawBase);
+  const fallback = cleanedBase.resolvedDestination ? null : demoSearchFallback(input);
+  const base = fallback?.resolvedDestination
+    ? ({...cleanedBase, resolvedDestination: fallback.resolvedDestination} as SearchResult)
+    : cleanedBase;
   if (input.cursor) return base;
 
   if (base.resolvedDestination) return addNuiteeDestinationInventory(base, input, context);
