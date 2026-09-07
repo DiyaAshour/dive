@@ -4,7 +4,7 @@ import {getNuiteeHotelDetails} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {requestGuestMarket} from "@/lib/request-guest-market";
 import {defaultStayDates} from "@/lib/stay-dates";
-import {NuiteeHotelPage} from "../../hotel/[id]/nuitee-page";
+import {NuiteeHotelPageV2} from "../../hotel/[id]/nuitee-page-v2";
 
 type SearchParams=Record<string,string|string[]|undefined>;
 
@@ -38,7 +38,7 @@ export default async function NuiteeHotelRoute({params,searchParams}:{params:Pro
     console.error("Nuitee hotel detail unavailable",error);
   }
   if(!hotel)return <main className="hotelExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader/><section className="shell hotelDetailSection"><div className="premiumEmpty"><h3>{market.locale==="ar"?"السعر لم يعد متاحاً":"This Nuitee rate is no longer available"}</h3><p>{market.locale==="ar"?"ارجع إلى البحث واختر سعراً جديداً.":"Return to search and choose a fresh supplier rate."}</p><Link className="resultCta" href="/search">{market.locale==="ar"?"العودة إلى البحث":"Return to search"}</Link></div></section></main>;
-  return <NuiteeHotelPage hotel={hotel} stay={stay} market={market}/>;
+  return <NuiteeHotelPageV2 hotel={hotel} stay={stay} market={market}/>;
 }
 
 function first(value:string|string[]|undefined):string|undefined{return Array.isArray(value)?value[0]:value;}
