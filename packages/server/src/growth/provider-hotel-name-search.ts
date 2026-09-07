@@ -1,6 +1,7 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
 import {getHotelbedsHotelDetails, type HotelbedsSearchResult} from "../hotelbeds/client";
 import {searchHotelbedsContentHotels} from "../hotelbeds/catalog";
+import {searchNuitee, type NuiteeSearchResult} from "../nuitee/client";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
@@ -8,21 +9,21 @@ type SearchResult = Awaited<ReturnType<typeof searchHotelsV2WithVisibilityBoostB
 type SearchItem = SearchResult["results"][number];
 
 /**
- * Extends destination search with Hotelbeds hotel-name lookup backed by the
- * local Content API catalogue. Static Hotelbeds content is never fetched in
- * real time from the customer request. Once a name resolves locally we make
- * one Availability request for the best matching provider hotel code.
+ * Extends the unified HandMeKey search with supplier inventory. Hotelbeds
+ * hotel-name lookup stays backed by the local Content API catalogue, while
+ * Nuitee Connect is queried only after HandMeKey resolves a real destination.
  */
 export async function searchHotelsV2WithVisibilityBoost(
   input: DiscoverySearchInput,
   context: VisibilitySearchContext = {},
 ): Promise<SearchResult> {
   const base = await searchHotelsV2WithVisibilityBoostBase(input, context);
+  if (input.cursor) return base;
 
-  if (input.cursor || base.resolvedDestination) return base;
+  if (base.resolvedDestination) return addNuiteeDestinationInventory(base, input, context);
+
   const query = normalizeHotelQuery(input.destination);
   if (query.length < 3) return base;
-
   const providerMatches = await searchHotelbedsByHotelName(input, context, query);
   if (!providerMatches.length) return base;
 
@@ -41,6 +42,48 @@ export async function searchHotelsV2WithVisibilityBoost(
     candidateCount: base.candidateCount + providerItems.length,
     results: combined,
   };
+}
+
+async function addNuiteeDestinationInventory(base: SearchResult, input: DiscoverySearchInput, context: VisibilitySearchContext): Promise<SearchResult> {
+  if (input.children > 0 && input.childrenAges.length !== input.children) return base;
+  try {
+    const destination = base.resolvedDestination;
+    if (!destination) return base;
+    const rows = await searchNuitee({
+      destination: destination.nameEn,
+      countryCode: destination.countryCode,
+      arrival: input.arrival,
+      departure: input.departure,
+      adults: input.adults,
+      children: input.children,
+      ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
+      ...(context.travelerCountry ? {guestNationality: context.travelerCountry} : {}),
+      currency: "JOD",
+      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      stars: input.stars,
+      freeCancellation: input.freeCancellation,
+      ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
+      limit: Math.min(input.pageSize, 20),
+      maxRatesPerHotel: 4,
+    });
+    if (!rows.length) return base;
+    const providerItems = rows.map(nuiteeSearchItem);
+    let combined = dedupeResults([...base.results, ...providerItems]).slice(0, input.pageSize);
+    if (providerItems.length && combined.length && !combined.some((item) => item.slug.startsWith("nuitee-"))) {
+      combined = [...combined.slice(0, -1), providerItems[0]!];
+    }
+    console.info("Nuitee Connect destination search completed", {destination: destination.nameEn, resultCount: rows.length});
+    return {
+      ...base,
+      count: combined.length,
+      candidateCount: base.candidateCount + providerItems.length,
+      results: combined,
+    };
+  } catch (error) {
+    console.error("Nuitee Connect search unavailable; continuing with existing inventory", error);
+    return base;
+  }
 }
 
 async function searchHotelbedsByHotelName(
@@ -62,8 +105,6 @@ async function searchHotelbedsByHotelName(
     .filter((hotel) => hotelNameMatchesQuery(hotel.name, hotel.destinationName ?? "", hotel.zoneName, normalizedQuery))
     .sort((left, right) => hotelCatalogMatchScore(right.name, normalizedQuery) - hotelCatalogMatchScore(left.name, normalizedQuery));
 
-  // Name discovery is local; availability is requested only for the strongest
-  // matching provider code, preventing one typed hotel name from burning quota.
   for (const candidate of ranked.slice(0, 2)) {
     try {
       const hotel = await getHotelbedsHotelDetails(candidate.code, {
@@ -132,10 +173,29 @@ function providerSearchItem(hotel: HotelbedsSearchResult): SearchItem {
   } as unknown as SearchItem;
 }
 
+function nuiteeSearchItem(hotel: NuiteeSearchResult): SearchItem {
+  return {
+    id: hotel.id,
+    slug: hotel.slug,
+    name: hotel.name,
+    city: hotel.city,
+    countryCode: hotel.countryCode,
+    area: hotel.area,
+    starRating: hotel.starRating,
+    currency: hotel.currency,
+    coverPhoto: hotel.coverPhoto,
+    amenities: hotel.amenities,
+    reviewSummary: hotel.reviewSummary,
+    availableOffers: hotel.availableOffers,
+    from: hotel.from,
+    source: "NUITEE_API",
+    visibilityBoost: null,
+  } as unknown as SearchItem;
+}
+
 function hotelNameMatchesQuery(name: string, city: string, area: string | null, normalizedQuery: string): boolean {
   const normalizedName = normalizeHotelQuery(name);
   if (normalizedName.includes(normalizedQuery)) return true;
-
   const searchable = normalizeHotelQuery(`${name} ${city} ${area ?? ""}`);
   const terms = normalizedQuery.split(" ").filter((term) => term.length >= 2);
   return terms.length > 0 && terms.every((term) => searchable.includes(term));
@@ -151,15 +211,7 @@ function hotelCatalogMatchScore(name: string, normalizedQuery: string): number {
 }
 
 function normalizeHotelQuery(value: string): string {
-  return value
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[\u064b-\u065f\u0670]/g, "")
-    .replace(/[أإآٱ]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+  return value.normalize("NFKD").toLowerCase().replace(/[\u064b-\u065f\u0670]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ");
 }
 
 function dedupeResults(results: SearchItem[]): SearchItem[] {
