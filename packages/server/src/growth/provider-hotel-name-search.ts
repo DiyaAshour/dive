@@ -17,7 +17,8 @@ export async function searchHotelsV2WithVisibilityBoost(
   input: DiscoverySearchInput,
   context: VisibilitySearchContext = {},
 ): Promise<SearchResult> {
-  const base = await searchHotelsV2WithVisibilityBoostBase(input, context);
+  const rawBase = await searchHotelsV2WithVisibilityBoostBase(input, context);
+  const base = withoutDemoHotels(rawBase);
   if (input.cursor) return base;
 
   if (base.resolvedDestination) return addNuiteeDestinationInventory(base, input, context);
@@ -41,6 +42,17 @@ export async function searchHotelsV2WithVisibilityBoost(
     count: combined.length,
     candidateCount: base.candidateCount + providerItems.length,
     results: combined,
+  };
+}
+
+function withoutDemoHotels(base: SearchResult): SearchResult {
+  const results = base.results.filter((hotel) => !hotel.slug.startsWith("demo-"));
+  if (results.length === base.results.length) return base;
+  return {
+    ...base,
+    count: results.length,
+    candidateCount: Math.max(results.length, base.candidateCount - (base.results.length - results.length)),
+    results,
   };
 }
 
