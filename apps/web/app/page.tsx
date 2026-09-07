@@ -55,7 +55,7 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
     listFeaturedDestinations({countryCode: "JO", limit: 4}).catch(() => []),
     requestGuestMarket(),
   ]);
-  const hotels = liveHotels;
+  const hotels = liveHotels.filter((hotel)=>!hotel.slug.startsWith("demo-"));
   const destinations = liveDestinations.length ? liveDestinations : demoDestinationsFallback(4);
   const locale=market.locale;
   const copy = guestDictionary(locale);
