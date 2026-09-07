@@ -63,6 +63,7 @@ export * from "./bookings/experience";
 export * from "./bookings/demo-quote";
 export * from "./operations/service";
 export * from "./operations/reservation-management";
+export * from "./operations/partner-dashboard";
 export * from "./operations/guest-view";
 export {getReviewEligibility, createGuestReview, replyToGuestReview} from "./reviews/service";
 export type {ReviewBookingAccess} from "./reviews/service";
