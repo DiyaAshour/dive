@@ -13,7 +13,7 @@
     },
     {
       "path": "/api/v1/internal/seo-hourly-publish",
-      "schedule": "* * * * *"
+      "schedule": "23 * * * *"
     },
     {
       "path": "/api/v1/internal/hotelbeds-content-sync",
