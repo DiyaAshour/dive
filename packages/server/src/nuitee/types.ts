@@ -129,7 +129,7 @@ export type NuiteeBookingInput = Readonly<{
   holderFirstName: string;
   holderLastName: string;
   email: string;
-  phone: string;
+  phone?: string;
 }>;
 
 export type NuiteeBookingResult = Readonly<{
