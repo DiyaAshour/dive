@@ -107,7 +107,7 @@ export async function GET(request:NextRequest){
 
     const hourSlot=Math.floor(Date.now()/3_600_000);
     const locale: "EN"|"AR"=hourSlot%2===0?"EN":"AR";
-    const pillar=pillars[Math.floor(hourSlot/2)%pillars.length];
+    const pillar=pillars[Math.floor(hourSlot/2)%pillars.length]!;
     const category=locale==="AR"?pillar.ar:pillar.en;
     const existing=posts.filter((post)=>post.locale===locale);
     const model=process.env.OPENAI_BLOG_MODEL?.trim()||"gpt-5.6-luna";
@@ -184,7 +184,6 @@ async function generateArticle(input:{
   qualityFeedback:string[];
 }){
   const language=input.locale==="AR"?"Arabic":"English";
-  const localePath=input.locale.toLowerCase();
   const existingTitles=input.existing.slice(0,120).map((post)=>`- ${post.title} [${post.slug}]`).join("\n")||"- None yet";
   const feedback=input.qualityFeedback.length?`\nA previous attempt failed these hard quality checks. Rewrite from scratch and fix every item:\n${input.qualityFeedback.map((item)=>`- ${item}`).join("\n")}`:"";
   const instructions=[
@@ -281,7 +280,7 @@ function qualityIssues(generated:Generated,existing:ExistingPost[],sources:strin
   if(article.tags.length<3||article.tags.length>8)issues.push("Use 3-8 specific topic tags");
   if(warningPresent)issues.push("Research notes contain a publication-blocking verification warning");
   if(similarity>=0.68)issues.push(`Title is too similar to an existing article (similarity ${similarity.toFixed(2)})`);
-  if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizeSlug(article.slug)))issues.push("Slug must be lowercase English ASCII kebab-case");
+  if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(article.slug.trim()))issues.push("Slug must be lowercase English ASCII kebab-case");
   return issues;
 }
 
