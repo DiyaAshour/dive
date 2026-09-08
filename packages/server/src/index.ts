@@ -42,6 +42,7 @@ export * from "./hotelbeds/content";
 export * from "./hotelbeds/catalog";
 export * from "./hotelbeds/post-booking";
 export * from "./nuitee/client";
+export * from "./nuitee/checkout-session";
 export * from "./api-bookings/service";
 export * from "./api-bookings/payment";
 export * from "./api-bookings/voucher";
