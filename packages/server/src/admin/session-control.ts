@@ -55,6 +55,7 @@ export async function revokePlatformManagedUserSession(actorUserId: string, user
 export async function assertPlatformOwnerConfigured() {
   const configuredId = process.env.PLATFORM_OWNER_USER_ID?.trim();
   const configuredEmail = process.env.PLATFORM_OWNER_EMAIL?.trim().toLowerCase();
+  const hasConfiguredOwner = Boolean(configuredId || configuredEmail);
 
   const owner = await database().user.findFirst({
     where: {
@@ -62,13 +63,13 @@ export async function assertPlatformOwnerConfigured() {
       ...(configuredEmail ? {email: configuredEmail} : {}),
       platformRole: "PLATFORM_ADMIN",
     },
-    orderBy: configuredId || configuredEmail ? undefined : [{createdAt: "asc"}, {id: "asc"}],
+    ...(!hasConfiguredOwner ? {orderBy: [{createdAt: "asc" as const}, {id: "asc" as const}]} : {}),
     select: {id: true, email: true, displayName: true, platformRole: true, createdAt: true},
   });
   if (!owner) {
     throw new ApplicationError(
-      configuredId || configuredEmail ? "PLATFORM_OWNER_INVALID" : "PLATFORM_OWNER_NOT_CONFIGURED",
-      configuredId || configuredEmail
+      hasConfiguredOwner ? "PLATFORM_OWNER_INVALID" : "PLATFORM_OWNER_NOT_CONFIGURED",
+      hasConfiguredOwner
         ? "Configured platform owner must exist and have PLATFORM_ADMIN role"
         : "At least one PLATFORM_ADMIN account is required for background administration",
       503,
