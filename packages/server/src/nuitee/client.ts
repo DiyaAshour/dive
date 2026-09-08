@@ -79,17 +79,20 @@ export async function prebookNuitee(offerId: string): Promise<NuiteePrebook> {
 export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBookingResult> {
   const prebookId = input.prebookId.trim();
   const transactionId = input.transactionId.trim();
+  const phone = input.phone.trim();
   if (!prebookId) throw new Error("Nuitee prebookId is required");
   if (!transactionId) throw new Error("Nuitee transactionId is required");
+  if (!phone) throw new Error("Nuitee holder phone is required");
   const payload = await request<unknown>(`${BOOK_BASE}/rates/book`, "POST", {
     prebookId,
+    clientReference: clientReference(transactionId),
     holder: {
       firstName: input.holderFirstName.trim(),
       lastName: input.holderLastName.trim(),
       email: input.email.trim(),
-      ...(input.phone?.trim() ? {phone: input.phone.trim()} : {}),
+      phone,
     },
-    guests: [{occupancyNumber: 1, firstName: input.holderFirstName.trim(), lastName: input.holderLastName.trim(), email: input.email.trim()}],
+    guests: [{occupancyNumber: 1, firstName: input.holderFirstName.trim(), lastName: input.holderLastName.trim(), email: input.email.trim(), phone}],
     payment: {method: "TRANSACTION_ID", transactionId},
   }, 70_000);
   const data = record(record(payload).data);
@@ -123,6 +126,9 @@ async function request<T>(url: string, method: "GET" | "POST", body?: RawRecord,
 function marginBody(): RawRecord {
   const margin = Number(process.env.NUITEE_MARGIN_PERCENT ?? "");
   return Number.isFinite(margin) && margin >= 0 && margin <= 50 ? {margin} : {};
+}
+function clientReference(transactionId: string): string {
+  return `HMK-${transactionId}`.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 120);
 }
 export function isNuiteeConfigured(): boolean { return Boolean(process.env.NUITEE_API_KEY?.trim()); }
 export function isNuiteeSandbox(): boolean {
