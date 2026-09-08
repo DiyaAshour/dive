@@ -12,16 +12,15 @@ export async function GET(request: NextRequest) {
     });
     if (!parsed.success) return validationError(parsed.error);
 
-    const local = await searchDestinationSuggestions(parsed.data.q, parsed.data.locale, parsed.data.limit);
     const query = parsed.data.q.trim();
-    if (query.length < 2) return ok(local);
+    const localPromise = searchDestinationSuggestions(parsed.data.q, parsed.data.locale, parsed.data.limit);
+    if (query.length < 2) return ok(await localPromise);
 
-    let providerHotels: Awaited<ReturnType<typeof searchNuiteeHotelSuggestions>> = [];
-    try {
-      providerHotels = await searchNuiteeHotelSuggestions(query, Math.min(5, parsed.data.limit));
-    } catch (error) {
+    const providerPromise = searchNuiteeHotelSuggestions(query, Math.min(5, parsed.data.limit)).catch((error) => {
       console.warn("Nuitee autocomplete unavailable; returning local suggestions", error);
-    }
+      return [];
+    });
+    const [local, providerHotels] = await Promise.all([localPromise, providerPromise]);
     if (!providerHotels.length) return ok(local);
 
     const seen = new Set(local.filter((item) => item.kind === "HOTEL").map((item) => item.label.trim().toLowerCase()));
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
         id: `nuitee:${hotel.id}`,
         label: hotel.name,
         searchValue: hotel.name,
-        secondary: location || hotel.address || (parsed.data.locale === "ar" ? "Nuitee Connect" : "Nuitee Connect"),
+        secondary: location || hotel.address || "Nuitee Connect",
         type: "HOTEL",
         landingPath: `/hotel/nuitee-${hotel.id}`,
       }];
