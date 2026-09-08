@@ -97,6 +97,33 @@ export async function searchNuiteeByHotelName(input: NuiteeHotelNameSearchInput)
   return searchViews(payload, {...rest, destination: hotelName, countryCode});
 }
 
+export async function searchNuiteeHotelIds(input: NuiteeSearchInput & Readonly<{hotelIds: readonly string[]}>): Promise<NuiteeSearchResult[]> {
+  if (!isNuiteeConfigured()) return [];
+  if (input.paymentMode === "PAY_AT_HOTEL") return [];
+  if (input.children > 0 && input.childrenAges?.length !== input.children) return [];
+  const hotelIds = [...new Set(input.hotelIds.map((id) => id.trim()).filter((id) => /^[A-Za-z0-9_-]+$/.test(id)))].slice(0, 50);
+  if (!hotelIds.length) return [];
+  const guestNationality = (input.guestNationality ?? input.countryCode ?? "JO").trim().toUpperCase();
+  const body: RawRecord = {
+    hotelIds,
+    occupancies: [occupancy(input)],
+    currency: (input.currency ?? "JOD").trim().toUpperCase(),
+    guestNationality,
+    checkin: input.arrival,
+    checkout: input.departure,
+    roomMapping: true,
+    includeHotelData: true,
+    maxRatesPerHotel: Math.max(1, Math.min(25, input.maxRatesPerHotel ?? 3)),
+    limit: Math.min(hotelIds.length, Math.max(1, Math.min(50, input.limit ?? hotelIds.length))),
+    timeout: 8,
+    ...(input.stars?.length ? {starRating: input.stars} : {}),
+    ...(input.freeCancellation ? {refundableRatesOnly: true} : {}),
+    ...marginBody(),
+  };
+  const payload = await request<unknown>(`${API_BASE}/hotels/rates`, "POST", body);
+  return searchViews(payload, input);
+}
+
 export async function searchNuitee(input: NuiteeSearchInput): Promise<NuiteeSearchResult[]> {
   if (!isNuiteeConfigured()) return [];
   if (input.paymentMode === "PAY_AT_HOTEL") return [];

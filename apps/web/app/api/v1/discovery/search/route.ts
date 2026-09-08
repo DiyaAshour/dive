@@ -7,6 +7,8 @@ export async function GET(request: Request) {
     const query = new URL(request.url).searchParams;
     const parsed = discoverySearchSchema.safeParse({
       destination: query.get("destination") ?? "",
+      destinationKind: optional(query.get("destinationKind")),
+      destinationId: optional(query.get("destinationId")),
       arrival: query.get("arrival") ?? "",
       departure: query.get("departure") ?? "",
       adults: query.get("adults") ?? 2,

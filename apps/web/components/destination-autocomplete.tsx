@@ -13,18 +13,22 @@ type Suggestion = Readonly<{
   landingPath: string | null;
 }>;
 
+type Selection = Readonly<{kind: Suggestion["kind"]; id: string}>;
+
 type Props = Readonly<{
   locale: "ar" | "en";
   name?: string;
   defaultValue?: string;
+  defaultSelection?: Selection | null;
   required?: boolean;
   ariaLabel?: string;
   placeholder?: string;
   className?: string;
 }>;
 
-export function DestinationAutocomplete({locale, name = "destination", defaultValue = "", required = false, ariaLabel, placeholder, className}: Props) {
+export function DestinationAutocomplete({locale, name = "destination", defaultValue = "", defaultSelection = null, required = false, ariaLabel, placeholder, className}: Props) {
   const [value, setValue] = useState(defaultValue);
+  const [selection, setSelection] = useState<Selection | null>(defaultSelection);
   const [items, setItems] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
@@ -34,25 +38,33 @@ export function DestinationAutocomplete({locale, name = "destination", defaultVa
   const requestId = useRef(0);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       const current = ++requestId.current;
       setLoading(true);
       try {
         const params = new URLSearchParams({q: value.trim(), locale, limit: "8"});
-        const response = await fetch(`/api/v1/discovery/suggestions?${params.toString()}`, {headers: {accept: "application/json"}});
+        const response = await fetch(`/api/v1/discovery/suggestions?${params.toString()}`, {
+          headers: {accept: "application/json"},
+          signal: controller.signal,
+        });
         const body = await response.json().catch(() => null) as {data?: Suggestion[] | null} | null;
         if (current !== requestId.current) return;
         const next = response.ok && Array.isArray(body?.data) ? body.data : [];
         setItems(next);
         setActive(-1);
         if (document.activeElement && rootRef.current?.contains(document.activeElement)) setOpen(true);
-      } catch {
+      } catch (error) {
+        if (controller.signal.aborted) return;
         if (current === requestId.current) setItems([]);
       } finally {
-        if (current === requestId.current) setLoading(false);
+        if (current === requestId.current && !controller.signal.aborted) setLoading(false);
       }
     }, value.trim() ? 180 : 80);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [value, locale]);
 
   useEffect(() => {
@@ -65,6 +77,7 @@ export function DestinationAutocomplete({locale, name = "destination", defaultVa
 
   function select(item: Suggestion) {
     setValue(item.searchValue);
+    setSelection({kind: item.kind, id: item.id});
     setOpen(false);
     setActive(-1);
   }
@@ -73,7 +86,11 @@ export function DestinationAutocomplete({locale, name = "destination", defaultVa
     <input
       name={name}
       value={value}
-      onChange={(event) => {setValue(event.target.value); setOpen(true);}}
+      onChange={(event) => {
+        setValue(event.target.value);
+        setSelection(null);
+        setOpen(true);
+      }}
       onFocus={() => setOpen(true)}
       onKeyDown={(event) => {
         if (event.key === "ArrowDown") {event.preventDefault(); setOpen(true); setActive((index) => Math.min(items.length - 1, index + 1));}
@@ -91,6 +108,8 @@ export function DestinationAutocomplete({locale, name = "destination", defaultVa
       aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
       autoComplete="off"
     />
+    <input type="hidden" name={`${name}Kind`} value={selection?.kind ?? ""}/>
+    <input type="hidden" name={`${name}Id`} value={selection?.id ?? ""}/>
     {open && (loading || items.length > 0) && <div className="destinationSuggestPanel" id={listId} role="listbox">
       <div className="destinationSuggestHead"><Search size={14}/><span>{loading ? (locale === "ar" ? "نبحث عن الوجهات…" : "Finding destinations…") : (locale === "ar" ? "وجهات وفنادق" : "Destinations & hotels")}</span></div>
       {!loading && items.map((item,index) => <button

@@ -1,6 +1,6 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
 import {demoSearchFallback} from "../discovery/demo-fallback";
-import {searchNuitee, searchNuiteeByHotelName, type NuiteeSearchResult} from "../nuitee/client";
+import {searchNuitee, searchNuiteeByHotelName, searchNuiteeHotelIds, type NuiteeSearchResult} from "../nuitee/client";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
@@ -22,6 +22,8 @@ export async function searchHotelsV2WithVisibilityBoost(
     ? ({...cleanedBase, resolvedDestination: fallback.resolvedDestination} as SearchResult)
     : cleanedBase;
 
+  const selectedNuiteeHotel = selectedNuiteeHotelCode(input);
+  if (selectedNuiteeHotel) return exactNuiteeHotelInventory(base, input, context, selectedNuiteeHotel);
   if (input.cursor) return base;
   if (!base.resolvedDestination) return addNuiteeHotelNameInventory(base, input, context);
   return addNuiteeDestinationInventory(base, input, context);
@@ -35,6 +37,65 @@ function withoutDemoHotels(base: SearchResult): SearchResult {
     count: results.length,
     candidateCount: Math.max(results.length, base.candidateCount - (base.results.length - results.length)),
     results,
+  };
+}
+
+function selectedNuiteeHotelCode(input: DiscoverySearchInput): string | null {
+  if (input.destinationKind !== "HOTEL" || !input.destinationId?.startsWith("nuitee:")) return null;
+  const code = input.destinationId.slice("nuitee:".length).trim();
+  return /^[A-Za-z0-9_-]+$/.test(code) ? code : null;
+}
+
+async function exactNuiteeHotelInventory(
+  base: SearchResult,
+  input: DiscoverySearchInput,
+  context: VisibilitySearchContext,
+  hotelId: string,
+): Promise<SearchResult> {
+  if (input.children > 0 && input.childrenAges.length !== input.children) return exactResult(base, [], input.pageSize);
+  try {
+    const rows = await searchNuiteeHotelIds({
+      hotelIds: [hotelId],
+      destination: input.destination,
+      arrival: input.arrival,
+      departure: input.departure,
+      adults: input.adults,
+      children: input.children,
+      ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
+      ...(context.travelerCountry ? {guestNationality: context.travelerCountry} : {}),
+      currency: "JOD",
+      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      stars: input.stars,
+      freeCancellation: input.freeCancellation,
+      ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
+      limit: 1,
+      maxRatesPerHotel: 8,
+    });
+    const providerItems = rows.map(nuiteeSearchItem);
+    console.info("Nuitee Connect exact hotel search completed", {hotelId, resultCount: providerItems.length});
+    return exactResult(base, providerItems, input.pageSize);
+  } catch (error) {
+    console.error("Nuitee Connect exact hotel search unavailable", {hotelId, error});
+    return exactResult(base, [], input.pageSize);
+  }
+}
+
+function exactResult(base: SearchResult, items: SearchItem[], pageSize: number): SearchResult {
+  const results = items.slice(0, pageSize);
+  return {
+    ...base,
+    count: results.length,
+    candidateCount: results.length,
+    resolvedDestination: null,
+    results,
+    pagination: {
+      ...base.pagination,
+      scanned: results.length,
+      offset: 0,
+      nextCursor: null,
+      hasMore: false,
+    },
   };
 }
 
