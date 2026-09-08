@@ -17,7 +17,12 @@ export type NuiteeSearchInput = Readonly<{
   limit?: number;
 }>;
 
-export type NuiteeCancellation = Readonly<{amount: number; from: string | null}>;
+export type NuiteeCancellation = Readonly<{
+  amount: number;
+  from: string | null;
+  currency: string | null;
+  timezone: string | null;
+}>;
 
 export type NuiteeOffer = Readonly<{
   offerId: string;
@@ -84,6 +89,8 @@ export type NuiteeHotelDetails = Readonly<{
   area: string | null;
   address: string | null;
   description: string | null;
+  importantInformation: string | null;
+  location: {latitude: number; longitude: number} | null;
   starRating: number | null;
   currency: string;
   coverPhoto: NuiteePhoto | null;
@@ -92,7 +99,10 @@ export type NuiteeHotelDetails = Readonly<{
   amenities: ReadonlyArray<{code: string; name: string; category: string | null}>;
   reviewSummary: {count: number; overall: number | null};
   checkInTime: string | null;
+  checkInEndTime: string | null;
   checkOutTime: string | null;
+  checkInInstructions: readonly string[];
+  checkInSpecialInstructions: string | null;
   offers: readonly NuiteeOffer[];
   sandbox: boolean;
 }>;
@@ -119,7 +129,7 @@ export type NuiteeBookingInput = Readonly<{
   holderFirstName: string;
   holderLastName: string;
   email: string;
-  phone?: string;
+  phone: string;
 }>;
 
 export type NuiteeBookingResult = Readonly<{
