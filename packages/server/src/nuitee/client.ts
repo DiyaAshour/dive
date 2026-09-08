@@ -179,14 +179,10 @@ export async function prebookNuitee(offerId: string): Promise<NuiteePrebook> {
   const clean = offerId.trim();
   if (!clean) throw new Error("Nuitee offerId is required");
   const body = {offerId: clean, usePaymentSdk: true};
-  let payload: unknown;
-  try {
-    payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", body, 35_000);
-  } catch (error) {
-    if (!retryablePaymentCreationError(error)) throw error;
-    await delay(350);
-    payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", body, 35_000);
-  }
+  // A payment-enabled prebook creates a new transaction/payment intent. Do not
+  // retry this call automatically: every successful prebook produces a new
+  // prebookId + transactionId pair, so a blind replay can orphan the first pair.
+  const payload = await request<unknown>(`${BOOK_BASE}/rates/prebook?timeout=30`, "POST", body, 35_000);
   const view = prebookView(payload, clean, isNuiteeSandbox());
   if (!view.prebookId) throw new Error("Nuitee did not return a prebookId");
   if (!view.transactionId || !view.secretKey) throw new Error("Nuitee Payment SDK data was not returned by prebook");
@@ -283,12 +279,6 @@ function parseProviderError(raw: string): {code:number|null;description:string|n
     return {code:null, description:null, providerMessage:null};
   }
 }
-function retryablePaymentCreationError(error: unknown): boolean {
-  if (!(error instanceof NuiteeApiError) || error.status < 500) return false;
-  const message = `${error.description ?? ""} ${error.providerMessage ?? ""}`.toLowerCase();
-  return error.code === 5000 && (message.includes("payment create failed") || message.includes("please try again"));
-}
-function delay(ms: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function marginBody(): RawRecord {
   const margin = Number(process.env.NUITEE_MARGIN_PERCENT ?? "");
   return Number.isFinite(margin) && margin >= 0 && margin <= 50 ? {margin} : {};
