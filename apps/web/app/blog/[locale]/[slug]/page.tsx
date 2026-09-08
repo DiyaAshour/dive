@@ -5,6 +5,7 @@ import {ArrowLeft, ArrowRight, CalendarDays, Clock3, UserRound} from "lucide-rea
 import {ApplicationError, getPublishedBlogPost, listRelatedPublishedBlogPosts} from "@platform/server";
 import {BlogArticleBody} from "@/components/blog-article-body";
 import {CustomerHeader} from "@/components/customer-header";
+import {SeoArticleTracker} from "@/components/seo-article-tracker";
 import {siteUrl} from "@/lib/site-url";
 
 export const dynamic="force-dynamic";
@@ -31,6 +32,7 @@ export default async function BlogArticlePage({params}:{params:Promise<{locale:s
   const breadcrumbs={"@context":"https://schema.org","@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"HandMeKey",item:siteUrl()},{"@type":"ListItem",position:2,name:locale==="ar"?"دليل السفر":"Travel Guide",item:siteUrl(`/blog/${locale}`)},{"@type":"ListItem",position:3,name:post.title,item:url}]};
   return <main className="blogExperience" dir={rtl?"rtl":"ltr"} lang={locale}>
     <CustomerHeader/>
+    <SeoArticleTracker locale={locale} slug={post.slug}/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(breadcrumbs)}}/>
     <article className="blogArticle shell">
