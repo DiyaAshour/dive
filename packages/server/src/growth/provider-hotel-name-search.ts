@@ -1,6 +1,6 @@
 import type { DiscoverySearchInput } from "@platform/contracts";
 import {demoSearchFallback} from "../discovery/demo-fallback";
-import {searchNuitee, type NuiteeSearchResult} from "../nuitee/client";
+import {searchNuitee, searchNuiteeByHotelName, type NuiteeSearchResult} from "../nuitee/client";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
@@ -22,7 +22,8 @@ export async function searchHotelsV2WithVisibilityBoost(
     ? ({...cleanedBase, resolvedDestination: fallback.resolvedDestination} as SearchResult)
     : cleanedBase;
 
-  if (input.cursor || !base.resolvedDestination) return base;
+  if (input.cursor) return base;
+  if (!base.resolvedDestination) return addNuiteeHotelNameInventory(base, input, context);
   return addNuiteeDestinationInventory(base, input, context);
 }
 
@@ -35,6 +36,43 @@ function withoutDemoHotels(base: SearchResult): SearchResult {
     candidateCount: Math.max(results.length, base.candidateCount - (base.results.length - results.length)),
     results,
   };
+}
+
+async function addNuiteeHotelNameInventory(base: SearchResult, input: DiscoverySearchInput, context: VisibilitySearchContext): Promise<SearchResult> {
+  if (input.destination.trim().length < 2) return base;
+  if (input.children > 0 && input.childrenAges.length !== input.children) return base;
+  try {
+    const rows = await searchNuiteeByHotelName({
+      hotelName: input.destination,
+      arrival: input.arrival,
+      departure: input.departure,
+      adults: input.adults,
+      children: input.children,
+      ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
+      ...(context.travelerCountry ? {guestNationality: context.travelerCountry} : {}),
+      currency: "JOD",
+      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      stars: input.stars,
+      freeCancellation: input.freeCancellation,
+      ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
+      limit: Math.min(input.pageSize, 20),
+      maxRatesPerHotel: 4,
+    });
+    if (!rows.length) return base;
+    const providerItems = rows.map(nuiteeSearchItem);
+    const combined = dedupeResults([...base.results, ...providerItems]).slice(0, input.pageSize);
+    console.info("Nuitee Connect hotel-name search completed", {query: input.destination, resultCount: rows.length});
+    return {
+      ...base,
+      count: combined.length,
+      candidateCount: base.candidateCount + providerItems.length,
+      results: combined,
+    };
+  } catch (error) {
+    console.error("Nuitee Connect hotel-name search unavailable; continuing with existing inventory", error);
+    return base;
+  }
 }
 
 async function addNuiteeDestinationInventory(base: SearchResult, input: DiscoverySearchInput, context: VisibilitySearchContext): Promise<SearchResult> {

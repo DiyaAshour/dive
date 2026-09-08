@@ -1,5 +1,5 @@
 import {hotelView, prebookView, searchViews} from "./views";
-import {occupancy, record, text} from "./normalize";
+import {occupancy, record, records, text} from "./normalize";
 import type {NuiteeBookingInput, NuiteeBookingResult, NuiteeHotelDetails, NuiteePrebook, NuiteeSearchInput, NuiteeSearchResult} from "./types";
 
 const API_BASE = "https://api.liteapi.travel/v3.0";
@@ -7,6 +7,14 @@ const BOOK_BASE = "https://book.liteapi.travel/v3.0";
 const REQUEST_TIMEOUT_MS = 15_000;
 
 type RawRecord = Record<string, unknown>;
+export type NuiteeHotelNameSuggestion = Readonly<{
+  id: string;
+  name: string;
+  city: string;
+  countryCode: string;
+  address: string | null;
+}>;
+export type NuiteeHotelNameSearchInput = Omit<NuiteeSearchInput, "destination"> & Readonly<{hotelName: string}>;
 
 export class NuiteeConfigurationError extends Error {
   constructor() {
@@ -30,6 +38,61 @@ export class NuiteeApiError extends Error {
     this.description = input.description;
     this.providerMessage = input.providerMessage;
   }
+}
+
+export async function searchNuiteeHotelSuggestions(query: string, limit = 5): Promise<NuiteeHotelNameSuggestion[]> {
+  if (!isNuiteeConfigured()) return [];
+  const hotelName = query.trim();
+  if (hotelName.length < 2) return [];
+  const params = new URLSearchParams({
+    hotelName,
+    offset: "0",
+    limit: String(Math.max(1, Math.min(limit, 12))),
+  });
+  const payload = await request<unknown>(`${API_BASE}/data/hotels?${params.toString()}`, "GET", undefined, 8_000);
+  return records(record(payload).data).flatMap((hotel) => {
+    const id = text(hotel.id) ?? text(hotel.hotelId);
+    const name = text(hotel.name) ?? text(hotel.hotelName);
+    if (!id || !name) return [];
+    return [{
+      id,
+      name,
+      city: text(hotel.city) ?? text(hotel.cityName) ?? "",
+      countryCode: (text(hotel.countryCode) ?? text(hotel.country) ?? "").toUpperCase(),
+      address: text(hotel.address),
+    }];
+  });
+}
+
+export async function searchNuiteeByHotelName(input: NuiteeHotelNameSearchInput): Promise<NuiteeSearchResult[]> {
+  if (!isNuiteeConfigured()) return [];
+  if (input.paymentMode === "PAY_AT_HOTEL") return [];
+  if (input.children > 0 && input.childrenAges?.length !== input.children) return [];
+  const hotelName = input.hotelName.trim();
+  if (hotelName.length < 2) return [];
+  const maxHotels = Math.max(1, Math.min(input.limit ?? 20, 20));
+  const matches = await searchNuiteeHotelSuggestions(hotelName, maxHotels);
+  if (!matches.length) return [];
+  const countryCode = input.countryCode?.trim().toUpperCase();
+  const body: RawRecord = {
+    hotelIds: matches.map((hotel) => hotel.id),
+    occupancies: [occupancy({...input, destination: hotelName})],
+    currency: (input.currency ?? "JOD").trim().toUpperCase(),
+    guestNationality: (input.guestNationality ?? countryCode ?? "JO").trim().toUpperCase(),
+    checkin: input.arrival,
+    checkout: input.departure,
+    roomMapping: true,
+    includeHotelData: true,
+    maxRatesPerHotel: Math.max(1, Math.min(25, input.maxRatesPerHotel ?? 3)),
+    limit: matches.length,
+    timeout: 8,
+    ...(input.stars?.length ? {starRating: input.stars} : {}),
+    ...(input.freeCancellation ? {refundableRatesOnly: true} : {}),
+    ...marginBody(),
+  };
+  const payload = await request<unknown>(`${API_BASE}/hotels/rates`, "POST", body);
+  const {hotelName: _hotelName, ...rest} = input;
+  return searchViews(payload, {...rest, destination: hotelName});
 }
 
 export async function searchNuitee(input: NuiteeSearchInput): Promise<NuiteeSearchResult[]> {
