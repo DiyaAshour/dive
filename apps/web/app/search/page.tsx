@@ -12,6 +12,7 @@ import { defaultStayDates } from "@/lib/stay-dates";
 import { SaveSearchButton } from "./save-search-button";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+type DestinationSelection = Readonly<{kind:"DESTINATION"|"HOTEL";id:string}>;
 const commonAmenities = ["WIFI","PARKING","POOL","GYM","BREAKFAST"] as const;
 
 export default async function SearchPage({searchParams}: {searchParams: Promise<SearchParams>}) {
@@ -25,7 +26,7 @@ export default async function SearchPage({searchParams}: {searchParams: Promise<
   const displayMaxPrice=optional(first(params.maxPrice));
   const destinationKind=first(params.destinationKind);
   const destinationId=optional(first(params.destinationId));
-  const defaultSelection=destinationId&&(destinationKind==="DESTINATION"||destinationKind==="HOTEL")?{kind:destinationKind,id:destinationId}:null;
+  const defaultSelection:DestinationSelection|null=destinationId&&(destinationKind==="DESTINATION"||destinationKind==="HOTEL")?{kind:destinationKind,id:destinationId}:null;
   const raw = {
     destination: first(params.destination) ?? "Amman",
     destinationKind: defaultSelection?.kind,
