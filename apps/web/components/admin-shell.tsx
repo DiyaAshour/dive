@@ -8,7 +8,7 @@ import {LanguageSwitcher} from "./language-switcher";
 import {SiteBrand} from "./site-brand";
 import styles from "./admin-shell.module.css";
 
-type Active = "overview" | "verification" | "properties" | "api-bookings" | "cars" | "reviews" | "blog" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
+type Active = "overview" | "verification" | "properties" | "api-bookings" | "cars" | "reviews" | "blog" | "seo" | "email" | "distribution" | "finance" | "rewards" | "launch" | "access" | "audit";
 type Principal = Readonly<{
   user: {displayName: string; email: string};
 }>;
@@ -27,6 +27,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
   const isCars = active === "cars";
   const dashboardHref = (section: Active) => section === "overview" ? "/admin" : `/admin#${section}`;
   const blogLabel = locale === "ar" ? "المحتوى والمدونة" : "Content & blog";
+  const seoLabel = locale === "ar" ? "مركز SEO الذاتي" : "Autonomous SEO";
   const communicationsLabel = locale === "ar" ? "الاتصالات" : "Communications";
   const emailLabel = locale === "ar" ? "البريد الإلكتروني" : "Email";
   const distributionLabel = locale === "ar" ? "التوزيع والقنوات" : "Distribution";
@@ -70,6 +71,7 @@ export function AdminShell({locale, principal, active, counts = {verification: 0
         <Link className={active === "api-bookings" ? "active" : ""} href="/admin/api-bookings"><Globe2 size={17}/>{apiBookingsLabel}</Link>
         <Link className={active === "reviews" ? "active" : ""} href="/admin/reviews"><MessageSquareWarning size={17}/>{admin.reviews}{counts.hiddenReviews > 0 && <b>{counts.hiddenReviews}</b>}</Link>
         <Link className={active === "blog" ? "active" : ""} href="/admin/blog"><BookOpenText size={17}/>{blogLabel}</Link>
+        <Link className={active === "seo" ? "active" : ""} href="/admin/seo"><Activity size={17}/>{seoLabel}</Link>
         <span>{communicationsLabel}</span>
         <Link className={active === "email" ? "active" : ""} href="/admin/communications/email"><Mail size={17}/>{emailLabel}{(counts.emailOps ?? 0) > 0 && <b>{counts.emailOps}</b>}</Link>
         <span>{distributionLabel}</span>
