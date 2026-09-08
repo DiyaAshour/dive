@@ -52,6 +52,9 @@ export function hotelView(code: string, contentPayload: unknown, ratesPayload: u
   const name = text(content.name) ?? `Nuitee hotel ${code}`;
   const photos = hotelPhotos(content, name);
   const times = record(content.checkinCheckoutTimes);
+  const coordinates = record(content.location);
+  const latitude = number(coordinates.latitude);
+  const longitude = number(coordinates.longitude);
   return {
     id: `nuitee:${code}`,
     slug: `nuitee-${code}`,
@@ -63,6 +66,8 @@ export function hotelView(code: string, contentPayload: unknown, ratesPayload: u
     area: text(content.area) ?? text(content.neighborhood),
     address: text(content.address),
     description: plainText(text(content.hotelDescription)),
+    importantInformation: plainText(text(content.hotelImportantInformation)),
+    location: latitude !== null && longitude !== null ? {latitude, longitude} : null,
     starRating: stars(number(content.starRating) ?? number(content.stars)),
     currency: offers[0]!.currency,
     coverPhoto: photos[0] ?? null,
@@ -70,8 +75,11 @@ export function hotelView(code: string, contentPayload: unknown, ratesPayload: u
     rooms: roomDetails(content),
     amenities: amenities(content),
     reviewSummary: reviewSummary(content),
-    checkInTime: text(times.checkin) ?? text(times.checkinStart),
+    checkInTime: text(times.checkin_start) ?? text(times.checkinStart) ?? text(times.checkin),
+    checkInEndTime: text(times.checkin_end) ?? text(times.checkinEnd),
     checkOutTime: text(times.checkout),
+    checkInInstructions: stringList(times.instructions),
+    checkInSpecialInstructions: plainText(text(times.special_instructions) ?? text(times.specialInstructions)),
     offers,
     sandbox,
   };
@@ -88,6 +96,8 @@ export function prebookView(payload: unknown, fallbackOfferId: string, sandbox: 
   const rules = records(policies.cancelPolicyInfos).map((item) => ({
     amount: number(item.amount) ?? number(item.cancelAmount) ?? number(item.penaltyAmount) ?? 0,
     from: text(item.cancelTime) ?? text(item.from),
+    currency: text(item.currency),
+    timezone: text(item.timezone) ?? text(item.timeZone) ?? "GMT",
   }));
   const refundable = text(policies.refundableTag)?.toUpperCase() === "RFN";
   return {
@@ -99,7 +109,7 @@ export function prebookView(payload: unknown, fallbackOfferId: string, sandbox: 
     price: number(data.price) ?? number(total.amount) ?? number(retail.amount) ?? 0,
     currency: text(data.currency) ?? text(total.currency) ?? text(retail.currency) ?? "USD",
     commission: number(data.commission),
-    roomName: text(rate.name),
+    roomName: text(room.name) ?? text(rate.name),
     boardName: text(rate.boardName),
     cancellationPolicy: {name: refundable ? "Refundable rate" : "Non-refundable / provider policy", rules},
     sandbox: Boolean(root.sandbox) || sandbox,
@@ -111,12 +121,13 @@ function hotelPhotos(content: RawRecord, hotelName: string): NuiteePhoto[] {
   const seen = new Set<string>();
   const photos: NuiteePhoto[] = [];
   const main = text(content.main_photo) ?? text(content.mainPhoto);
-  if (main) { seen.add(main); photos.push({url: main, alt: hotelName, sortOrder: 0}); }
+  if (main) { seen.add(main); photos.push({url: main, alt: hotelName, sortOrder: -2}); }
   for (const [index, image] of records(content.hotelImages).entries()) {
-    const url = text(image.url);
+    const url = text(image.urlHd) ?? text(image.url);
     if (!url || seen.has(url)) continue;
     seen.add(url);
-    photos.push({url, alt: text(image.caption) ?? `${hotelName} photo ${index + 1}`, sortOrder: number(image.order) ?? index + 1});
+    const defaultPriority = image.defaultImage === true ? -1 : number(image.order) ?? index + 1;
+    photos.push({url, alt: text(image.caption) ?? `${hotelName} photo ${index + 1}`, sortOrder: defaultPriority});
   }
   return photos.sort((left, right) => left.sortOrder - right.sortOrder);
 }
@@ -128,7 +139,7 @@ function roomDetails(content: RawRecord): NuiteeRoom[] {
     const name = text(room.roomName) ?? text(room.name) ?? `Room ${roomIndex + 1}`;
     const seen = new Set<string>();
     const photos = records(room.photos).flatMap((photo, index) => {
-      const url = text(photo.url) ?? text(photo.failoverPhoto);
+      const url = text(photo.hd_url) ?? text(photo.url) ?? text(photo.failoverPhoto);
       if (!url || seen.has(url)) return [];
       seen.add(url);
       const order = photo.mainPhoto === true ? 0 : number(photo.classOrder) ?? number(photo.order) ?? index + 1;
@@ -184,6 +195,7 @@ function reviewSummary(content: RawRecord): {count: number; overall: number | nu
   const rating = number(content.rating);
   return {count, overall: rating === null ? null : Math.max(0, Math.min(10, rating))};
 }
+function stringList(value: unknown): string[] { return Array.isArray(value) ? value.flatMap((item) => typeof item === "string" && item.trim() ? [item.trim()] : []) : []; }
 function integerOrNull(value: unknown): number | null { const parsed = number(value); return parsed === null ? null : Math.max(0, Math.round(parsed)); }
 function stars(value: number | null): number | null { return value === null ? null : Math.max(0, Math.min(5, value)); }
 function plainText(value: string | null): string | null { return value ? value.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim() || null : null; }
