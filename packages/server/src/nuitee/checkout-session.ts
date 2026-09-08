@@ -68,9 +68,11 @@ export async function createNuiteeCheckoutSession(input: Readonly<{proof: string
   const guest = normalizeGuest(input.guest);
   const db = database();
   const clientReference = nuiteeClientReference(proof.transactionId);
-  const token = randomBytes(32).toString("base64url");
+  const token = paymentRecoveryToken(proof.transactionId);
   const tokenHash = tokenFingerprint(token);
-  const returnUrl = `${cleanOrigin(input.origin)}/nuitee-payment-return?token=${encodeURIComponent(token)}`;
+  const origin = cleanOrigin(input.origin);
+  const returnUrl = `${origin}/nuitee-payment-return?token=${encodeURIComponent(token)}`;
+  const storedReturnUrl = `${origin}/nuitee-payment-return`;
   const attemptKey = `NUITEE-SDK-${sha256(proof.transactionId).slice(0, 48)}`;
   const providerRequest = jsonSafe({
     prebookId: proof.prebookId,
@@ -112,7 +114,7 @@ export async function createNuiteeCheckoutSession(input: Readonly<{proof: string
       }}),
       db.apiPaymentAttempt.update({where: {id: existingAttempt.id}, data: {
         requestFingerprint: tokenHash,
-        returnUrl,
+        returnUrl: storedReturnUrl,
         ...(existingAttempt.status === "FAILED" || existingAttempt.status === "CANCELLED" ? {status: "REQUIRES_ACTION", failureCode: null} : {}),
       }}),
     ]);
@@ -171,7 +173,7 @@ export async function createNuiteeCheckoutSession(input: Readonly<{proof: string
     idempotencyKey: attemptKey,
     requestFingerprint: tokenHash,
     externalPaymentId: proof.transactionId,
-    returnUrl,
+    returnUrl: storedReturnUrl,
   }});
   return {...bookingView(booking, attempt.status === "CAPTURED" ? "confirmed" : "payment_pending", returnUrl), token};
 }
@@ -290,7 +292,7 @@ async function markNeedsReview(bookingId: string, attemptId: string, failureCode
   ]);
 }
 
-async function queueNuiteeConfirmation(booking: Awaited<ReturnType<typeof database>>["apiBooking"] extends never ? never : any) {
+async function queueNuiteeConfirmation(booking: any) {
   const provider = asRecord(booking.providerResponse);
   const data = asRecord(provider.data);
   const hotelConfirmation = stringValue(data.hotelConfirmationCode) ?? stringValue(data.confirmationCode) ?? stringValue(data.hotelConfirmationNumber);
@@ -387,6 +389,7 @@ function readProof(value: string): ProofPayload {
 }
 
 function sign(value: string): string {return createHmac("sha256", checkoutSigningKey()).update(value).digest("base64url");}
+function paymentRecoveryToken(transactionId: string): string {return createHmac("sha256", checkoutSigningKey()).update(`payment-return:${transactionId}`).digest("base64url");}
 function checkoutSigningKey(): string {
   const dedicated = process.env.NUITEE_CHECKOUT_SIGNING_SECRET?.trim();
   const apiKey = process.env.NUITEE_API_KEY?.trim();
