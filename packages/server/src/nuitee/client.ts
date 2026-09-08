@@ -40,11 +40,13 @@ export class NuiteeApiError extends Error {
   }
 }
 
-export async function searchNuiteeHotelSuggestions(query: string, limit = 5): Promise<NuiteeHotelNameSuggestion[]> {
+export async function searchNuiteeHotelSuggestions(query: string, limit = 5, countryCode = "JO"): Promise<NuiteeHotelNameSuggestion[]> {
   if (!isNuiteeConfigured()) return [];
   const hotelName = query.trim();
   if (hotelName.length < 2) return [];
+  const country = countryCode.trim().toUpperCase() || "JO";
   const params = new URLSearchParams({
+    countryCode: country,
     hotelName,
     offset: "0",
     limit: String(Math.max(1, Math.min(limit, 12))),
@@ -58,7 +60,7 @@ export async function searchNuiteeHotelSuggestions(query: string, limit = 5): Pr
       id,
       name,
       city: text(hotel.city) ?? text(hotel.cityName) ?? "",
-      countryCode: (text(hotel.countryCode) ?? text(hotel.country) ?? "").toUpperCase(),
+      countryCode: (text(hotel.countryCode) ?? text(hotel.country) ?? country).toUpperCase(),
       address: text(hotel.address),
     }];
   });
@@ -71,14 +73,14 @@ export async function searchNuiteeByHotelName(input: NuiteeHotelNameSearchInput)
   const hotelName = input.hotelName.trim();
   if (hotelName.length < 2) return [];
   const maxHotels = Math.max(1, Math.min(input.limit ?? 20, 20));
-  const matches = await searchNuiteeHotelSuggestions(hotelName, maxHotels);
+  const countryCode = input.countryCode?.trim().toUpperCase() || "JO";
+  const matches = await searchNuiteeHotelSuggestions(hotelName, maxHotels, countryCode);
   if (!matches.length) return [];
-  const countryCode = input.countryCode?.trim().toUpperCase();
   const body: RawRecord = {
     hotelIds: matches.map((hotel) => hotel.id),
     occupancies: [occupancy({...input, destination: hotelName})],
     currency: (input.currency ?? "JOD").trim().toUpperCase(),
-    guestNationality: (input.guestNationality ?? countryCode ?? "JO").trim().toUpperCase(),
+    guestNationality: (input.guestNationality ?? countryCode).trim().toUpperCase(),
     checkin: input.arrival,
     checkout: input.departure,
     roomMapping: true,
@@ -92,7 +94,7 @@ export async function searchNuiteeByHotelName(input: NuiteeHotelNameSearchInput)
   };
   const payload = await request<unknown>(`${API_BASE}/hotels/rates`, "POST", body);
   const {hotelName: _hotelName, ...rest} = input;
-  return searchViews(payload, {...rest, destination: hotelName});
+  return searchViews(payload, {...rest, destination: hotelName, countryCode});
 }
 
 export async function searchNuitee(input: NuiteeSearchInput): Promise<NuiteeSearchResult[]> {
