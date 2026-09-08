@@ -15,6 +15,23 @@ export class NuiteeConfigurationError extends Error {
   }
 }
 
+export class NuiteeApiError extends Error {
+  readonly status: number;
+  readonly code: number | null;
+  readonly description: string | null;
+  readonly providerMessage: string | null;
+
+  constructor(input: Readonly<{status:number;code:number|null;description:string|null;providerMessage:string|null}>) {
+    const detail = input.description ?? input.providerMessage;
+    super(detail ? `Nuitee request failed (${input.status}): ${detail}` : `Nuitee request failed (${input.status})`);
+    this.name = "NuiteeApiError";
+    this.status = input.status;
+    this.code = input.code;
+    this.description = input.description;
+    this.providerMessage = input.providerMessage;
+  }
+}
+
 export async function searchNuitee(input: NuiteeSearchInput): Promise<NuiteeSearchResult[]> {
   if (!isNuiteeConfigured()) return [];
   if (input.paymentMode === "PAY_AT_HOTEL") return [];
@@ -69,7 +86,15 @@ export async function getNuiteeHotelDetails(code: string, input: NuiteeSearchInp
 export async function prebookNuitee(offerId: string): Promise<NuiteePrebook> {
   const clean = offerId.trim();
   if (!clean) throw new Error("Nuitee offerId is required");
-  const payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", {offerId: clean, usePaymentSdk: true}, 35_000);
+  const body = {offerId: clean, usePaymentSdk: true};
+  let payload: unknown;
+  try {
+    payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", body, 35_000);
+  } catch (error) {
+    if (!retryablePaymentCreationError(error)) throw error;
+    await delay(350);
+    payload = await request<unknown>(`${BOOK_BASE}/rates/prebook`, "POST", body, 35_000);
+  }
   const view = prebookView(payload, clean, isNuiteeSandbox());
   if (!view.prebookId) throw new Error("Nuitee did not return a prebookId");
   if (!view.transactionId || !view.secretKey) throw new Error("Nuitee Payment SDK data was not returned by prebook");
@@ -116,12 +141,32 @@ async function request<T>(url: string, method: "GET" | "POST", body?: RawRecord,
   if (response.status === 204) return {data: []} as T;
   const raw = await response.text();
   if (!response.ok) {
-    console.error("Nuitee request failed", {path: new URL(url).pathname, status: response.status, body: raw.slice(0, 500)});
-    throw new Error(`Nuitee request failed (${response.status})`);
+    const provider = parseProviderError(raw);
+    console.error("Nuitee request failed", {path: new URL(url).pathname, status: response.status, code: provider.code, description: provider.description, message: provider.providerMessage});
+    throw new NuiteeApiError({status: response.status, ...provider});
   }
   try { return JSON.parse(raw) as T; } catch { throw new Error("Nuitee returned an invalid response"); }
 }
 
+function parseProviderError(raw: string): {code:number|null;description:string|null;providerMessage:string|null} {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    const provider = record(record(parsed).error);
+    const rawCode = provider.code;
+    const code = typeof rawCode === "number" && Number.isFinite(rawCode)
+      ? rawCode
+      : typeof rawCode === "string" && /^\d+$/.test(rawCode) ? Number(rawCode) : null;
+    return {code, description: text(provider.description), providerMessage: text(provider.message)};
+  } catch {
+    return {code:null, description:null, providerMessage:null};
+  }
+}
+function retryablePaymentCreationError(error: unknown): boolean {
+  if (!(error instanceof NuiteeApiError) || error.status < 500) return false;
+  const message = `${error.description ?? ""} ${error.providerMessage ?? ""}`.toLowerCase();
+  return error.code === 5000 && (message.includes("payment create failed") || message.includes("please try again"));
+}
+function delay(ms: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function marginBody(): RawRecord {
   const margin = Number(process.env.NUITEE_MARGIN_PERCENT ?? "");
   return Number.isFinite(margin) && margin >= 0 && margin <= 50 ? {margin} : {};
