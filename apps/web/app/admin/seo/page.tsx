@@ -24,7 +24,7 @@ function pct(n:number,d:number){return d?`${((n/d)*100).toFixed(1)}%`:"0.0%";}
 export default async function SeoControlPage(){
   const principal=await currentAdminPrincipal(); if(!principal)redirect("/admin/login?next=%2Fadmin%2Fseo");
   const locale=await requestLocale(); const ar=locale==="ar"; const db=database();
-  const since24=new Date(Date.now()-24*60*60*1000); const since30=new Date(Date.now()-30*24*60*60*1000);
+  const since30=new Date(Date.now()-30*24*60*60*1000);
   const [counts,queue,lastAutoPost,autoPosts30,views30,search30,cars30,recentEvents]=await Promise.all([
     getAdminNavigationCounts(principal.user.id),
     getQueue(),
@@ -33,7 +33,7 @@ export default async function SeoControlPage(){
     db.auditLog.count({where:{entityType:"SEO_CONVERSION",action:"BLOG_VIEW",createdAt:{gte:since30}}}),
     db.auditLog.count({where:{entityType:"SEO_CONVERSION",action:"BLOG_TO_SEARCH",createdAt:{gte:since30}}}),
     db.auditLog.count({where:{entityType:"SEO_CONVERSION",action:"BLOG_TO_CARS",createdAt:{gte:since30}}}),
-    db.auditLog.findMany({where:{entityType:"SEO_CONVERSION",createdAt:{gte:since30}},orderBy:{createdAt:"desc"},take:20,select:{action:true,entityId:true,after:true,createdAt:true}}),
+    db.auditLog.findMany({where:{entityType:"SEO_CONVERSION",createdAt:{gte:since30}},orderBy:{createdAt:"desc"},take:20,select:{action:true,entityId:true,createdAt:true}}),
   ]);
   const lastMs=lastAutoPost?.publishedAt?.getTime()??0; const publisherRecent=lastMs>Date.now()-2*60*60*1000;
   const oldest=queue.issues[0]?Date.now()-new Date(queue.issues[0].created_at).getTime():0;
