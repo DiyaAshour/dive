@@ -4,51 +4,55 @@ import Link from "next/link";
 import {useEffect,useRef,useState} from "react";
 import type {GuestLocale} from "@/lib/guest-market";
 
-type StoredCheckout={prebookId:string;transactionId:string;firstName:string;lastName:string;email:string;phone?:string;hotelName:string;roomName:string|null;arrival:string;departure:string;sandbox:boolean};
-type Confirmation={bookingId:string|null;hotelConfirmationCode:string|null;status:string|null};
-const STORAGE_PREFIX="handmekey:nuitee-payment:";
+type CheckoutState="payment_pending"|"processing"|"confirmed"|"needs_review";
+type Finalization={state:CheckoutState;reference:string;hotelName:string;roomName:string|null;arrival:string;departure:string;amount:number;currency:string;bookingId:string|null;hotelConfirmationCode:string|null;providerStatus:string|null;message:string|null};
 
-export function FinalizeNuiteeBooking({transactionId,locale}:{transactionId:string;locale:GuestLocale}){
+export function FinalizeNuiteeBooking({token,locale}:{token:string;locale:GuestLocale}){
   const started=useRef(false);
-  const [state,setState]=useState<"loading"|"success"|"error">("loading");
+  const [state,setState]=useState<"loading"|"success"|"review"|"error">("loading");
   const [message,setMessage]=useState<string|null>(null);
-  const [confirmation,setConfirmation]=useState<Confirmation|null>(null);
-  const [stay,setStay]=useState<StoredCheckout|null>(null);
+  const [result,setResult]=useState<Finalization|null>(null);
   const ar=locale==="ar";
 
   useEffect(()=>{
     if(started.current)return;
     started.current=true;
-    const storageKey=`${STORAGE_PREFIX}${transactionId}`;
-    let checkout:StoredCheckout|null=null;
-    try{
-      const raw=sessionStorage.getItem(storageKey);
-      checkout=raw?JSON.parse(raw) as StoredCheckout:null;
-    }catch{checkout=null;}
-    if(!checkout||checkout.transactionId!==transactionId||!checkout.prebookId){
-      setState("error");
-      setMessage(ar?"تعذر العثور على جلسة الحجز في هذا المتصفح. لا تحاول الدفع مرة أخرى قبل التحقق من حجوزاتك في Nuitee.":"The booking session could not be recovered in this browser. Do not pay again until you verify the transaction in Nuitee.");
-      return;
-    }
-    setStay(checkout);
-    void finalize(checkout,storageKey);
+    let cancelled=false;
+    void finalize(0);
 
-    async function finalize(input:StoredCheckout,key:string){
+    async function finalize(poll:number){
       try{
-        const response=await fetch("/api/v1/nuitee/book",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prebookId:input.prebookId,transactionId:input.transactionId,firstName:input.firstName,lastName:input.lastName,email:input.email,phone:input.phone})});
-        const payload=await response.json().catch(()=>null) as {data?:Confirmation;error?:{message?:string}}|null;
-        if(!response.ok||!payload?.data)throw new Error(payload?.error?.message??`Booking failed (${response.status})`);
-        setConfirmation(payload.data);
-        setState("success");
-        sessionStorage.removeItem(key);
+        const response=await fetch("/api/v1/nuitee/finalize",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({token})});
+        const payload=await response.json().catch(()=>null) as {data?:Finalization;error?:{message?:string}}|null;
+        if(cancelled)return;
+        if(!response.ok&&response.status!==202)throw new Error(payload?.error?.message??`Booking verification failed (${response.status})`);
+        if(!payload?.data)throw new Error(ar?"لم يصل رد صالح من نظام الحجز":"The booking service returned an invalid response");
+        setResult(payload.data);
+        if(payload.data.state==="confirmed"){
+          setState("success");
+          return;
+        }
+        if(payload.data.state==="needs_review"){
+          setMessage(payload.data.message);
+          setState("review");
+          return;
+        }
+        if(payload.data.state==="processing"&&poll<6){
+          window.setTimeout(()=>void finalize(poll+1),1800);
+          return;
+        }
+        setMessage(ar?"لا يزال تأكيد الفندق قيد التحقق. لا تبدأ عملية دفع جديدة.":"Hotel confirmation is still being verified. Do not start a new payment.");
+        setState("review");
       }catch(cause){
+        if(cancelled)return;
         setState("error");
-        setMessage(cause instanceof Error?cause.message:(ar?"تم الدفع لكن تعذر تأكيد الفندق حالياً.":"Payment returned, but the hotel booking could not be finalized right now."));
+        setMessage(cause instanceof Error?cause.message:(ar?"تعذر التحقق من الحجز حالياً.":"The booking could not be verified right now."));
       }
     }
-  },[transactionId,ar]);
+    return()=>{cancelled=true;};
+  },[token,ar]);
 
-  if(state==="loading")return <div className="panel"><span className="eyebrow">Nuitee Connect</span><h2>{ar?"جارٍ تأكيد الحجز…":"Confirming your reservation…"}</h2><p className="muted">{ar?"لا تغلق هذه الصفحة حتى يظهر رقم الحجز.":"Please keep this page open until a booking reference appears."}</p></div>;
-  if(state==="error")return <div className="panel"><span className="eyebrow">Nuitee Connect</span><h2>{ar?"نحتاج للتحقق من الحجز":"Booking needs verification"}</h2><p className="danger">{message}</p><p className="muted">{ar?"إذا تم خصم المبلغ، تحقق من لوحة Nuitee أو تواصل مع الدعم قبل إعادة المحاولة حتى لا يتم الدفع مرتين.":"If payment was charged, check the Nuitee dashboard or contact support before trying again so you do not pay twice."}</p><Link className="resultCta" href="/search">{ar?"العودة إلى البحث":"Return to search"}</Link></div>;
-  return <div className="panel"><span className="eyebrow">Nuitee Connect</span><h2>{ar?"تم تأكيد الحجز":"Booking confirmed"}</h2>{stay&&<><p><strong>{stay.hotelName}</strong>{stay.roomName?` · ${stay.roomName}`:""}</p><p className="muted">{stay.arrival} — {stay.departure}</p></>}<div className="breakdown"><span>{ar?"رقم حجز Nuitee":"Nuitee booking ID"}</span><strong>{confirmation?.bookingId??"—"}</strong></div><div className="breakdown"><span>{ar?"رقم تأكيد الفندق":"Hotel confirmation"}</span><strong>{confirmation?.hotelConfirmationCode??"—"}</strong></div><div className="breakdown"><span>{ar?"الحالة":"Status"}</span><strong>{confirmation?.status??"Confirmed"}</strong></div>{stay?.sandbox&&<p className="muted">{ar?"هذا حجز Sandbox تجريبي.":"This is a Sandbox test booking."}</p>}<Link className="resultCta" href="/">{ar?"العودة إلى HandMeKey":"Back to HandMeKey"}</Link></div>;
+  if(state==="loading")return <div className="panel"><span className="eyebrow">Nuitee Connect</span><h2>{ar?"جارٍ تأكيد الحجز…":"Confirming your reservation…"}</h2><p className="muted">{ar?"تم استرجاع جلسة الدفع من خادم HandMeKey. لا تغلق الصفحة حتى يظهر التأكيد.":"HandMeKey recovered your payment session from the server. Keep this page open until confirmation appears."}</p></div>;
+  if(state==="review"||state==="error")return <div className="panel"><span className="eyebrow">Nuitee Connect</span><h2>{ar?"الحجز يحتاج تحقق":"Booking needs verification"}</h2>{result?.reference&&<div className="breakdown"><span>{ar?"مرجع HandMeKey":"HandMeKey reference"}</span><strong>{result.reference}</strong></div>}<p className="danger">{message}</p><p className="muted">{ar?"إذا تم خصم المبلغ فلا تدفع مرة ثانية. HandMeKey يحتفظ بجلسة الحجز ويمكن مطابقتها مع Nuitee باستخدام نفس المرجع.":"If payment was charged, do not pay again. HandMeKey has retained the checkout session and can reconcile it with Nuitee using the same reference."}</p><Link className="resultCta" href="/search">{ar?"العودة إلى البحث":"Return to search"}</Link></div>;
+  return <div className="panel"><span className="eyebrow">Nuitee Connect</span><h2>{ar?"تم تأكيد الحجز":"Booking confirmed"}</h2>{result&&<><p><strong>{result.hotelName}</strong>{result.roomName?` · ${result.roomName}`:""}</p><p className="muted">{result.arrival} — {result.departure}</p><div className="breakdown"><span>{ar?"مرجع HandMeKey":"HandMeKey reference"}</span><strong>{result.reference}</strong></div><div className="breakdown"><span>{ar?"رقم حجز Nuitee":"Nuitee booking ID"}</span><strong>{result.bookingId??"—"}</strong></div><div className="breakdown"><span>{ar?"رقم تأكيد الفندق":"Hotel confirmation"}</span><strong>{result.hotelConfirmationCode??"—"}</strong></div><div className="breakdown"><span>{ar?"الحالة":"Status"}</span><strong>{result.providerStatus??"Confirmed"}</strong></div><div className="breakdown"><span>{ar?"الإجمالي":"Total"}</span><strong>{result.amount.toFixed(2)} {result.currency}</strong></div></>}<Link className="resultCta" href="/">{ar?"العودة إلى HandMeKey":"Back to HandMeKey"}</Link></div>;
 }

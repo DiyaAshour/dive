@@ -193,6 +193,36 @@ export async function prebookNuitee(offerId: string): Promise<NuiteePrebook> {
   return view;
 }
 
+export function nuiteeClientReference(transactionId: string): string {
+  return `HMK-${transactionId}`.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 120);
+}
+
+export async function findNuiteeBookingByClientReference(clientReference: string): Promise<NuiteeBookingResult | null> {
+  const clean = clientReference.trim();
+  if (!clean) return null;
+  const params = new URLSearchParams({clientReference: clean, timeout: "4"});
+  const payload = await request<unknown>(`${BOOK_BASE}/bookings?${params.toString()}`, "GET", undefined, 10_000);
+  const root = record(payload);
+  const dataRecord = record(root.data);
+  const rows = records(root.data).length
+    ? records(root.data)
+    : records(dataRecord.bookings).length
+      ? records(dataRecord.bookings)
+      : records(root.bookings);
+  const row = rows[0];
+  if (!row) return null;
+  const nested = record(row.booking);
+  const source = Object.keys(nested).length ? nested : row;
+  const bookingId = text(source.bookingId) ?? text(source.id) ?? text(source.bookingReference);
+  if (!bookingId) return null;
+  return {
+    bookingId,
+    hotelConfirmationCode: text(source.hotelConfirmationCode) ?? text(source.confirmationCode) ?? text(source.hotelConfirmationNumber),
+    status: text(source.status),
+    raw: payload,
+  };
+}
+
 export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBookingResult> {
   const prebookId = input.prebookId.trim();
   const transactionId = input.transactionId.trim();
@@ -201,7 +231,7 @@ export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBooki
   if (!transactionId) throw new Error("Nuitee transactionId is required");
   const payload = await request<unknown>(`${BOOK_BASE}/rates/book`, "POST", {
     prebookId,
-    clientReference: clientReference(transactionId),
+    clientReference: nuiteeClientReference(transactionId),
     holder: {
       firstName: input.holderFirstName.trim(),
       lastName: input.holderLastName.trim(),
@@ -262,9 +292,6 @@ function delay(ms: number): Promise<void> { return new Promise((resolve) => setT
 function marginBody(): RawRecord {
   const margin = Number(process.env.NUITEE_MARGIN_PERCENT ?? "");
   return Number.isFinite(margin) && margin >= 0 && margin <= 50 ? {margin} : {};
-}
-function clientReference(transactionId: string): string {
-  return `HMK-${transactionId}`.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 120);
 }
 export function isNuiteeConfigured(): boolean { return Boolean(process.env.NUITEE_API_KEY?.trim()); }
 export function isNuiteeSandbox(): boolean {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {LockKeyhole,RefreshCw,ShieldCheck} from "lucide-react";
-import {getNuiteeHotelDetails,NuiteeApiError,prebookNuitee,type NuiteeHotelDetails,type NuiteePrebook} from "@platform/server";
+import {createNuiteeCheckoutProof,getNuiteeHotelDetails,NuiteeApiError,prebookNuitee,type NuiteeHotelDetails,type NuiteePrebook} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {requestGuestMarket} from "@/lib/request-guest-market";
 import {NuiteeCheckoutFlow} from "./checkout-flow";
@@ -39,7 +39,25 @@ export default async function NuiteeCheckoutPage({searchParams}:{searchParams:Pr
   const ar=market.locale==="ar";
   const hotelLink=hotelId?hotelHref({hotelId,arrival,departure,adults,children,childrenAges}):"/search";
   const retryLink=valid?checkoutHref({hotelId,offerId,arrival,departure,adults,children,childrenAges}):hotelLink;
-  return <main className="checkoutExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader minimal/><section className="checkoutBanner"><div className="shell"><div><span className="eyebrow">Nuitee Connect</span><h1>{ar?"راجع السعر وادفع بأمان":"Review the rate and pay securely"}</h1><p>{ar?"يتم تثبيت السعر عبر Prebook، ثم معالجة الدفع من خلال Nuitee Payment SDK قبل تأكيد الفندق.":"The rate is locked with Prebook, then Nuitee Payment SDK processes payment before the hotel booking is finalized."}</p></div><div className="checkoutTrust"><span><LockKeyhole size={18}/>{ar?"مفتاح API يبقى على الخادم":"API key stays server-side"}</span><span><ShieldCheck size={18}/>{ar?"الدفع قبل الحجز النهائي":"Payment before final booking"}</span></div></div></section><section className="shell checkoutSection">{!prebook||!hotel||!prebook.transactionId||!prebook.secretKey?<CheckoutRecovery ar={ar} issue={prebookIssue} retryLink={retryLink} hotelLink={hotelLink}/>:<NuiteeCheckoutFlow prebookId={prebook.prebookId} transactionId={prebook.transactionId} secretKey={prebook.secretKey} hotelName={hotel.name} roomName={prebook.roomName} boardName={prebook.boardName} arrival={arrival} departure={departure} price={prebook.price} sourceCurrency={prebook.currency} locale={market.locale} currency={market.currency} sandbox={prebook.sandbox}/>}</section></main>;
+  const checkoutProof=prebook&&hotel&&prebook.transactionId&&prebook.secretKey?createNuiteeCheckoutProof({
+    prebookId:prebook.prebookId,
+    transactionId:prebook.transactionId,
+    offerId:prebook.offerId||offerId,
+    hotelId,
+    hotelName:hotel.name,
+    city:hotel.city,
+    roomName:prebook.roomName,
+    boardName:prebook.boardName,
+    arrival,
+    departure,
+    adults,
+    children,
+    price:prebook.price,
+    currency:prebook.currency,
+    cancellationPolicy:prebook.cancellationPolicy,
+    sandbox:prebook.sandbox,
+  }):null;
+  return <main className="checkoutExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader minimal/><section className="checkoutBanner"><div className="shell"><div><span className="eyebrow">Nuitee Connect</span><h1>{ar?"راجع السعر وادفع بأمان":"Review the rate and pay securely"}</h1><p>{ar?"يتم تثبيت السعر عبر Prebook، ثم معالجة الدفع من خلال Nuitee Payment SDK قبل تأكيد الفندق.":"The rate is locked with Prebook, then Nuitee Payment SDK processes payment before the hotel booking is finalized."}</p></div><div className="checkoutTrust"><span><LockKeyhole size={18}/>{ar?"مفتاح API يبقى على الخادم":"API key stays server-side"}</span><span><ShieldCheck size={18}/>{ar?"الدفع قبل الحجز النهائي":"Payment before final booking"}</span></div></div></section><section className="shell checkoutSection">{!prebook||!hotel||!prebook.transactionId||!prebook.secretKey||!checkoutProof?<CheckoutRecovery ar={ar} issue={prebookIssue} retryLink={retryLink} hotelLink={hotelLink}/>:<NuiteeCheckoutFlow checkoutProof={checkoutProof} secretKey={prebook.secretKey} hotelName={hotel.name} roomName={prebook.roomName} boardName={prebook.boardName} arrival={arrival} departure={departure} price={prebook.price} sourceCurrency={prebook.currency} locale={market.locale} currency={market.currency} sandbox={prebook.sandbox}/>}</section></main>;
 }
 
 function CheckoutRecovery({ar,issue,retryLink,hotelLink}:{ar:boolean;issue:PrebookIssue;retryLink:string;hotelLink:string}){
