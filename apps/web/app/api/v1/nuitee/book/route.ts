@@ -11,9 +11,9 @@ export async function POST(request:Request){
   const lastName=value(body.lastName);
   const email=value(body.email);
   const phone=value(body.phone);
-  if(!prebookId||!transactionId||!firstName||!lastName||!email||!email.includes("@")||!phone)return Response.json({error:{message:"Missing or invalid booking details"}},{status:400});
+  if(!prebookId||!transactionId||!firstName||!lastName||!email||!email.includes("@"))return Response.json({error:{message:"Missing or invalid booking details"}},{status:400});
   try{
-    const result=await bookNuitee({prebookId,transactionId,holderFirstName:firstName,holderLastName:lastName,email,phone});
+    const result=await bookNuitee({prebookId,transactionId,holderFirstName:firstName,holderLastName:lastName,email,...(phone?{phone}:{})});
     return Response.json({data:result},{headers:{"cache-control":"no-store"}});
   }catch(error){
     console.error("Nuitee booking failed",error);
