@@ -17,9 +17,12 @@ export const publicStaySchema = z.object({
 });
 
 export const discoverySortSchema = z.enum(["RECOMMENDED", "PRICE_ASC", "PRICE_DESC", "STARS_DESC", "RATING_DESC"]);
+export const discoveryDestinationKindSchema = z.enum(["DESTINATION", "HOTEL"]);
 
 export const discoverySearchSchema = publicStaySchema.safeExtend({
   destination: z.string().trim().min(1).max(120),
+  destinationKind: discoveryDestinationKindSchema.optional(),
+  destinationId: z.string().trim().min(1).max(180).optional(),
   minPrice: z.coerce.number().finite().nonnegative().max(1_000_000).optional(),
   maxPrice: z.coerce.number().finite().nonnegative().max(1_000_000).optional(),
   stars: z.array(z.coerce.number().int().min(1).max(5)).max(5).default([]),
@@ -32,6 +35,9 @@ export const discoverySearchSchema = publicStaySchema.safeExtend({
 }).superRefine((value, ctx) => {
   if (value.minPrice !== undefined && value.maxPrice !== undefined && value.maxPrice < value.minPrice) {
     ctx.addIssue({code: "custom", path: ["maxPrice"], message: "Maximum price cannot be lower than minimum price"});
+  }
+  if (Boolean(value.destinationKind) !== Boolean(value.destinationId)) {
+    ctx.addIssue({code: "custom", path: [value.destinationKind ? "destinationId" : "destinationKind"], message: "Destination selection metadata must include both kind and id"});
   }
 });
 
