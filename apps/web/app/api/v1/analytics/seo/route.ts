@@ -1,4 +1,5 @@
-import {NextRequest, NextResponse} from "next/server";
+import type {NextRequest} from "next/server";
+import {NextResponse} from "next/server";
 import {database} from "@platform/database";
 
 const EVENTS = new Set(["BLOG_VIEW", "BLOG_TO_SEARCH", "BLOG_TO_CARS"]);
