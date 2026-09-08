@@ -79,10 +79,9 @@ export async function prebookNuitee(offerId: string): Promise<NuiteePrebook> {
 export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBookingResult> {
   const prebookId = input.prebookId.trim();
   const transactionId = input.transactionId.trim();
-  const phone = input.phone.trim();
+  const phone = input.phone?.trim();
   if (!prebookId) throw new Error("Nuitee prebookId is required");
   if (!transactionId) throw new Error("Nuitee transactionId is required");
-  if (!phone) throw new Error("Nuitee holder phone is required");
   const payload = await request<unknown>(`${BOOK_BASE}/rates/book`, "POST", {
     prebookId,
     clientReference: clientReference(transactionId),
@@ -90,9 +89,9 @@ export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBooki
       firstName: input.holderFirstName.trim(),
       lastName: input.holderLastName.trim(),
       email: input.email.trim(),
-      phone,
+      ...(phone ? {phone} : {}),
     },
-    guests: [{occupancyNumber: 1, firstName: input.holderFirstName.trim(), lastName: input.holderLastName.trim(), email: input.email.trim(), phone}],
+    guests: [{occupancyNumber: 1, firstName: input.holderFirstName.trim(), lastName: input.holderLastName.trim(), email: input.email.trim(), ...(phone ? {phone} : {})}],
     payment: {method: "TRANSACTION_ID", transactionId},
   }, 70_000);
   const data = record(record(payload).data);
