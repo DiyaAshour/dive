@@ -13,19 +13,21 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
     const offerId = text(room.offerId);
     const rate = records(room.rates)[0];
     if (!offerId || !rate) return [];
-    const offerRetail = record(room.offerRetailRate);
+    const offerRetail = records(room.offerRetailRate)[0] ?? record(room.offerRetailRate);
     const summed = records(room.rates).reduce((sum, item) => sum + (rateTotal(item) ?? 0), 0);
     const total = number(offerRetail.amount) ?? summed;
     if (!(total > 0)) return [];
     const currency = text(offerRetail.currency) ?? rateCurrency(rate) ?? "USD";
     const policy = cancellation(rate);
     const refundable = text(record(rate.cancellationPolicies).refundableTag)?.toUpperCase() === "RFN";
-    const deadline = policy.rules.find((rule) => rule.from)?.from ?? null;
-    const freeCancellationNow = refundable && (!deadline || Date.parse(deadline) > Date.now());
+    const firstPenalty = policy.rules.find((rule) => rule.amount > 0);
+    const deadline = firstPenalty?.from ?? null;
+    const parsedDeadline = deadline ? Date.parse(deadline) : Number.NaN;
+    const freeCancellationNow = refundable && (!deadline || !Number.isFinite(parsedDeadline) || parsedDeadline > Date.now());
     return [{
       offerId,
       rateId: text(rate.rateId),
-      roomName: text(rate.name) ?? "Provider room",
+      roomName: text(room.name) ?? text(rate.name) ?? "Provider room",
       mappedRoomId: text(rate.mappedRoomId),
       boardCode: text(rate.boardType),
       boardName: text(rate.boardName),
@@ -36,7 +38,7 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
       paymentModes: ["PAY_NOW"] as const,
       freeCancellationNow,
       cancellationPolicy: policy,
-      promotion: null,
+      promotion: promotion(rate),
     }];
   }).filter((offer) => offerMatches(offer, input)).sort((left, right) => left.total - right.total);
 }
@@ -46,9 +48,21 @@ function cancellation(rate: RawRecord): NuiteeOffer["cancellationPolicy"] {
   const rules = records(policies.cancelPolicyInfos).map((item) => ({
     amount: number(item.amount) ?? number(item.cancelAmount) ?? number(item.penaltyAmount) ?? 0,
     from: text(item.cancelTime) ?? text(item.from),
+    currency: text(item.currency),
+    timezone: text(item.timezone) ?? text(item.timeZone) ?? "GMT",
   }));
   const refundable = text(policies.refundableTag)?.toUpperCase() === "RFN";
   return {name: refundable ? "Refundable rate" : "Non-refundable / provider policy", rules};
+}
+
+function promotion(rate: RawRecord): NuiteeOffer["promotion"] {
+  const retail = record(rate.retailRate);
+  const item = records(retail.promotions)[0];
+  if (!item) return null;
+  const discount = number(item.discount);
+  const discountType = text(item.discountType)?.toLowerCase();
+  if (!(discount !== null && discount > 0) || discountType !== "percentage") return null;
+  return {name: text(item.name) ?? "Promotion", discountPercent: Math.round(discount * 100) / 100};
 }
 
 function offerMatches(offer: NuiteeOffer, input: NuiteeSearchInput): boolean {
