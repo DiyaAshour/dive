@@ -12,6 +12,10 @@
       "schedule": "0 * * * *"
     },
     {
+      "path": "/api/v1/internal/seo-hourly-publish",
+      "schedule": "23 * * * *"
+    },
+    {
       "path": "/api/v1/internal/hotelbeds-content-sync",
       "schedule": "17 2 * * *"
     }
