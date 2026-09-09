@@ -3,8 +3,8 @@ import {database} from "@platform/database";
 
 const API_BASE = "https://api.liteapi.travel/v3.0";
 const REQUEST_TIMEOUT_MS = 15_000;
-const DEFAULT_BATCH_SIZE = 150;
-const DEFAULT_CONCURRENCY = 6;
+const DEFAULT_BATCH_SIZE = 300;
+const DEFAULT_CONCURRENCY = 8;
 
 type RawRecord = Record<string, unknown>;
 
