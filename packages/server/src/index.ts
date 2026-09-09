@@ -43,6 +43,7 @@ export * from "./hotelbeds/catalog";
 export * from "./hotelbeds/post-booking";
 export * from "./nuitee/client";
 export * from "./nuitee/catalog";
+export * from "./nuitee/scheduled-sync";
 export {getNuiteeHotelDetailsCatalog as getNuiteeHotelDetails, searchNuiteeCatalog as searchNuitee} from "./nuitee/catalog";
 export * from "./nuitee/checkout-session";
 export * from "./nuitee/webhook";
