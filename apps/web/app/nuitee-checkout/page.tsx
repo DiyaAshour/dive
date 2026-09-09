@@ -3,13 +3,14 @@ import {LockKeyhole,ShieldCheck} from "lucide-react";
 import {getNuiteeHotelDetails,NUITEE_PAYMENT_CURRENCY,type NuiteeHotelDetails} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {requestGuestMarket} from "@/lib/request-guest-market";
+import {currentUser} from "@/lib/server-session";
 import {NuiteeCheckoutFlow} from "./checkout-flow";
 
 type SearchParams=Record<string,string|string[]|undefined>;
 export const metadata={robots:{index:false,follow:false}};
 
 export default async function NuiteeCheckoutPage({searchParams}:{searchParams:Promise<SearchParams>}){
-  const [query,market]=await Promise.all([searchParams,requestGuestMarket()]);
+  const [query,market,user]=await Promise.all([searchParams,requestGuestMarket(),currentUser()]);
   const hotelId=first(query.hotelId)?.trim()??"";
   const offerId=first(query.offerId)?.trim()??"";
   const arrival=first(query.arrival)?.trim()??"";
@@ -26,9 +27,17 @@ export default async function NuiteeCheckoutPage({searchParams}:{searchParams:Pr
   }
   const ar=market.locale==="ar";
   const hotelLink=hotelId?hotelHref({hotelId,arrival,departure,adults,children,childrenAges}):"/search";
-  return <main className="checkoutExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader minimal/><section className="checkoutBanner"><div className="shell"><div><span className="eyebrow">Nuitee Connect</span><h1>{ar?"راجع إقامتك وادفع بأمان":"Review your stay and pay securely"}</h1><p>{ar?"لن يتم إنشاء Prebook أو جلسة دفع أثناء تحميل هذه الصفحة. يتم فحص العرض مرة واحدة فقط عندما تضغط المتابعة إلى الدفع، ثم تفتح بوابة Nuitee الآمنة.":"Loading this page never creates a prebook or payment session. The selected offer is checked once only when you continue to payment, then Nuitee's secure payment portal opens."}</p></div><div className="checkoutTrust"><span><LockKeyhole size={18}/>{ar?"مفتاح API يبقى على الخادم":"API key stays server-side"}</span><span><ShieldCheck size={18}/>{ar?"Prebook فقط عند طلبك":"Prebook only on your action"}</span></div></div></section><section className="shell checkoutSection">{valid&&hotel?<NuiteeCheckoutFlow hotelId={hotelId} offerId={offerId} hotelName={hotel.name} city={hotel.city} arrival={arrival} departure={departure} adults={adults} children={children} childrenAges={childrenAges} guestNationality={market.countryCode||"JO"} locale={market.locale} currency={market.currency} refreshHref={hotelLink}/>:<CheckoutRecovery ar={ar} hotelLink={hotelLink} invalid={!valid}/>}</section></main>;
+  const account=accountGuest(user);
+  return <main className="checkoutExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader minimal/><section className="checkoutBanner"><div className="shell"><div><span className="eyebrow">Nuitee Connect</span><h1>{ar?"راجع إقامتك وادفع بأمان":"Review your stay and pay securely"}</h1><p>{ar?"لن يتم إنشاء Prebook أو جلسة دفع أثناء تحميل هذه الصفحة. يتم فحص العرض مرة واحدة فقط عندما تضغط المتابعة إلى الدفع، ثم تفتح بوابة Nuitee الآمنة.":"Loading this page never creates a prebook or payment session. The selected offer is checked once only when you continue to payment, then Nuitee's secure payment portal opens."}</p></div><div className="checkoutTrust"><span><LockKeyhole size={18}/>{ar?"مفتاح API يبقى على الخادم":"API key stays server-side"}</span><span><ShieldCheck size={18}/>{ar?"Prebook فقط عند طلبك":"Prebook only on your action"}</span></div></div></section><section className="shell checkoutSection">{valid&&hotel?<NuiteeCheckoutFlow hotelId={hotelId} offerId={offerId} hotelName={hotel.name} city={hotel.city} arrival={arrival} departure={departure} adults={adults} children={children} childrenAges={childrenAges} guestNationality={market.countryCode||"JO"} locale={market.locale} currency={market.currency} refreshHref={hotelLink} initialFirstName={account.firstName} initialLastName={account.lastName} initialEmail={account.email} accountPrefilled={Boolean(user)}/>:<CheckoutRecovery ar={ar} hotelLink={hotelLink} invalid={!valid}/>}</section></main>;
 }
 
+function accountGuest(user:{displayName:string;email:string}|null){
+  if(!user)return {firstName:"",lastName:"",email:""};
+  const parts=user.displayName.trim().split(/\s+/).filter(Boolean);
+  const firstName=parts.shift()??"";
+  const lastName=parts.join(" ");
+  return {firstName,lastName,email:user.email.trim()};
+}
 function CheckoutRecovery({ar,hotelLink,invalid}:{ar:boolean;hotelLink:string;invalid:boolean}){
   const title=invalid?(ar?"اختيار الحجز غير مكتمل":"The booking selection is incomplete"):(ar?"تعذر تحديث بيانات الفندق":"Hotel details could not be refreshed");
   const copy=invalid?(ar?"ارجع إلى الفندق واختر غرفة وسعرًا من جديد.":"Return to the hotel and choose a room and rate again."):(ar?"لم يتم إنشاء Prebook ولم يتم بدء أي دفعة. اعرض أحدث الغرف وحاول من جديد.":"No prebook or payment was started. View the latest rooms and try again.");
