@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BedDouble, Building2, CheckCircle2, Images, Plus, Send, ShieldCheck } from "lucide-react";
-import { getHotelPublicContentForManagement, getHotelWorkspace, getPublishingReadiness, listHotelMediaWithCategories, listUserHotels } from "@platform/server";
+import { getHotelPublicContentForManagement, getHotelWorkspace, getNuiteeHotelClaim, getPublishingReadiness, listHotelMediaWithCategories, listUserHotels } from "@platform/server";
 import { PartnerSidebar } from "@/components/partner-sidebar";
 import { PartnerLanguageBar } from "@/components/partner-language-bar";
 import { currentUser } from "@/lib/server-session";
@@ -12,6 +12,7 @@ import SetupManager from "../setup-manager";
 import PublicContentManager from "../public-content-manager";
 import PublishingManager from "../publishing-manager";
 import MediaManager from "../media-manager";
+import NuiteeClaimManager from "../nuitee-claim-manager";
 
 export default async function PropertySettingsPage({searchParams}: {searchParams: Promise<{hotelId?: string}>}) {
   const user = await currentUser();
@@ -25,11 +26,12 @@ export default async function PropertySettingsPage({searchParams}: {searchParams
   const selected = hotels.find((hotel) => hotel.id === query.hotelId) ?? hotels[0];
   if (!selected) redirect("/partner/onboarding");
 
-  const [workspace, publicContent, readiness, media] = await Promise.all([
+  const [workspace, publicContent, readiness, media, nuiteeClaim] = await Promise.all([
     getHotelWorkspace(user.id, selected.id),
     getHotelPublicContentForManagement(user.id, selected.id),
     getPublishingReadiness(user.id, selected.id),
     listHotelMediaWithCategories(user.id, selected.id),
+    getNuiteeHotelClaim(user.id, selected.id),
   ]);
   const ratePlanCount = workspace.roomTypes.reduce((sum, roomType) => sum + roomType.ratePlans.length, 0);
   const serviceRate = Number(workspace.serviceRate) * 100;
@@ -64,6 +66,7 @@ export default async function PropertySettingsPage({searchParams}: {searchParams
       <div className="partnerInsightGrid"><div className="partnerInsight"><ShieldCheck size={20}/><div><strong>{copy.reviewGated}</strong><p>{copy.reviewGatedBody}</p></div></div><div className="partnerInsight"><Building2 size={20}/><div><strong>{copy.completeListing}</strong><p>{copy.completeListingBody}</p></div></div></div>
 
       <div className="partnerWorkspaceStack">
+        <NuiteeClaimManager hotelId={workspace.id} initialClaim={nuiteeClaim ? {...nuiteeClaim, claimedAt: nuiteeClaim.claimedAt?.toISOString() ?? null} : null} locale={locale}/>
         <div id="property-profile" className="dashboardAnchor"><PublicContentManager hotelId={workspace.id} content={{area: publicContent.area, description: publicContent.description, starRating: publicContent.starRating, latitude: publicContent.latitude, longitude: publicContent.longitude, checkInTime: publicContent.checkInTime, checkOutTime: publicContent.checkOutTime, amenities: publicContent.amenities.map((amenity) => ({code: amenity.code, name: amenity.name, category: amenity.category})), translations: publicContent.translations.map((translation) => ({locale: translation.locale, name: translation.name, description: translation.description}))}} locale={locale}/></div>
         <div id="property-photos" className="dashboardAnchor"><MediaManager hotelId={workspace.id} initialMedia={mediaProps} roomTypes={workspace.roomTypes.map((room) => ({id: room.id, name: room.name}))} locale={locale}/></div>
         <div id="rooms-rates" className="dashboardAnchor"><SetupManager hotelId={workspace.id} overbookingEnabled={workspace.overbookingEnabled} roomTypes={workspace.roomTypes.map((roomType) => ({id: roomType.id, name: roomType.name, code: roomType.code, ratePlans: roomType.ratePlans.map((plan) => ({id: plan.id, name: plan.name, code: plan.code, allowPayNow: plan.allowPayNow, allowPayAtHotel: plan.allowPayAtHotel, cancellationPolicy: plan.cancellationPolicy ? {name: plan.cancellationPolicy.name} : null}))}))} locale={locale}/></div>
