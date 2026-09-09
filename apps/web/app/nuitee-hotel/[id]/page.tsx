@@ -1,5 +1,4 @@
 import Link from "next/link";
-import {unstable_cache} from "next/cache";
 import {publicStaySchema} from "@platform/contracts";
 import {getNuiteeHotelDetails,NUITEE_PAYMENT_CURRENCY} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
@@ -10,29 +9,6 @@ import {NuiteeHotelPageV2} from "../../hotel/[id]/nuitee-page-v2";
 type SearchParams=Record<string,string|string[]|undefined>;
 
 export const metadata={robots:{index:false,follow:true}};
-
-const cachedNuiteeHotelDetails=unstable_cache(
-  async (
-    id:string,
-    arrival:string,
-    departure:string,
-    adults:number,
-    children:number,
-    childrenAges:number[],
-    guestNationality:string,
-  )=>getNuiteeHotelDetails(id,{
-    destination:"Nuitee",
-    arrival,
-    departure,
-    adults,
-    children,
-    ...(childrenAges.length?{childrenAges}:{}),
-    ...(guestNationality?{guestNationality}:{}),
-    currency:NUITEE_PAYMENT_CURRENCY,
-  }),
-  ["nuitee-hotel-details-v1"],
-  {revalidate:15},
-);
 
 export default async function NuiteeHotelRoute({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<SearchParams>}) {
   const [{id},query,market]=await Promise.all([params,searchParams,requestGuestMarket()]);
@@ -47,15 +23,19 @@ export default async function NuiteeHotelRoute({params,searchParams}:{params:Pro
   const stay=parsed.success?parsed.data:{arrival:defaults.arrival,departure:defaults.departure,adults:2,children:0,childrenAges:[]};
   let hotel=null;
   try {
-    hotel=await cachedNuiteeHotelDetails(
-      id,
-      stay.arrival,
-      stay.departure,
-      stay.adults,
-      stay.children,
-      stay.childrenAges,
-      market.countryCode??"",
-    );
+    // getNuiteeHotelDetails already caches static hotel content separately while its
+    // /hotels/rates request is no-store. Do not wrap the combined result in a page
+    // cache, otherwise live offerIds can remain stale after the supplier changes them.
+    hotel=await getNuiteeHotelDetails(id,{
+      destination:"Nuitee",
+      arrival:stay.arrival,
+      departure:stay.departure,
+      adults:stay.adults,
+      children:stay.children,
+      ...(stay.childrenAges.length?{childrenAges:stay.childrenAges}:{}),
+      ...(market.countryCode?{guestNationality:market.countryCode}:{}),
+      currency:NUITEE_PAYMENT_CURRENCY,
+    });
   } catch(error) {
     console.error("Nuitee hotel detail unavailable",error);
   }

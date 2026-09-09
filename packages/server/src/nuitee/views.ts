@@ -45,7 +45,9 @@ export function searchViews(payload: unknown, input: NuiteeSearchInput): NuiteeS
 export function hotelView(code: string, contentPayload: unknown, ratesPayload: unknown, input: NuiteeSearchInput, sandbox: boolean): NuiteeHotelDetails | null {
   const content = record(record(contentPayload).data);
   const rateRows = records(record(ratesPayload).data);
-  const row = rateRows.find((item) => text(item.hotelId) === code) ?? rateRows[0];
+  // This request is for one explicit hotel ID. Never attach the first unrelated
+  // provider row to the requested hotel's static content when that ID is absent.
+  const row = rateRows.find((item) => text(item.hotelId) === code);
   if (!row) return null;
   const offers = offersFromHotel(row, input);
   if (!offers.length) return null;
