@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, BookOpen, CalendarDays, FolderOpen, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, FolderOpen } from "lucide-react";
 import {blogCategoryBreadcrumb, getPublicBlogTaxonomy, listPublishedBlogPosts, materializeBlogTaxonomy} from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { siteUrl } from "@/lib/site-url";
@@ -23,7 +23,9 @@ const pageCopy = {
     search:"Search live stays",
     all:"All guides",
     categories:"Browse by topic",
+    subtopics:"More in this topic",
     latest:"Latest guides",
+    editorial:"Clear travel advice, organized by topic — no decorative stock imagery.",
   },
   ar: {
     title:"دليل HandMeKey للسفر | فنادق الأردن ونصائح الحجز والوجهات",
@@ -39,7 +41,9 @@ const pageCopy = {
     search:"ابحث عن إقامات متاحة",
     all:"كل الأدلة",
     categories:"استكشف حسب الموضوع",
+    subtopics:"مواضيع فرعية",
     latest:"أحدث الأدلة",
+    editorial:"محتوى سفر واضح ومرتب حسب الموضوع — بدون صور مكررة أو صور تجميلية غير مفيدة.",
   },
 } as const;
 
@@ -74,20 +78,23 @@ export default async function BlogLanding({params,searchParams}:{params:Promise<
   const visiblePosts=selectedCategory?posts.filter(post=>post.category===selectedCategory||post.category.startsWith(`${selectedCategory} / `)):posts;
   const featured=selectedCategory?null:(visiblePosts.find(post=>post.featured)??visiblePosts[0]??null);
   const rest=featured?visiblePosts.filter(post=>post.id!==featured.id):visiblePosts;
+  const topCategories=categories.filter(category=>category.depth===0);
+  const selectedRoot=selectedCategory?.split(" / ")[0]??null;
+  const subcategories=selectedRoot?categories.filter(category=>category.depth>0&&category.path.startsWith(`${selectedRoot} / `)):[];
   const structuredData={"@context":"https://schema.org","@type":"Blog",name:c.eyebrow,description:c.description,url:siteUrl(`/blog/${locale}`),inLanguage:locale,publisher:{"@type":"Organization",name:"HandMeKey",url:siteUrl()}};
 
   return <main className="blogExperience blogPortal" dir={rtl?"rtl":"ltr"} lang={locale}>
     <CustomerHeader/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/>
-    <section className="blogHero"><div className="shell blogHeroInner"><div><span className="eyebrow"><BookOpen size={16}/>{c.eyebrow}</span><h1>{c.heading}</h1><p>{c.intro}</p><div className="blogHeroLinks"><Link href={`/rewards/${locale}`}>{c.rewards}</Link><Link href="/search">{c.search}</Link></div></div><div className="blogLanguageLinks"><Link href="/blog/en" hrefLang="en">English</Link><Link href="/blog/ar" hrefLang="ar">العربية</Link></div></div></section>
+    <section className="blogHero"><div className="shell blogHeroInner"><div><span className="eyebrow"><BookOpen size={16}/>{c.eyebrow}</span><h1>{c.heading}</h1><p>{c.intro}</p><div className="blogHeroLinks"><Link href={`/rewards/${locale}`}>{c.rewards}</Link><Link href="/search">{c.search}</Link></div><p className="blogEditorialNote"><strong>HandMeKey Editorial</strong> · {c.editorial}</p></div><div className="blogLanguageLinks"><Link href="/blog/en" hrefLang="en">English</Link><Link href="/blog/ar" hrefLang="ar">العربية</Link></div></div></section>
 
-    <section className="shell blogTopicNav"><div className="blogTopicHead"><span><FolderOpen size={17}/>{c.categories}</span>{selectedCategory&&<strong>{blogCategoryBreadcrumb(selectedCategory)}</strong>}</div><div className="blogTopicPills blogTopicHierarchy"><Link className={!selectedCategory?"active":""} href={`/blog/${locale}`}>{c.all}<span>{posts.length}</span></Link>{categories.map(category=><Link data-depth={category.depth} className={selectedCategory===category.path?"active":""} href={`/blog/${locale}?category=${encodeURIComponent(category.path)}`} key={category.id}>{category.depth>0&&<i>{"↳".repeat(Math.min(category.depth,3))}</i>}{category.name}<span>{category.count}</span></Link>)}</div></section>
+    <section className="shell blogTopicNav"><div className="blogTopicHead"><span><FolderOpen size={17}/>{c.categories}</span>{selectedCategory&&<strong>{blogCategoryBreadcrumb(selectedCategory)}</strong>}</div><div className="blogTopicPills"><Link className={!selectedCategory?"active":""} href={`/blog/${locale}`}>{c.all}<span>{posts.length}</span></Link>{topCategories.map(category=><Link className={selectedRoot===category.path?"active":""} href={`/blog/${locale}?category=${encodeURIComponent(category.path)}`} key={category.id}>{category.name}<span>{category.count}</span></Link>)}</div>{subcategories.length>0&&<div className="blogSubtopics"><span>{c.subtopics}</span>{subcategories.map(category=><Link className={selectedCategory===category.path?"active":""} href={`/blog/${locale}?category=${encodeURIComponent(category.path)}`} key={category.id}>{blogCategoryBreadcrumb(category.path)}</Link>)}</div>}</section>
 
     <section className="shell blogListing">
       {visiblePosts.length===0?<div className="blogEmpty"><BookOpen size={34}/><strong>{selectedCategory?c.emptyCategory:c.empty}</strong></div>:<>
-        {featured&&<article className="blogFeatured">{featured.coverImageUrl?<img src={featured.coverImageUrl} alt={featured.coverImageAlt||featured.title}/>:<div className="blogImagePlaceholder"><Sparkles size={34}/></div>}<div><span className="blogCategory">{c.featured} · {blogCategoryBreadcrumb(featured.category)}</span><h2><Link href={`/blog/${locale}/${featured.slug}`}>{featured.title}</Link></h2><p>{featured.excerpt}</p><div className="blogMeta"><CalendarDays size={15}/>{formatDate(featured.publishedAt,locale)} · {featured.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${featured.slug}`}>{c.read}<ArrowRight size={16}/></Link></div></article>}
+        {featured&&<article className="blogFeatured"><div className="blogFeaturedMarker">01</div><div className="blogFeaturedBody"><span className="blogCategory">{c.featured} · {blogCategoryBreadcrumb(featured.category)}</span><h2><Link href={`/blog/${locale}/${featured.slug}`}>{featured.title}</Link></h2><p>{featured.excerpt}</p><div className="blogFeaturedFooter"><div className="blogMeta"><CalendarDays size={15}/>{formatDate(featured.publishedAt,locale)} · {featured.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${featured.slug}`}>{c.read}<ArrowRight size={16}/></Link></div></div></article>}
         <div className="blogListHeading"><h2>{selectedCategory?blogCategoryBreadcrumb(selectedCategory):c.latest}</h2><span>{rest.length} {locale==="ar"?"مقال":"guides"}</span></div>
-        <div className="blogGrid">{rest.map((post)=><article className="blogCard" key={post.id}>{post.coverImageUrl?<img src={post.coverImageUrl} alt={post.coverImageAlt||post.title} loading="lazy"/>:<div className="blogImagePlaceholder"><BookOpen size={28}/></div>}<div><Link className="blogCategory" href={`/blog/${locale}?category=${encodeURIComponent(post.category)}`}>{blogCategoryBreadcrumb(post.category)}</Link><h2><Link href={`/blog/${locale}/${post.slug}`}>{post.title}</Link></h2><p>{post.excerpt}</p><div className="blogMeta"><CalendarDays size={14}/>{formatDate(post.publishedAt,locale)} · {post.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${post.slug}`}>{c.read}<ArrowRight size={15}/></Link></div></article>)}</div>
+        <div className="blogGrid">{rest.map((post,index)=><article className="blogCard" key={post.id}><div><div className="blogCardTop"><Link className="blogCategory" href={`/blog/${locale}?category=${encodeURIComponent(post.category)}`}>{blogCategoryBreadcrumb(post.category)}</Link><span className="blogCardIndex">{String(index+(featured?2:1)).padStart(2,"0")}</span></div><h2><Link href={`/blog/${locale}/${post.slug}`}>{post.title}</Link></h2><p>{post.excerpt}</p><div className="blogCardFooter"><div className="blogMeta"><CalendarDays size={14}/>{formatDate(post.publishedAt,locale)} · {post.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${post.slug}`}>{c.read}<ArrowRight size={15}/></Link></div></div></article>)}</div>
       </>}
     </section>
   </main>;
