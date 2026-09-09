@@ -22,7 +22,7 @@ export default async function NuiteeCheckoutPage({searchParams}:{searchParams:Pr
   let hotel:NuiteeHotelDetails|null=null;
   if(valid){
     try{
-      hotel=await getNuiteeHotelDetails(hotelId,{destination:"Nuitee",arrival,departure,adults,children,...(childrenAges.length?{childrenAges}:{}),...(market.countryCode?{guestNationality:market.countryCode}:{}),currency:NUITEE_PAYMENT_CURRENCY,maxRatesPerHotel:20});
+      hotel=await getNuiteeHotelDetails(hotelId,{destination:"Nuitee",arrival,departure,adults,children,...(childrenAges.length?{childrenAges}:{}),...(market.countryCode?{guestNationality:market.countryCode}:{}),currency:NUITEE_PAYMENT_CURRENCY});
     }catch(error){console.error("Nuitee checkout hotel refresh failed",error);}
   }
   const ar=market.locale==="ar";
