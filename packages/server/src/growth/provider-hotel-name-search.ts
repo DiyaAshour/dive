@@ -254,11 +254,65 @@ function nuiteeUsdBound(value:number):number {
   return convertCurrency(value,"JOD",NUITEE_PAYMENT_CURRENCY) ?? value;
 }
 
+/**
+ * Nuitee can expose the same physical property under more than one provider hotel
+ * code. Provider IDs are therefore not sufficient as the only listing identity.
+ * For Nuitee rows, exact normalized property name + city is a conservative physical
+ * identity key; local/partner inventory keeps its normal database ID identity.
+ * When duplicate Nuitee rows exist, keep the cheapest row in the requested supplier
+ * currency so the guest sees one property card and the strongest live offer.
+ */
 function dedupeResults(results: SearchItem[]): SearchItem[] {
-  const seen = new Set<string>();
-  return results.filter((hotel) => {
-    if (seen.has(hotel.id)) return false;
-    seen.add(hotel.id);
-    return true;
+  const orderedKeys: string[] = [];
+  const bestByKey = new Map<string, SearchItem>();
+
+  for (const hotel of results) {
+    const key = resultIdentity(hotel);
+    const existing = bestByKey.get(key);
+    if (!existing) {
+      orderedKeys.push(key);
+      bestByKey.set(key, hotel);
+      continue;
+    }
+    if (preferDuplicateCandidate(existing, hotel)) bestByKey.set(key, hotel);
+  }
+
+  return orderedKeys.flatMap((key) => {
+    const hotel = bestByKey.get(key);
+    return hotel ? [hotel] : [];
   });
+}
+
+function resultIdentity(hotel: SearchItem): string {
+  if (!hotel.slug.startsWith("nuitee-")) return `id:${hotel.id}`;
+  const name = normalizePropertyText(hotel.name);
+  const city = normalizePropertyText(hotel.city);
+  return name && city ? `nuitee-property:${name}|${city}` : `id:${hotel.id}`;
+}
+
+function preferDuplicateCandidate(existing: SearchItem, candidate: SearchItem): boolean {
+  if (!existing.slug.startsWith("nuitee-") || !candidate.slug.startsWith("nuitee-")) return false;
+  const existingCurrency = String(existing.currency ?? "").toUpperCase();
+  const candidateCurrency = String(candidate.currency ?? "").toUpperCase();
+  if (existingCurrency && existingCurrency === candidateCurrency) {
+    const existingTotal = Number(existing.from?.total);
+    const candidateTotal = Number(candidate.from?.total);
+    if (Number.isFinite(existingTotal) && Number.isFinite(candidateTotal) && candidateTotal < existingTotal) return true;
+    if (Number.isFinite(existingTotal) && Number.isFinite(candidateTotal) && candidateTotal > existingTotal) return false;
+  }
+  const existingReviews = Number(existing.reviewSummary?.count ?? 0);
+  const candidateReviews = Number(candidate.reviewSummary?.count ?? 0);
+  if (candidateReviews !== existingReviews) return candidateReviews > existingReviews;
+  return !existing.coverPhoto && Boolean(candidate.coverPhoto);
+}
+
+function normalizePropertyText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
