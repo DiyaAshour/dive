@@ -164,7 +164,10 @@ export async function getNuiteeHotelDetails(code: string, input: NuiteeSearchInp
     checkout: input.departure,
     roomMapping: true,
     includeHotelData: true,
-    maxRatesPerHotel: Math.max(1, Math.min(50, input.maxRatesPerHotel ?? 20)),
+    // Hotel detail pages need the complete supplier rate set so every meal plan
+    // (room-only, breakfast, half-board, full-board, etc.) can be grouped under
+    // the mapped room. Nuitee recommends omitting maxRatesPerHotel here.
+    ...(input.maxRatesPerHotel !== undefined ? {maxRatesPerHotel: Math.max(1, Math.min(200, input.maxRatesPerHotel))} : {}),
     timeout: 10,
     ...(input.freeCancellation ? {refundableRatesOnly: true} : {}),
     ...marginBody(),
