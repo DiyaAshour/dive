@@ -9,9 +9,9 @@ const API_BASE = "https://api.liteapi.travel/v3.0";
 const REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_SYNC_PAGE_SIZE = 250;
 const DEFAULT_SYNC_CONCURRENCY = 6;
-const DEFAULT_LAZY_FILL_LIMIT = 8;
-const DEFAULT_RATE_CACHE_TTL_MS = 45_000;
-const MAX_RATE_CACHE_ENTRIES = 500;
+const DEFAULT_LAZY_FILL_LIMIT = 2;
+const DEFAULT_RATE_CACHE_TTL_MS = 120_000;
+const MAX_RATE_CACHE_ENTRIES = 1500;
 
 type RawRecord = Record<string, unknown>;
 type RateCacheEntry = Readonly<{expiresAt: number; value: unknown}>;
@@ -53,7 +53,7 @@ export async function getNuiteeHotelDetailsCatalog(code: string, input: NuiteeSe
     ...(input.maxRatesPerHotel !== undefined
       ? {maxRatesPerHotel: Math.max(1, Math.min(200, input.maxRatesPerHotel))}
       : {}),
-    timeout: 10,
+    timeout: 8,
     ...(input.freeCancellation ? {refundableRatesOnly: true} : {}),
     ...marginBody(),
   };
@@ -83,7 +83,7 @@ export async function searchNuiteeCatalog(input: NuiteeSearchInput): Promise<Nui
     includeHotelData: false,
     maxRatesPerHotel: Math.max(1, Math.min(25, input.maxRatesPerHotel ?? 3)),
     limit: Math.max(1, Math.min(50, input.limit ?? 20)),
-    timeout: 8,
+    timeout: 6,
     ...(input.stars?.length ? {starRating: input.stars} : {}),
     ...(input.freeCancellation ? {refundableRatesOnly: true} : {}),
     ...marginBody(),
@@ -180,7 +180,7 @@ async function loadCatalogContent(providerHotelIds: readonly string[], fallbackC
 
   const lazyFillLimit = Math.max(0, Number(process.env.NUITEE_CONTENT_LAZY_FILL_LIMIT ?? DEFAULT_LAZY_FILL_LIMIT));
   const missing = providerHotelIds.filter((id) => !byId.has(id)).slice(0, lazyFillLimit);
-  await mapWithConcurrency(missing, Math.min(4, DEFAULT_SYNC_CONCURRENCY), async (id) => {
+  await mapWithConcurrency(missing, Math.min(2, DEFAULT_SYNC_CONCURRENCY), async (id) => {
     try {
       const payload = await fetchLiveNuiteeContent(id);
       const content = record(record(payload).data);
