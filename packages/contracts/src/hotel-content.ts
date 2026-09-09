@@ -4,11 +4,41 @@ const nullableText = (max: number) => z.string().trim().max(max).nullable();
 
 export const HOTEL_CONTENT_LOCALES = ["en","ar","zh","fr","de","es","it","tr","ru","ja","ko","hi","pt","id","th"] as const;
 
+export const HOTEL_AMENITY_MINIMUM = 10;
+export const HOTEL_AMENITY_CODES = [
+  "WIFI","PARKING","BREAKFAST","RESTAURANT","ROOM_SERVICE","POOL","SPA","GYM","AIRPORT_SHUTTLE",
+  "FAMILY_ROOMS","BUSINESS_CENTER","ROOFTOP","TERRACE","PLAY_AREA","BEACH_SHUTTLE","BEACH_ACCESS","MARINA","WATER_SPORTS",
+] as const;
+export type HotelAmenityCode = (typeof HOTEL_AMENITY_CODES)[number];
+
+const HOTEL_AMENITY_DETAILS: Record<HotelAmenityCode,{name:string;category:string}> = {
+  WIFI:{name:"Free Wi-Fi",category:"Essentials"},
+  PARKING:{name:"Parking",category:"Convenience"},
+  BREAKFAST:{name:"Breakfast",category:"Food & drink"},
+  RESTAURANT:{name:"Restaurant",category:"Food & drink"},
+  ROOM_SERVICE:{name:"Room service",category:"Food & drink"},
+  POOL:{name:"Pool",category:"Wellness"},
+  SPA:{name:"Spa",category:"Wellness"},
+  GYM:{name:"Fitness centre",category:"Wellness"},
+  AIRPORT_SHUTTLE:{name:"Airport shuttle",category:"Transport"},
+  FAMILY_ROOMS:{name:"Family rooms",category:"Family"},
+  BUSINESS_CENTER:{name:"Business centre",category:"Business"},
+  ROOFTOP:{name:"Rooftop terrace",category:"Outdoors"},
+  TERRACE:{name:"Terrace",category:"Outdoors"},
+  PLAY_AREA:{name:"Children’s play area",category:"Family"},
+  BEACH_SHUTTLE:{name:"Beach shuttle",category:"Transport"},
+  BEACH_ACCESS:{name:"Beach access",category:"Activities"},
+  MARINA:{name:"Marina access",category:"Activities"},
+  WATER_SPORTS:{name:"Water sports",category:"Activities"},
+};
+
+export const HOTEL_AMENITY_CATALOG = HOTEL_AMENITY_CODES.map((code)=>({code,...HOTEL_AMENITY_DETAILS[code]}));
+
 export const hotelAmenityInputSchema = z.object({
-  code: z.string().trim().min(1).max(50).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()),
-  name: z.string().trim().min(2).max(80),
-  category: nullableText(60).default(null),
-});
+  code: z.enum(HOTEL_AMENITY_CODES),
+  name: z.string().trim().min(2).max(80).optional(),
+  category: nullableText(60).optional(),
+}).transform(({code})=>({code,name:HOTEL_AMENITY_DETAILS[code].name,category:HOTEL_AMENITY_DETAILS[code].category}));
 
 export const hotelTranslationInputSchema = z.object({
   locale: z.enum(HOTEL_CONTENT_LOCALES),
@@ -24,7 +54,7 @@ export const updateHotelPublicContentSchema = z.object({
   longitude: z.number().finite().min(-180).max(180).nullable().default(null),
   checkInTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
   checkOutTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
-  amenities: z.array(hotelAmenityInputSchema).max(60).default([]),
+  amenities: z.array(hotelAmenityInputSchema).min(HOTEL_AMENITY_MINIMUM,`At least ${HOTEL_AMENITY_MINIMUM} property amenities are required`).max(HOTEL_AMENITY_CODES.length).default([]),
   translations: z.array(hotelTranslationInputSchema).max(HOTEL_CONTENT_LOCALES.length).default([]),
 }).superRefine((value, ctx) => {
   if ((value.latitude === null) !== (value.longitude === null)) {

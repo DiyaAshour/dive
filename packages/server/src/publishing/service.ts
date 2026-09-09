@@ -9,7 +9,7 @@ const REVIEW_WINDOW_DAYS = 30;
 const MIN_SELLABLE_DAYS = 7;
 const MIN_DESCRIPTION_LENGTH = 80;
 const MIN_PHOTOS = 3;
-const MIN_AMENITIES = 3;
+const MIN_AMENITIES = 10;
 const REQUIRED_DOCUMENT_TYPES = ["COMMERCIAL_REGISTRATION", "BUSINESS_LICENSE"] as const;
 
 type ReadinessCheck = {code: string; label: string; passed: boolean; detail: string};
