@@ -39,7 +39,7 @@ export function NuiteeHotelPageV2({hotel,stay,market}:Readonly<{hotel:NuiteeHote
             const roomPhoto=group.room?.photos[0]??null;
             return <article className="roomOfferCard" key={group.key}>
               <section className="publicRoomProduct">
-                <div className="publicRoomMedia">{roomPhoto?<img src={roomPhoto.url} alt={group.roomName} loading="lazy" decoding="async"/>:<><ImageIcon size={28}/><span>{ar?"لم يرسل المزود صورة لهذه الغرفة":"Room photo not provided by supplier"}</span></>}</div>
+                <div className="publicRoomMedia">{roomPhoto?<img src={roomPhoto.url} alt={group.roomName} loading="lazy" decoding="async"/>:<><ImageIcon size={28}/><span>{ar?"لم يرسل Nuitee صورة مرتبطة بهذه الغرفة":"Nuitee did not provide a mapped photo for this room"}</span></>}</div>
                 <div className="publicRoomContent"><span className="eyebrow">{ar?"الغرفة":"Room"}</span><h3>{group.roomName}</h3><div className="publicRoomTags">{group.room?.maxOccupancy&&<span><UserRound size={14}/>{ar?`حتى ${group.room.maxOccupancy} ضيوف`:`Up to ${group.room.maxOccupancy} guests`}</span>}{group.room?.sizeValue&&<span><Ruler size={14}/>{group.room.sizeValue} {group.room.sizeUnit??"m²"}</span>}{group.room?.beds.slice(0,2).map((bed,index)=><span key={`${bed.type}-${index}`}><BedDouble size={14}/>{bed.quantity} {bed.type}</span>)}</div>{group.room?.description?<p className="publicRoomDescription">{group.room.description}</p>:<p className="publicRoomDescription">{ar?"اسم الغرفة وخيارات الوجبات وسياسة الإلغاء تأتي مباشرة من Nuitee Connect.":"The supplier room name, meal options and cancellation terms come directly from Nuitee Connect."}</p>}{group.room?.amenities.length?<div className="publicRoomTags">{group.room.amenities.slice(0,6).map((amenity)=><span key={amenity.code}>{amenity.name}</span>)}</div>:null}{lowInventory<=3&&<strong className="scarcityNote">{ar?`متبقي ${lowInventory} فقط لهذه التواريخ`:`Only ${lowInventory} left for these dates`}</strong>}</div>
               </section>
               <section className="publicRateOptions">
@@ -76,12 +76,14 @@ export function NuiteeHotelPageV2({hotel,stay,market}:Readonly<{hotel:NuiteeHote
 }
 
 function groupOffers(offers:readonly NuiteeOffer[],rooms:readonly RoomContent[]):RoomGroup[]{
-  const roomById=new Map(rooms.map((room)=>[room.id,room] as const));
-  const roomByName=new Map(rooms.map((room)=>[normalizeRoomName(room.name),room] as const));
+  const roomById=new Map(rooms.map((room)=>[room.id.trim(),room] as const));
   const groups=new Map<string,{roomName:string;mappedRoomId:string|null;room:RoomContent|null;offers:NuiteeOffer[]}>();
   for(const offer of offers){
     const mapped=offer.mappedRoomId?.trim()||null;
-    const matchedRoom=(mapped?roomById.get(mapped):undefined)??roomByName.get(normalizeRoomName(offer.roomName))??null;
+    // Nuitee documents mappedRoomId as the exact join key to hotel data rooms[].id.
+    // Never guess a room image by name when a mapping is missing or does not join:
+    // showing no image is safer than attaching another room's photo.
+    const matchedRoom=mapped?(roomById.get(mapped)??null):null;
     const key=mapped?`mapped:${mapped}`:`name:${normalizeRoomName(offer.roomName)}`;
     const current=groups.get(key);
     if(current)current.offers.push(offer);else groups.set(key,{roomName:offer.roomName,mappedRoomId:mapped,room:matchedRoom,offers:[offer]});
