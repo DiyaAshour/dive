@@ -27,7 +27,10 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
     return [{
       offerId,
       rateId: text(rate.rateId),
-      roomName: text(room.name) ?? text(rate.name) ?? "Provider room",
+      // Nuitee documents rates[].name as the supplier room name. The offer-level
+      // roomTypes item is an offer container, so its name must not override the
+      // supplier rate name or room-to-rate mapping can be displayed incorrectly.
+      roomName: text(rate.name) ?? text(room.name) ?? "Provider room",
       mappedRoomId: text(rate.mappedRoomId),
       boardCode: text(rate.boardType),
       boardName: text(rate.boardName),
