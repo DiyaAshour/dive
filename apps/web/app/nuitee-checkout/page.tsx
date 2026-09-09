@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {LockKeyhole,ShieldCheck} from "lucide-react";
-import {getNuiteeHotelDetails,type NuiteeHotelDetails} from "@platform/server";
+import {getNuiteeHotelDetails,NUITEE_PAYMENT_CURRENCY,type NuiteeHotelDetails} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {requestGuestMarket} from "@/lib/request-guest-market";
 import {NuiteeCheckoutFlow} from "./checkout-flow";
@@ -21,7 +21,7 @@ export default async function NuiteeCheckoutPage({searchParams}:{searchParams:Pr
   let hotel:NuiteeHotelDetails|null=null;
   if(valid){
     try{
-      hotel=await getNuiteeHotelDetails(hotelId,{destination:"Nuitee",arrival,departure,adults,children,...(childrenAges.length?{childrenAges}:{}),...(market.countryCode?{guestNationality:market.countryCode}:{}),currency:"JOD",maxRatesPerHotel:20});
+      hotel=await getNuiteeHotelDetails(hotelId,{destination:"Nuitee",arrival,departure,adults,children,...(childrenAges.length?{childrenAges}:{}),...(market.countryCode?{guestNationality:market.countryCode}:{}),currency:NUITEE_PAYMENT_CURRENCY,maxRatesPerHotel:20});
     }catch(error){console.error("Nuitee checkout hotel refresh failed",error);}
   }
   const ar=market.locale==="ar";
