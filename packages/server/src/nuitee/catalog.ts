@@ -10,8 +10,14 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_SYNC_PAGE_SIZE = 250;
 const DEFAULT_SYNC_CONCURRENCY = 6;
 const DEFAULT_LAZY_FILL_LIMIT = 8;
+const DEFAULT_RATE_CACHE_TTL_MS = 45_000;
+const MAX_RATE_CACHE_ENTRIES = 500;
 
 type RawRecord = Record<string, unknown>;
+type RateCacheEntry = Readonly<{expiresAt: number; value: unknown}>;
+
+const rateCache = new Map<string, RateCacheEntry>();
+const rateInflight = new Map<string, Promise<unknown>>();
 
 type SyncOptions = Readonly<{
   countryCode?: string;
@@ -54,7 +60,7 @@ export async function getNuiteeHotelDetailsCatalog(code: string, input: NuiteeSe
 
   const [content, rates] = await Promise.all([
     getStoredOrLiveNuiteeContent(clean),
-    nuiteeRequest(`${API_BASE}/hotels/rates`, "POST", rateBody),
+    cachedNuiteeRates(rateBody),
   ]);
 
   return hotelView(clean, content, rates, input, isNuiteeSandbox());
@@ -83,7 +89,7 @@ export async function searchNuiteeCatalog(input: NuiteeSearchInput): Promise<Nui
     ...marginBody(),
   };
 
-  const payload = await nuiteeRequest(`${API_BASE}/hotels/rates`, "POST", body);
+  const payload = await cachedNuiteeRates(body);
   const root = record(payload);
   const hotelIds = [...new Set(records(root.data).flatMap((row) => {
     const id = text(row.hotelId);
@@ -243,6 +249,52 @@ async function persistNuiteeContent(providerHotelId: string, payload: unknown, f
     },
   });
   return "synced";
+}
+
+async function cachedNuiteeRates(body: RawRecord): Promise<unknown> {
+  const ttlMs = rateCacheTtlMs();
+  if (ttlMs <= 0) return nuiteeRequest(`${API_BASE}/hotels/rates`, "POST", body);
+
+  const key = JSON.stringify(body);
+  const now = Date.now();
+  const hit = rateCache.get(key);
+  if (hit && hit.expiresAt > now) return hit.value;
+  if (hit) rateCache.delete(key);
+
+  const pending = rateInflight.get(key);
+  if (pending) return pending;
+
+  const request = nuiteeRequest(`${API_BASE}/hotels/rates`, "POST", body)
+    .then((value) => {
+      pruneRateCache(now);
+      rateCache.set(key, {expiresAt: Date.now() + ttlMs, value});
+      return value;
+    })
+    .finally(() => {
+      rateInflight.delete(key);
+    });
+
+  rateInflight.set(key, request);
+  return request;
+}
+
+function rateCacheTtlMs(): number {
+  const raw = process.env.NUITEE_RATE_CACHE_TTL_SECONDS?.trim();
+  if (!raw) return DEFAULT_RATE_CACHE_TTL_MS;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds)) return DEFAULT_RATE_CACHE_TTL_MS;
+  return Math.max(0, Math.min(300, seconds)) * 1000;
+}
+
+function pruneRateCache(now: number): void {
+  for (const [key, entry] of rateCache) {
+    if (entry.expiresAt <= now) rateCache.delete(key);
+  }
+  while (rateCache.size >= MAX_RATE_CACHE_ENTRIES) {
+    const oldest = rateCache.keys().next().value as string | undefined;
+    if (!oldest) break;
+    rateCache.delete(oldest);
+  }
 }
 
 async function nuiteeRequest(url: string, method: "GET" | "POST", body?: RawRecord): Promise<unknown> {
