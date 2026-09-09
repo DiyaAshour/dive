@@ -42,6 +42,8 @@ export * from "./hotelbeds/content";
 export * from "./hotelbeds/catalog";
 export * from "./hotelbeds/post-booking";
 export * from "./nuitee/client";
+export * from "./nuitee/catalog";
+export {getNuiteeHotelDetailsCatalog as getNuiteeHotelDetails, searchNuiteeCatalog as searchNuitee} from "./nuitee/catalog";
 export * from "./nuitee/checkout-session";
 export * from "./nuitee/webhook";
 export * from "./api-bookings/service";
