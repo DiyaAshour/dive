@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {publicStaySchema} from "@platform/contracts";
-import {getNuiteeHotelDetails} from "@platform/server";
+import {getNuiteeHotelDetails,NUITEE_PAYMENT_CURRENCY} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {requestGuestMarket} from "@/lib/request-guest-market";
 import {defaultStayDates} from "@/lib/stay-dates";
@@ -31,7 +31,7 @@ export default async function NuiteeHotelRoute({params,searchParams}:{params:Pro
       children:stay.children,
       ...(stay.childrenAges.length?{childrenAges:stay.childrenAges}:{}),
       ...(market.countryCode?{guestNationality:market.countryCode}:{}),
-      currency:"JOD",
+      currency:NUITEE_PAYMENT_CURRENCY,
       maxRatesPerHotel:20,
     });
   } catch(error) {
