@@ -32,7 +32,6 @@ export default async function NuiteeHotelRoute({params,searchParams}:{params:Pro
       ...(stay.childrenAges.length?{childrenAges:stay.childrenAges}:{}),
       ...(market.countryCode?{guestNationality:market.countryCode}:{}),
       currency:NUITEE_PAYMENT_CURRENCY,
-      maxRatesPerHotel:20,
     });
   } catch(error) {
     console.error("Nuitee hotel detail unavailable",error);
