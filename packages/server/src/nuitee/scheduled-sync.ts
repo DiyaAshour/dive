@@ -68,7 +68,7 @@ export async function runScheduledNuiteeContentSync(input: Readonly<{
       data: {
         nextOffset,
         cycle: nextCycle,
-        lastCompletedAt: completedCycle ? new Date() : undefined,
+        ...(completedCycle ? {lastCompletedAt: new Date()} : {}),
         lastError: null,
       },
     });
