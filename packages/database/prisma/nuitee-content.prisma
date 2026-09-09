@@ -15,3 +15,16 @@ model NuiteeContentHotel {
   @@index([countryCode, city])
   @@index([syncedAt])
 }
+
+model NuiteeContentSyncState {
+  id              String   @id @db.VarChar(32)
+  countryCode     String   @db.VarChar(2)
+  nextOffset      Int      @default(0)
+  cycle           Int      @default(0)
+  lastCompletedAt DateTime?
+  lastError       String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([countryCode])
+}
