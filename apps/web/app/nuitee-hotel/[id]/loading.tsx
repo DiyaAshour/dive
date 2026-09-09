@@ -1,3 +1,4 @@
+import {BadgeCheck} from "lucide-react";
 import {CustomerHeader} from "@/components/customer-header";
 
 export default function NuiteeHotelLoading() {
@@ -6,7 +7,7 @@ export default function NuiteeHotelLoading() {
     <section className="shell hotelDetailSection" aria-busy="true" aria-live="polite">
       <div className="premiumHotelHead">
         <div>
-          <div className="hotelBadges"><span>Nuitee Connect</span></div>
+          <div className="hotelBadges"><span><BadgeCheck size={14}/>Verified Property</span></div>
           <h1>Loading hotel…</h1>
           <p>جاري تحميل الفندق والأسعار المباشرة…</p>
         </div>
