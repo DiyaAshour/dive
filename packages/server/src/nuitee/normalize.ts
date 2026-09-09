@@ -13,6 +13,13 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
     const offerId = text(room.offerId);
     const rate = records(room.rates)[0];
     if (!offerId || !rate) return [];
+
+    const rawAvailability = number(room.availableToSell) ?? number(rate.availableToSell);
+    // Never convert an explicit supplier zero into one available room. A stale or
+    // sold-out offer should disappear before checkout instead of producing avoidable
+    // 409 "No availability found" responses at prebook time.
+    if (rawAvailability !== null && rawAvailability <= 0) return [];
+
     const offerRetail = records(room.offerRetailRate)[0] ?? record(room.offerRetailRate);
     const summed = records(room.rates).reduce((sum, item) => sum + (rateTotal(item) ?? 0), 0);
     const total = number(offerRetail.amount) ?? summed;
@@ -20,10 +27,7 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
     const currency = text(offerRetail.currency) ?? rateCurrency(rate) ?? "USD";
     const policy = cancellation(rate);
     const refundable = text(record(rate.cancellationPolicies).refundableTag)?.toUpperCase() === "RFN";
-    const firstPenalty = policy.rules.find((rule) => rule.amount > 0);
-    const deadline = firstPenalty?.from ?? null;
-    const parsedDeadline = deadline ? Date.parse(deadline) : Number.NaN;
-    const freeCancellationNow = refundable && (!deadline || !Number.isFinite(parsedDeadline) || parsedDeadline > Date.now());
+    const freeCancellationNow = refundable && hasNoActivePositivePenalty(policy.rules);
     const normalizedBoardCode = boardCode(rate);
     return [{
       offerId,
@@ -38,7 +42,7 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
       total,
       currency,
       averageNightlyTotal: money(total / nights),
-      availableToSell: Math.max(1, Math.round(number(room.availableToSell) ?? number(rate.availableToSell) ?? 1)),
+      availableToSell: rawAvailability === null ? 1 : Math.max(1, Math.round(rawAvailability)),
       paymentModes: ["PAY_NOW"] as const,
       freeCancellationNow,
       cancellationPolicy: policy,
@@ -73,9 +77,38 @@ function cancellation(rate: RawRecord): NuiteeOffer["cancellationPolicy"] {
     from: text(item.cancelTime) ?? text(item.from),
     currency: text(item.currency),
     timezone: text(item.timezone) ?? text(item.timeZone) ?? "GMT",
-  }));
+  })).sort(compareCancellationRules);
   const refundable = text(policies.refundableTag)?.toUpperCase() === "RFN";
   return {name: refundable ? "Refundable rate" : "Non-refundable / provider policy", rules};
+}
+
+function compareCancellationRules(left:NuiteeOffer["cancellationPolicy"]["rules"][number], right:NuiteeOffer["cancellationPolicy"]["rules"][number]):number {
+  const leftTime = cancellationTime(left.from);
+  const rightTime = cancellationTime(right.from);
+  if (leftTime === null && rightTime === null) return 0;
+  if (leftTime === null) return 1;
+  if (rightTime === null) return -1;
+  return leftTime - rightTime;
+}
+
+function hasNoActivePositivePenalty(rules:NuiteeOffer["cancellationPolicy"]["rules"]):boolean {
+  const now = Date.now();
+  for (const rule of rules) {
+    if (!(rule.amount > 0)) continue;
+    const when = cancellationTime(rule.from);
+    // Missing or malformed timing means we cannot safely advertise "free now".
+    if (when === null || when <= now) return false;
+  }
+  return true;
+}
+
+function cancellationTime(value:string|null):number|null {
+  if (!value) return null;
+  // Nuitee commonly sends `YYYY-MM-DD HH:mm:ss`; normalizing the separator makes
+  // parsing consistent in Node while preserving timestamps already in ISO form.
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value) ? value.replace(" ", "T") + (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? "" : "Z") : value;
+  const parsed = Date.parse(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function promotion(rate: RawRecord): NuiteeOffer["promotion"] {
