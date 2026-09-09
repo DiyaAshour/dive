@@ -17,7 +17,7 @@
     },
     {
       "path": "/api/v1/internal/nuitee-content-sync",
-      "schedule": "17 */6 * * *"
+      "schedule": "17 * * * *"
     }
   ]
 }
