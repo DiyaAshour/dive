@@ -139,7 +139,10 @@ function roomDetails(content: RawRecord): NuiteeRoom[] {
     const name = text(room.roomName) ?? text(room.name) ?? `Room ${roomIndex + 1}`;
     const seen = new Set<string>();
     const photos = records(room.photos).flatMap((photo, index) => {
-      const url = text(photo.hd_url) ?? text(photo.url) ?? text(photo.failoverPhoto);
+      // Nuitee's documented room-photo field is photos[].url. Only use the
+      // provider failover when that canonical URL is absent; do not let an
+      // undocumented alternate field override the room's mapped image.
+      const url = text(photo.url) ?? text(photo.failoverPhoto);
       if (!url || seen.has(url)) return [];
       seen.add(url);
       const order = photo.mainPhoto === true ? 0 : number(photo.classOrder) ?? number(photo.order) ?? index + 1;
