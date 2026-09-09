@@ -5,6 +5,35 @@ import { requirePlatformAdmin } from "../admin/authorization";
 
 export type PublicBlogLocale = "en" | "ar";
 
+const CURATED_BLOG_COVERS = [
+  {
+    url: "https://images.unsplash.com/photo-1627902011272-7ada906bc4ec?auto=format&fit=crop&w=1600&q=82",
+    keywords: ["wadi rum", "desert", "petra", "aqaba", "road trip", "adventure", "صحراء", "وادي رم", "البتراء", "العقبة", "رحلة برية"],
+  },
+  {
+    url: "https://images.unsplash.com/photo-1761014586555-947a9555d302?auto=format&fit=crop&w=1600&q=82",
+    keywords: ["key", "keys", "deposit", "insurance", "payment", "credit card", "contract", "booking", "refund", "مفتاح", "تأمين", "عربون", "وديعة", "دفع", "بطاقة", "عقد", "حجز", "استرداد"],
+  },
+  {
+    url: "https://images.unsplash.com/photo-1661789165886-9af8842bb073?auto=format&fit=crop&w=1600&q=82",
+    keywords: ["amman", "airport", "queen alia", "downtown", "عمّان", "عمان", "المطار", "مطار الملكة علياء", "وسط البلد"],
+  },
+  {
+    url: "https://images.unsplash.com/photo-1560546941-be7b4ac3b40e?auto=format&fit=crop&w=1600&q=82",
+    keywords: ["drive", "driving", "road", "highway", "fuel", "petrol", "gas", "parking", "قيادة", "طريق", "وقود", "بنزين", "مواقف"],
+  },
+  {
+    url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=82",
+    keywords: ["hotel", "stay", "resort", "room", "accommodation", "فندق", "إقامة", "اقامة", "منتجع", "غرفة"],
+  },
+  {
+    url: "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1800&q=88",
+    keywords: ["jordan", "destination", "travel guide", "الأردن", "الاردن", "وجهة", "دليل سفر"],
+  },
+] as const;
+
+const BLOG_COVER_FALLBACK_POOL = CURATED_BLOG_COVERS.slice(0, 4).map((cover) => cover.url);
+
 const publicListSelect = {
   id: true,
   locale: true,
@@ -34,12 +63,13 @@ export function databaseBlogLocale(locale: PublicBlogLocale): "EN" | "AR" {
 }
 
 export async function listPublishedBlogPosts(locale: PublicBlogLocale, limit = 24) {
-  return database().blogPost.findMany({
+  const posts = await database().blogPost.findMany({
     where: {locale: databaseBlogLocale(locale), status: "PUBLISHED", publishedAt: {lte: new Date()}},
     select: publicListSelect,
     orderBy: [{featured: "desc"}, {publishedAt: "desc"}],
     take: Math.max(1, Math.min(limit, 100)),
   });
+  return posts.map(withBlogCoverImage);
 }
 
 export async function getPublishedBlogPost(locale: PublicBlogLocale, slug: string) {
@@ -48,16 +78,17 @@ export async function getPublishedBlogPost(locale: PublicBlogLocale, slug: strin
     select: publicArticleSelect,
   });
   if (!post) notFound("Blog post");
-  return post;
+  return withBlogCoverImage(post);
 }
 
 export async function listRelatedPublishedBlogPosts(locale: PublicBlogLocale, postId: string, category: string, limit = 3) {
-  return database().blogPost.findMany({
+  const posts = await database().blogPost.findMany({
     where: {id: {not: postId}, locale: databaseBlogLocale(locale), category, status: "PUBLISHED", publishedAt: {lte: new Date()}},
-    select: {id: true, slug: true, title: true, excerpt: true, coverImageUrl: true, coverImageAlt: true, publishedAt: true, category: true, readingMinutes: true},
+    select: {id: true, slug: true, title: true, excerpt: true, tags: true, coverImageUrl: true, coverImageAlt: true, publishedAt: true, category: true, readingMinutes: true},
     orderBy: {publishedAt: "desc"},
     take: Math.max(1, Math.min(limit, 6)),
   });
+  return posts.map(withBlogCoverImage);
 }
 
 export async function listBlogSitemapEntries() {
@@ -240,6 +271,26 @@ function validStatus(value: string | undefined): value is "DRAFT" | "PUBLISHED" 
 function estimateReadingMinutes(body: string) {
   const words = body.trim() ? body.trim().split(/\s+/).length : 0;
   return Math.max(1, Math.ceil(words / 220));
+}
+
+function withBlogCoverImage<T extends {coverImageUrl: string | null; coverImageAlt: string | null; title: string; slug: string; category: string; tags?: readonly string[]}>(post: T): T {
+  const explicit = post.coverImageUrl?.trim();
+  if (explicit) {
+    return {...post, coverImageUrl: explicit, coverImageAlt: post.coverImageAlt?.trim() || post.title};
+  }
+
+  const haystack = [post.title, post.category, ...(post.tags ?? [])].join(" ").toLocaleLowerCase();
+  const matched = CURATED_BLOG_COVERS.find((cover) =>
+    cover.keywords.some((keyword) => haystack.includes(keyword.toLocaleLowerCase())),
+  );
+  const coverImageUrl = matched?.url ?? BLOG_COVER_FALLBACK_POOL[stableCoverIndex(post.slug, BLOG_COVER_FALLBACK_POOL.length)]!;
+  return {...post, coverImageUrl, coverImageAlt: post.coverImageAlt?.trim() || post.title};
+}
+
+function stableCoverIndex(value: string, modulo: number) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  return modulo > 0 ? hash % modulo : 0;
 }
 
 function auditSnapshot(post: {locale: string; slug: string; title: string; status: string; featured: boolean; publishedAt: Date | null}) {
