@@ -1,6 +1,7 @@
+import {convertCurrency} from "@platform/core";
 import type { DiscoverySearchInput } from "@platform/contracts";
 import {demoSearchFallback} from "../discovery/demo-fallback";
-import {searchNuitee, searchNuiteeByHotelName, searchNuiteeHotelIds, type NuiteeSearchResult} from "../nuitee/client";
+import {NUITEE_PAYMENT_CURRENCY, searchNuitee, searchNuiteeByHotelName, searchNuiteeHotelIds, type NuiteeSearchResult} from "../nuitee/client";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
@@ -63,9 +64,9 @@ async function exactNuiteeHotelInventory(
       children: input.children,
       ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
       ...(context.travelerCountry ? {guestNationality: context.travelerCountry} : {}),
-      currency: "JOD",
-      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
-      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      currency: NUITEE_PAYMENT_CURRENCY,
+      ...(input.minPrice !== undefined ? {minPrice: nuiteeUsdBound(input.minPrice)} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: nuiteeUsdBound(input.maxPrice)} : {}),
       stars: input.stars,
       freeCancellation: input.freeCancellation,
       ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
@@ -111,9 +112,9 @@ async function addNuiteeHotelNameInventory(base: SearchResult, input: DiscoveryS
       children: input.children,
       ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
       ...(context.travelerCountry ? {guestNationality: context.travelerCountry} : {}),
-      currency: "JOD",
-      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
-      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      currency: NUITEE_PAYMENT_CURRENCY,
+      ...(input.minPrice !== undefined ? {minPrice: nuiteeUsdBound(input.minPrice)} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: nuiteeUsdBound(input.maxPrice)} : {}),
       stars: input.stars,
       freeCancellation: input.freeCancellation,
       ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
@@ -150,9 +151,9 @@ async function addNuiteeDestinationInventory(base: SearchResult, input: Discover
       children: input.children,
       ...(input.childrenAges.length ? {childrenAges: input.childrenAges} : {}),
       ...(context.travelerCountry ? {guestNationality: context.travelerCountry} : {}),
-      currency: "JOD",
-      ...(input.minPrice !== undefined ? {minPrice: input.minPrice} : {}),
-      ...(input.maxPrice !== undefined ? {maxPrice: input.maxPrice} : {}),
+      currency: NUITEE_PAYMENT_CURRENCY,
+      ...(input.minPrice !== undefined ? {minPrice: nuiteeUsdBound(input.minPrice)} : {}),
+      ...(input.maxPrice !== undefined ? {maxPrice: nuiteeUsdBound(input.maxPrice)} : {}),
       stars: input.stars,
       freeCancellation: input.freeCancellation,
       ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
@@ -198,6 +199,10 @@ function nuiteeSearchItem(hotel: NuiteeSearchResult): SearchItem {
     source: "NUITEE_API",
     visibilityBoost: null,
   } as unknown as SearchItem;
+}
+
+function nuiteeUsdBound(value:number):number {
+  return convertCurrency(value,"JOD",NUITEE_PAYMENT_CURRENCY) ?? value;
 }
 
 function dedupeResults(results: SearchItem[]): SearchItem[] {
