@@ -5,9 +5,11 @@ import type {NuiteeBookingInput, NuiteeBookingResult, NuiteeHotelDetails, Nuitee
 const API_BASE = "https://api.liteapi.travel/v3.0";
 const BOOK_BASE = "https://book.liteapi.travel/v3.0";
 const REQUEST_TIMEOUT_MS = 15_000;
+const HOTEL_CONTENT_REVALIDATE_SECONDS = 21_600;
 export const NUITEE_PAYMENT_CURRENCY = "USD";
 
 type RawRecord = Record<string, unknown>;
+type NuiteeRequestCache = Readonly<{cache:RequestCache;revalidateSeconds?:number}>;
 export type NuiteeHotelNameSuggestion = Readonly<{
   id: string;
   name: string;
@@ -163,7 +165,9 @@ export async function getNuiteeHotelDetails(code: string, input: NuiteeSearchInp
     checkin: input.arrival,
     checkout: input.departure,
     roomMapping: true,
-    includeHotelData: true,
+    // Static hotel/room content is fetched separately and cached below. Keeping it
+    // out of the live rate payload avoids downloading and parsing the same data twice.
+    includeHotelData: false,
     // Hotel detail pages need the complete supplier rate set so every meal plan
     // (room-only, breakfast, half-board, full-board, etc.) can be grouped under
     // the mapped room. Nuitee recommends omitting maxRatesPerHotel here.
@@ -173,7 +177,14 @@ export async function getNuiteeHotelDetails(code: string, input: NuiteeSearchInp
     ...marginBody(),
   };
   const [content, rates] = await Promise.all([
-    request<unknown>(`${API_BASE}/data/hotel?hotelId=${encodeURIComponent(clean)}`, "GET"),
+    request<unknown>(
+      `${API_BASE}/data/hotel?hotelId=${encodeURIComponent(clean)}`,
+      "GET",
+      undefined,
+      REQUEST_TIMEOUT_MS,
+      {cache:"force-cache",revalidateSeconds:HOTEL_CONTENT_REVALIDATE_SECONDS},
+    ),
+    // Rates and offerIds intentionally stay uncached so availability remains live.
     request<unknown>(`${API_BASE}/hotels/rates`, "POST", rateBody),
   ]);
   return hotelView(clean, content, rates, input, isNuiteeSandbox());
@@ -250,16 +261,18 @@ export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBooki
   };
 }
 
-async function request<T>(url: string, method: "GET" | "POST", body?: RawRecord, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
+async function request<T>(url: string, method: "GET" | "POST", body?: RawRecord, timeoutMs = REQUEST_TIMEOUT_MS, caching?: NuiteeRequestCache): Promise<T> {
   const apiKey = process.env.NUITEE_API_KEY?.trim();
   if (!apiKey) throw new NuiteeConfigurationError();
-  const response = await fetch(url, {
+  const init: RequestInit & {next?:{revalidate:number}} = {
     method,
     headers: {accept: "application/json", "X-API-Key": apiKey, ...(body ? {"content-type": "application/json"} : {})},
     ...(body ? {body: JSON.stringify(body)} : {}),
-    cache: "no-store",
+    cache: caching?.cache ?? "no-store",
+    ...(caching?.revalidateSeconds !== undefined ? {next:{revalidate:caching.revalidateSeconds}} : {}),
     signal: AbortSignal.timeout(timeoutMs),
-  });
+  };
+  const response = await fetch(url, init);
   if (response.status === 204) return {data: []} as T;
   const raw = await response.text();
   if (!response.ok) {
