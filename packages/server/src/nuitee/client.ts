@@ -5,6 +5,7 @@ import type {NuiteeBookingInput, NuiteeBookingResult, NuiteeHotelDetails, Nuitee
 const API_BASE = "https://api.liteapi.travel/v3.0";
 const BOOK_BASE = "https://book.liteapi.travel/v3.0";
 const REQUEST_TIMEOUT_MS = 15_000;
+export const NUITEE_PAYMENT_CURRENCY = "USD";
 
 type RawRecord = Record<string, unknown>;
 export type NuiteeHotelNameSuggestion = Readonly<{
@@ -79,7 +80,7 @@ export async function searchNuiteeByHotelName(input: NuiteeHotelNameSearchInput)
   const body: RawRecord = {
     hotelIds: matches.map((hotel) => hotel.id),
     occupancies: [occupancy({...input, destination: hotelName})],
-    currency: (input.currency ?? "JOD").trim().toUpperCase(),
+    currency: (input.currency ?? NUITEE_PAYMENT_CURRENCY).trim().toUpperCase(),
     guestNationality: (input.guestNationality ?? countryCode).trim().toUpperCase(),
     checkin: input.arrival,
     checkout: input.departure,
@@ -107,7 +108,7 @@ export async function searchNuiteeHotelIds(input: NuiteeSearchInput & Readonly<{
   const body: RawRecord = {
     hotelIds,
     occupancies: [occupancy(input)],
-    currency: (input.currency ?? "JOD").trim().toUpperCase(),
+    currency: (input.currency ?? NUITEE_PAYMENT_CURRENCY).trim().toUpperCase(),
     guestNationality,
     checkin: input.arrival,
     checkout: input.departure,
@@ -131,7 +132,7 @@ export async function searchNuitee(input: NuiteeSearchInput): Promise<NuiteeSear
   const countryCode = (input.countryCode ?? "JO").trim().toUpperCase();
   const body: RawRecord = {
     occupancies: [occupancy(input)],
-    currency: (input.currency ?? "JOD").trim().toUpperCase(),
+    currency: (input.currency ?? NUITEE_PAYMENT_CURRENCY).trim().toUpperCase(),
     guestNationality: (input.guestNationality ?? countryCode).trim().toUpperCase(),
     checkin: input.arrival,
     checkout: input.departure,
@@ -157,7 +158,7 @@ export async function getNuiteeHotelDetails(code: string, input: NuiteeSearchInp
   const rateBody: RawRecord = {
     hotelIds: [clean],
     occupancies: [occupancy(input)],
-    currency: (input.currency ?? "JOD").trim().toUpperCase(),
+    currency: (input.currency ?? NUITEE_PAYMENT_CURRENCY).trim().toUpperCase(),
     guestNationality: (input.guestNationality ?? input.countryCode ?? "JO").trim().toUpperCase(),
     checkin: input.arrival,
     checkout: input.departure,
@@ -235,7 +236,7 @@ export async function bookNuitee(input: NuiteeBookingInput): Promise<NuiteeBooki
       ...(phone ? {phone} : {}),
     },
     guests: [{occupancyNumber: 1, firstName: input.holderFirstName.trim(), lastName: input.holderLastName.trim(), email: input.email.trim(), ...(phone ? {phone} : {})}],
-    payment: {method: "TRANSACTION_ID", transactionId},
+    payment: {method: "TRANSACTION", transactionId},
   }, 70_000);
   const data = record(record(payload).data);
   return {
