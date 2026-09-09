@@ -24,6 +24,7 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
     const deadline = firstPenalty?.from ?? null;
     const parsedDeadline = deadline ? Date.parse(deadline) : Number.NaN;
     const freeCancellationNow = refundable && (!deadline || !Number.isFinite(parsedDeadline) || parsedDeadline > Date.now());
+    const normalizedBoardCode = boardCode(rate);
     return [{
       offerId,
       rateId: text(rate.rateId),
@@ -32,8 +33,8 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
       // supplier rate name or room-to-rate mapping can be displayed incorrectly.
       roomName: text(rate.name) ?? text(room.name) ?? "Provider room",
       mappedRoomId: text(rate.mappedRoomId),
-      boardCode: text(rate.boardType),
-      boardName: text(rate.boardName),
+      boardCode: normalizedBoardCode,
+      boardName: text(rate.boardName) ?? boardFallbackName(normalizedBoardCode),
       total,
       currency,
       averageNightlyTotal: money(total / nights),
@@ -44,6 +45,25 @@ export function offersFromHotel(hotel: RawRecord, input: NuiteeSearchInput): Nui
       promotion: promotion(rate),
     }];
   }).filter((offer) => offerMatches(offer, input)).sort((left, right) => left.total - right.total);
+}
+
+function boardCode(rate: RawRecord): string | null {
+  const raw = text(rate.boardType)?.trim().toUpperCase() ?? null;
+  if (!raw) return null;
+  if (raw === "BI" || /^BB\d*$/.test(raw)) return "BB";
+  if (raw === "BDI" || raw === "BLI" || raw === "LDI" || /^HB\d*$/.test(raw)) return "HB";
+  if (/^FB\d*$/.test(raw)) return "FB";
+  if (/^AI\d*$/.test(raw)) return "AI";
+  return raw;
+}
+
+function boardFallbackName(code: string | null): string | null {
+  if (code === "RO") return "Room Only";
+  if (code === "BB") return "Breakfast Included";
+  if (code === "HB") return "Half Board";
+  if (code === "FB") return "Full Board";
+  if (code === "AI") return "All Inclusive";
+  return null;
 }
 
 function cancellation(rate: RawRecord): NuiteeOffer["cancellationPolicy"] {
