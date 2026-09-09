@@ -1,19 +1,22 @@
 model NuiteeContentHotel {
-  providerHotelId String   @id @db.VarChar(128)
-  name            String
-  countryCode     String?  @db.VarChar(2)
-  city            String?
-  area            String?
-  address         String?  @db.Text
-  starRating      Float?
-  contentHash     String?  @db.VarChar(64)
-  raw             Json
-  syncedAt        DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  providerHotelId  String    @id @db.VarChar(128)
+  name             String
+  countryCode      String?   @db.VarChar(2)
+  city             String?
+  area             String?
+  address          String?   @db.Text
+  starRating       Float?
+  contentHash      String?   @db.VarChar(64)
+  raw              Json
+  claimedByHotelId String?   @unique
+  claimedAt        DateTime?
+  syncedAt         DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([countryCode, city])
   @@index([syncedAt])
+  @@index([claimedByHotelId])
 }
 
 model NuiteeContentSyncState {

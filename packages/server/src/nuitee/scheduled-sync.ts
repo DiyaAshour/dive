@@ -14,6 +14,7 @@ export type NuiteeScheduledSyncResult = Readonly<{
   nextOffset: number;
   cycle: number;
   discovered: number;
+  claimedSkipped: number;
   synced: number;
   unchanged: number;
   failed: number;
@@ -42,12 +43,20 @@ export async function runScheduledNuiteeContentSync(input: Readonly<{
   try {
     const rows = await listHotels(countryCode, offset, batchSize);
     const ids = [...new Set(rows.map((row) => stringValue(row.id) ?? stringValue(row.hotelId)).filter((id): id is string => Boolean(id)))];
+    const claimed = ids.length
+      ? await database().nuiteeContentHotel.findMany({
+          where: {providerHotelId: {in: ids}, claimedByHotelId: {not: null}},
+          select: {providerHotelId: true},
+        })
+      : [];
+    const claimedIds = new Set(claimed.map((row) => row.providerHotelId));
+    const idsToSync = ids.filter((providerHotelId) => !claimedIds.has(providerHotelId));
 
     let synced = 0;
     let unchanged = 0;
     let failed = 0;
 
-    await mapWithConcurrency(ids, concurrency, async (providerHotelId) => {
+    await mapWithConcurrency(idsToSync, concurrency, async (providerHotelId) => {
       try {
         const payload = await request(`${API_BASE}/data/hotel?hotelId=${encodeURIComponent(providerHotelId)}`);
         const result = await persistHotel(providerHotelId, payload, countryCode);
@@ -79,6 +88,7 @@ export async function runScheduledNuiteeContentSync(input: Readonly<{
       nextOffset,
       cycle: nextCycle,
       discovered: ids.length,
+      claimedSkipped: claimedIds.size,
       synced,
       unchanged,
       failed,
@@ -101,13 +111,15 @@ async function listHotels(countryCode: string, offset: number, limit: number): P
 }
 
 async function persistHotel(providerHotelId: string, payload: unknown, fallbackCountryCode: string): Promise<"synced" | "unchanged"> {
+  const existing = await database().nuiteeContentHotel.findUnique({
+    where: {providerHotelId},
+    select: {contentHash: true, claimedByHotelId: true},
+  });
+  if (existing?.claimedByHotelId) return "unchanged";
+
   const content = record(record(payload).data);
   const serialized = JSON.stringify(content);
   const contentHash = createHash("sha256").update(serialized).digest("hex");
-  const existing = await database().nuiteeContentHotel.findUnique({
-    where: {providerHotelId},
-    select: {contentHash: true},
-  });
 
   if (existing?.contentHash === contentHash) {
     await database().nuiteeContentHotel.update({

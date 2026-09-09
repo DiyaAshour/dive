@@ -19,6 +19,7 @@ export async function searchStoredNuiteeHotelPreviews(destination:string,country
   const rows=await database().nuiteeContentHotel.findMany({
     where:{
       countryCode:countryCode.trim().toUpperCase(),
+      claimedByHotelId:null,
       OR:[{city:{contains:query,mode:"insensitive"}},{area:{contains:query,mode:"insensitive"}},{name:{contains:query,mode:"insensitive"}}],
     },
     orderBy:[{starRating:"desc"},{name:"asc"}],

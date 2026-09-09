@@ -1,7 +1,8 @@
 import Link from "next/link";
+import {redirect} from "next/navigation";
 import {unstable_cache} from "next/cache";
 import {publicStaySchema} from "@platform/contracts";
-import {getNuiteeHotelDetails,NUITEE_PAYMENT_CURRENCY,type NuiteeHotelDetails} from "@platform/server";
+import {getNuiteeHotelDetails,NUITEE_PAYMENT_CURRENCY,resolveClaimedNuiteeHotel,type NuiteeHotelDetails} from "@platform/server";
 import {CustomerHeader} from "@/components/customer-header";
 import {requestGuestMarket} from "@/lib/request-guest-market";
 import {defaultStayDates} from "@/lib/stay-dates";
@@ -37,6 +38,17 @@ const cachedNuiteeHotelDetails=unstable_cache(
 
 export default async function NuiteeHotelRoute({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<SearchParams>}) {
   const [{id},query,market]=await Promise.all([params,searchParams,requestGuestMarket()]);
+  const claimed=await resolveClaimedNuiteeHotel(id);
+  if(claimed){
+    const forwarded=new URLSearchParams();
+    for(const [key,value] of Object.entries(query)){
+      if(Array.isArray(value))value.forEach((item)=>forwarded.append(key,item));
+      else if(typeof value==="string")forwarded.set(key,value);
+    }
+    const suffix=forwarded.toString();
+    redirect(`/hotel/${claimed.slug}${suffix?`?${suffix}`:""}`);
+  }
+
   const defaults=defaultStayDates();
   const parsed=publicStaySchema.safeParse({
     arrival:first(query.arrival)??defaults.arrival,
