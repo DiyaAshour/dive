@@ -2,7 +2,8 @@ import {convertCurrency} from "@platform/core";
 import type { DiscoverySearchInput } from "@platform/contracts";
 import {demoSearchFallback} from "../discovery/demo-fallback";
 import {resolveDestinationQuery, type ResolvedDestination} from "../discovery/destinations";
-import {NUITEE_PAYMENT_CURRENCY, searchNuitee, searchNuiteeByHotelName, searchNuiteeHotelIds, type NuiteeSearchResult} from "../nuitee/client";
+import {NUITEE_PAYMENT_CURRENCY, searchNuiteeByHotelName, searchNuiteeHotelIds, type NuiteeSearchResult} from "../nuitee/client";
+import {searchNuiteeCatalog} from "../nuitee/catalog";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
@@ -18,10 +19,6 @@ export async function searchHotelsV2WithVisibilityBoost(
   context: VisibilitySearchContext = {},
 ): Promise<SearchResult> {
   const selectedNuiteeHotel = selectedNuiteeHotelCode(input);
-
-  // Start the local/partner search immediately. For normal destination searches we
-  // also resolve the destination independently so Nuitee can start while the local
-  // search is still evaluating inventory instead of waiting for it to finish first.
   const rawBasePromise = searchHotelsV2WithVisibilityBoostBase(input, context);
   const providerDestinationPromise = !selectedNuiteeHotel && !input.cursor
     ? resolveDestinationQuery(input.destination)
@@ -102,8 +99,6 @@ async function safeExactNuiteeRows(
       freeCancellation: input.freeCancellation,
       ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
       limit: 1,
-      // Listing cards only need the cheapest bookable rate. The hotel page fetches
-      // the complete rate set separately after the user opens the property.
       maxRatesPerHotel: 1,
     });
   } catch (error) {
@@ -174,7 +169,7 @@ async function safeNuiteeDestinationRows(
 ): Promise<NuiteeSearchResult[]> {
   if (input.children > 0 && input.childrenAges.length !== input.children) return [];
   try {
-    return await searchNuitee({
+    return await searchNuiteeCatalog({
       destination: destination.nameEn,
       countryCode: destination.countryCode,
       arrival: input.arrival,
@@ -190,8 +185,6 @@ async function safeNuiteeDestinationRows(
       freeCancellation: input.freeCancellation,
       ...(input.paymentMode ? {paymentMode: input.paymentMode} : {}),
       limit: Math.min(input.pageSize, 20),
-      // Nuitee sorts rates cheapest-first; one rate per hotel is sufficient for the
-      // search listing and keeps the response substantially smaller.
       maxRatesPerHotel: 1,
     });
   } catch (error) {
