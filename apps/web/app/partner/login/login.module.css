@@ -1,0 +1,10 @@
+.page{overflow-x:clip}
+
+@media(max-width:520px){
+  .page :global(.partnerAuthHeader .shell){width:calc(100% - 24px);min-width:0;gap:10px}
+  .page :global(.partnerHeaderTools){min-width:0;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .page :global(.partnerHeaderTools>a){display:none}
+  .page :global(.partnerAuthShell){width:calc(100% - 24px);min-width:0}
+  .page :global(.partnerAuthIntro),
+  .page :global(.authCard){min-width:0;max-width:100%}
+}

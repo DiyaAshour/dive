@@ -9,6 +9,7 @@ import {requestLocale} from "@/lib/request-locale";
 import {direction} from "@/lib/i18n";
 import {portalDictionary} from "@/lib/portal-i18n";
 import AdminLoginForm from "./admin-login-form";
+import styles from "./login.module.css";
 
 export const metadata: Metadata = {title: "Administrator sign in"};
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function AdminLoginPage({searchParams}: {searchParams: Prom
   if (await currentAdminPrincipal()) redirect(nextPath);
   const locale = await requestLocale();
   const copy = portalDictionary(locale).admin;
-  return <main className="adminLoginPage" dir={direction(locale)}>
+  return <main className={`${styles.page} adminLoginPage`} dir={direction(locale)}>
     <header className="adminLoginHeader"><div className="shell"><Brand inverse/><div className="adminLoginHeaderActions"><LanguageSwitcher locale={locale} compact/><Link href="/">{copy.returnMarketplace}</Link></div></div></header>
     <section className="shell adminLoginShell">
       <div className="adminLoginIntro">

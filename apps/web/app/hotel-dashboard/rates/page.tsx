@@ -9,6 +9,7 @@ import {requestLocale} from "@/lib/request-locale";
 import {direction} from "@/lib/i18n";
 import RateManager from "./rate-manager";
 import RestrictionManager from "./restriction-manager";
+import RevenueHealthPanel from "./revenue-health-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function RatesPage({searchParams}: {searchParams: Promise<{
       <div className="partnerTopbar"><div><span className="partnerPageEyebrow">{ar ? "إدارة الإيرادات" : "Revenue operations"}</span><h1>{ar ? "الأسعار والمخزون" : "Rates & inventory"}</h1><p>{ar ? "غيّر الأسعار والمخزون وقيود الإقامة من نفس المصدر الذي يقرأ منه محرك الحجز." : "Control rates, inventory and stay restrictions from the same source of truth used by the booking engine."}</p></div><Link className="secondaryButton" href={`/hotel-dashboard/rooms?hotelId=${selected.id}`}>{ar ? "إدارة الغرف وخطط الأسعار" : "Manage rooms & rate plans"}</Link></div>
       <div className="partnerPageIntro"><strong>{ar ? "تقويم تشغيل حقيقي مع قيود بيع متقدمة" : "A real operating calendar with advanced sell controls"}</strong><span>{ar ? "تعديل جماعي حتى 366 يوماً، سعر ومخزون، حد أدنى/أقصى للإقامة، CTA وCTD، مهلة الحجز، ووقف البيع مع سجل تدقيق لكل عملية." : "Bulk-edit up to 366 days with rates, inventory, length-of-stay, CTA, CTD, booking lead windows and stop-sell, all with an audit trail."}</span></div>
       <div className="partnerKpiGrid"><Metric icon={<Layers3 size={18}/>} label={ar ? "أنواع الغرف النشطة" : "Active room types"} value={activeRooms}/><Metric icon={<Gauge size={18}/>} label={ar ? "خطط الأسعار النشطة" : "Active rate plans"} value={activePlans}/><Metric icon={<CalendarDays size={18}/>} label={ar ? "أقصى تعديل جماعي" : "Bulk horizon"} value={366} suffix={ar ? " يوم" : " days"}/><Metric icon={<ShieldCheck size={18}/>} label={ar ? "تجاوز الحجز" : "Overbooking"} value={workspace.overbookingEnabled ? (ar ? "مفعّل" : "Enabled") : (ar ? "متوقف" : "Off")}/></div>
+      <RevenueHealthPanel hotelId={selected.id} rooms={roomTypes} locale={locale}/>
       <RateManager hotelId={selected.id} currency={workspace.currency} overbookingEnabled={workspace.overbookingEnabled} rooms={roomTypes} locale={locale}/>
       <RestrictionManager hotelId={selected.id} rooms={restrictionRooms} locale={locale}/>
     </section>
