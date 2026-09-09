@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bath, BedDouble, Building2, ChevronLeft, ChevronRight, Coffee, Dumbbell, Eye, Images, Landmark, Sparkles, Utensils, Waves, Wine, X } from "lucide-react";
 import type { HotelPhotoCategory } from "@platform/contracts";
 
@@ -29,10 +30,15 @@ export function HotelGalleryController({photos,hotelName,locale}:{photos:Gallery
   const [open,setOpen]=useState(false);
   const [filter,setFilter]=useState<HotelPhotoCategory|"ALL">("ALL");
   const [selectedId,setSelectedId]=useState<string|null>(photos[0]?.id??null);
+  const [galleryHost,setGalleryHost]=useState<HTMLElement|null>(null);
   const filtered=useMemo(()=>filter==="ALL"?photos:photos.filter((photo)=>photo.category===filter),[photos,filter]);
   const selectedIndex=Math.max(0,filtered.findIndex((photo)=>photo.id===selectedId));
   const selected=filtered[selectedIndex]??filtered[0]??null;
   const presentCategories=useMemo(()=>CATEGORIES.filter((category)=>photos.some((photo)=>photo.category===category.value)),[photos]);
+
+  useEffect(()=>{
+    setGalleryHost(document.querySelector<HTMLElement>(".premiumGallery"));
+  },[]);
 
   useEffect(()=>{
     if(!photos.length)return;
@@ -46,20 +52,21 @@ export function HotelGalleryController({photos,hotelName,locale}:{photos:Gallery
       return photos.find((photo)=>photo.url===rawSrc||photo.url===image.currentSrc||photo.url===image.src)??fallback;
     }
 
+    function activate(photo:GalleryPhoto){
+      setFilter("ALL");
+      setSelectedId(photo.id);
+      setOpen(true);
+    }
+
     function bind(image:HTMLImageElement,photo:GalleryPhoto){
       image.setAttribute("role","button");
       image.setAttribute("tabindex","0");
       image.setAttribute("aria-label",ar?`فتح معرض صور ${hotelName}`:`Open ${hotelName} photo gallery`);
-      const activate=()=>{
-        setFilter("ALL");
-        setSelectedId(photo.id);
-        setOpen(true);
-      };
-      const onClick=()=>activate();
+      const onClick=()=>activate(photo);
       const onKeyDown=(event:KeyboardEvent)=>{
         if(!(["Enter"," "].includes(event.key)))return;
         event.preventDefault();
-        activate();
+        activate(photo);
       };
       image.addEventListener("click",onClick);
       image.addEventListener("keydown",onKeyDown);
@@ -106,9 +113,25 @@ export function HotelGalleryController({photos,hotelName,locale}:{photos:Gallery
     setSelectedId(filtered[(current+step+filtered.length)%filtered.length]!.id);
   }
 
-  if(!photos.length||!open||!selected)return null;
+  function openAll(){
+    if(!photos.length)return;
+    setFilter("ALL");
+    setSelectedId(photos[0]!.id);
+    setOpen(true);
+  }
 
-  return <div className="hotelGalleryLightbox" role="dialog" aria-modal="true" aria-label={ar?`معرض صور ${hotelName}`:`${hotelName} photo gallery`}>
+  if(!photos.length)return null;
+
+  const opener=galleryHost?createPortal(
+    <button className="hotelGalleryOpenAll" type="button" onClick={openAll} aria-label={ar?`عرض كل صور ${hotelName}`:`Show all ${hotelName} photos`}>
+      <Images size={17}/>{ar?`عرض كل ${photos.length} صورة`:`Show all ${photos.length} photos`}
+    </button>,
+    galleryHost,
+  ):null;
+
+  if(!open||!selected)return opener;
+
+  return <>{opener}<div className="hotelGalleryLightbox" role="dialog" aria-modal="true" aria-label={ar?`معرض صور ${hotelName}`:`${hotelName} photo gallery`}>
     <div className="hotelGalleryTopbar">
       <div><strong>{hotelName}</strong><span>{ar?`${photos.length} صورة`:`${photos.length} photos`}</span></div>
       <button type="button" onClick={()=>setOpen(false)} aria-label={ar?"إغلاق المعرض":"Close gallery"}><X size={22}/></button>
@@ -124,7 +147,7 @@ export function HotelGalleryController({photos,hotelName,locale}:{photos:Gallery
     </div>
     <div className="hotelGalleryCaption"><div><strong>{selected.alt??categoryLabel(selected.category,ar)}</strong><span>{categoryLabel(selected.category,ar)}</span></div><b>{selectedIndex+1} / {filtered.length}</b></div>
     <div className="hotelGalleryThumbs">{filtered.map((photo,index)=><button type="button" className={photo.id===selected.id?"active":""} key={photo.id} onClick={()=>setSelectedId(photo.id)} aria-label={`${index+1}`}><img src={photo.url} alt=""/></button>)}</div>
-  </div>;
+  </div></>;
 }
 
 function categoryLabel(value:HotelPhotoCategory,ar:boolean){const category=CATEGORIES.find((entry)=>entry.value===value);return category?(ar?category.ar:category.en):(ar?"صور الفندق":"Property photos");}
