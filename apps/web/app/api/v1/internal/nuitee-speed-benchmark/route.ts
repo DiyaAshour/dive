@@ -20,34 +20,37 @@ export async function GET() {
   }
 
   const apiKey = process.env.NUITEE_API_KEY?.trim();
-  if (!apiKey) return Response.json({ok: false, error: "NUITEE_API_KEY missing"}, {status: 503});
 
   const db = await timed(async () => database().nuiteeContentHotel.findUnique({
     where: {providerHotelId: HOTEL_ID},
     select: {providerHotelId: true, name: true, syncedAt: true},
   }));
 
-  const rates = await timed(async () => {
-    const response = await fetch(`${API_BASE}/hotels/rates`, {
-      method: "POST",
-      headers: {accept: "application/json", "content-type": "application/json", "X-API-Key": apiKey},
-      body: JSON.stringify({
-        hotelIds: [HOTEL_ID],
-        occupancies: [{rooms: 1, adults: 2, children: []}],
-        currency: "USD",
-        guestNationality: "JO",
-        checkin: CHECKIN,
-        checkout: CHECKOUT,
-        roomMapping: true,
-        includeHotelData: false,
-        timeout: 10,
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+  let rawNuiteeRates: {ms: number; status: number; ok: boolean} | {available: false} = {available: false};
+  if (apiKey) {
+    const rates = await timed(async () => {
+      const response = await fetch(`${API_BASE}/hotels/rates`, {
+        method: "POST",
+        headers: {accept: "application/json", "content-type": "application/json", "X-API-Key": apiKey},
+        body: JSON.stringify({
+          hotelIds: [HOTEL_ID],
+          occupancies: [{rooms: 1, adults: 2, children: []}],
+          currency: "USD",
+          guestNationality: "JO",
+          checkin: CHECKIN,
+          checkout: CHECKOUT,
+          roomMapping: true,
+          includeHotelData: false,
+          timeout: 10,
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      });
+      await response.arrayBuffer();
+      return {status: response.status, ok: response.ok};
     });
-    await response.arrayBuffer();
-    return {status: response.status, ok: response.ok};
-  });
+    rawNuiteeRates = {ms: rates.ms, ...rates.value};
+  }
 
   const hostedUrl = `https://diyaashour-user-jx7pv.nuitee.link/hotels/${HOTEL_ID}?checkin=${CHECKIN}&checkout=${CHECKOUT}&rooms=1&adults=2&name=Paris&currency=USD&language=ar`;
   const hosted = await timed(async () => {
@@ -69,7 +72,7 @@ export async function GET() {
     hotelId: HOTEL_ID,
     stay: {checkin: CHECKIN, checkout: CHECKOUT, adults: 2, rooms: 1, currency: "USD"},
     db: {ms: db.ms, found: Boolean(db.value), hotel: db.value?.name ?? null},
-    rawNuiteeRates: {ms: rates.ms, ...rates.value},
+    rawNuiteeRates,
     nuiteeHostedPage: {ms: hosted.ms, ...hosted.value},
     handMeKeyProductionPage: {ms: handmekey.ms, ...handmekey.value},
     note: "Full-response wall-clock timings from the same Vercel runtime; run multiple times to observe warm/cold variance.",
