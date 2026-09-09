@@ -83,8 +83,8 @@ function cancellation(rate: RawRecord): NuiteeOffer["cancellationPolicy"] {
 }
 
 function compareCancellationRules(left:NuiteeOffer["cancellationPolicy"]["rules"][number], right:NuiteeOffer["cancellationPolicy"]["rules"][number]):number {
-  const leftTime = cancellationTime(left.from);
-  const rightTime = cancellationTime(right.from);
+  const leftTime = cancellationRuleTime(left);
+  const rightTime = cancellationRuleTime(right);
   if (leftTime === null && rightTime === null) return 0;
   if (leftTime === null) return 1;
   if (rightTime === null) return -1;
@@ -95,18 +95,27 @@ function hasNoActivePositivePenalty(rules:NuiteeOffer["cancellationPolicy"]["rul
   const now = Date.now();
   for (const rule of rules) {
     if (!(rule.amount > 0)) continue;
-    const when = cancellationTime(rule.from);
-    // Missing or malformed timing means we cannot safely advertise "free now".
+    const when = cancellationRuleTime(rule);
+    // Missing, malformed or unsupported timezone timing means we cannot safely
+    // advertise "free cancellation now" to the guest.
     if (when === null || when <= now) return false;
   }
   return true;
 }
 
-function cancellationTime(value:string|null):number|null {
+function cancellationRuleTime(rule:NuiteeOffer["cancellationPolicy"]["rules"][number]):number|null {
+  const value = rule.from;
   if (!value) return null;
-  // Nuitee commonly sends `YYYY-MM-DD HH:mm:ss`; normalizing the separator makes
-  // parsing consistent in Node while preserving timestamps already in ISO form.
-  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value) ? value.replace(" ", "T") + (/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? "" : "Z") : value;
+  const explicitZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value);
+  let normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value) ? value.replace(" ", "T") : value;
+  if (!explicitZone) {
+    const timezone = (rule.timezone ?? "GMT").trim().toUpperCase();
+    // Nuitee commonly returns GMT/UTC as a separate field. For arbitrary named
+    // zones we stay conservative rather than guessing an offset and overstating
+    // free-cancellation eligibility.
+    if (timezone === "GMT" || timezone === "UTC" || timezone === "ETC/UTC") normalized += "Z";
+    else return null;
+  }
   const parsed = Date.parse(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
