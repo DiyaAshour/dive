@@ -17,6 +17,7 @@ import "./wallet.css";
 import "./checkout-wallet-amount.css";
 import "./nuitee-payment.css";
 import "./content.css";
+import "./blog-landing.css";
 import "./blog-cms.css";
 import "./blog-taxonomy.css";
 import "./hotel-vitality.css";
