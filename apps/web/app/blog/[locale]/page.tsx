@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, CalendarDays, FolderOpen } from "lucide-react";
-import {blogCategoryBreadcrumb, getPublicBlogTaxonomy, listPublishedBlogPosts, materializeBlogTaxonomy} from "@platform/server";
+import {listPublishedBlogPosts} from "@platform/server";
 import { CustomerHeader } from "@/components/customer-header";
 import { siteUrl } from "@/lib/site-url";
 
@@ -23,9 +23,7 @@ const pageCopy = {
     search:"Search live stays",
     all:"All guides",
     categories:"Browse by topic",
-    subtopics:"More in this topic",
     latest:"Latest guides",
-    editorial:"Clear travel advice, organized by topic — no decorative stock imagery.",
   },
   ar: {
     title:"دليل HandMeKey للسفر | فنادق الأردن ونصائح الحجز والوجهات",
@@ -41,13 +39,22 @@ const pageCopy = {
     search:"ابحث عن إقامات متاحة",
     all:"كل الأدلة",
     categories:"استكشف حسب الموضوع",
-    subtopics:"مواضيع فرعية",
     latest:"أحدث الأدلة",
-    editorial:"محتوى سفر واضح ومرتب حسب الموضوع — بدون صور مكررة أو صور تجميلية غير مفيدة.",
   },
 } as const;
 
 type Locale = keyof typeof pageCopy;
+type TopicKey = "stays"|"destinations"|"transport"|"planning"|"booking";
+
+type Topic = {key:TopicKey; ar:string; en:string; keywords:string[]};
+
+const topics: Topic[] = [
+  {key:"stays",ar:"فنادق وإقامات",en:"Hotels & stays",keywords:["فندق","فنادق","إقامة","اقامة","سكن","غرفة","منتجع","hotel","stay","room","resort"]},
+  {key:"destinations",ar:"وجهات وتجارب",en:"Destinations & experiences",keywords:["عمان","البتراء","وادي رم","العقبة","جرش","مادبا","البحر الميت","رحلة","وجهة","destination","petra","amman","aqaba","wadi rum","dead sea","jerash"]},
+  {key:"transport",ar:"سيارات ومواصلات",en:"Cars & transport",keywords:["سيارة","سيارات","تأجير","مواصلات","نقل","طريق","قيادة","suv","car","rental","transport","drive"]},
+  {key:"booking",ar:"الحجز والأسعار",en:"Booking & prices",keywords:["حجز","سعر","أسعار","إلغاء","الغاء","دفع","حجوزات","booking","price","rate","cancel","payment"]},
+  {key:"planning",ar:"تخطيط ونصائح السفر",en:"Travel planning",keywords:["تخطيط","نصائح","دليل","برنامج","متى","كيف","أفضل وقت","موسم","طقس","planning","tips","guide","itinerary","when","how"]},
+];
 
 export function generateStaticParams(){return [{locale:"en"},{locale:"ar"}];}
 
@@ -61,46 +68,39 @@ export async function generateMetadata({params}:{params:Promise<{locale:string}>
 export default async function BlogLanding({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<{category?:string}>}){
   const [{locale:raw},query]=await Promise.all([params,searchParams]); if(raw!=="en"&&raw!=="ar")notFound();
   const locale=raw as Locale; const c=pageCopy[locale]; const rtl=locale==="ar";
-  const [posts,taxonomy]=await Promise.all([listPublishedBlogPosts(locale,100),getPublicBlogTaxonomy(locale)]);
-  const taxonomyItems=materializeBlogTaxonomy(taxonomy);
-  const usedPaths=Array.from(new Set(posts.map(post=>post.category)));
-  const taxonomyPaths=new Set(taxonomyItems.map(item=>item.path));
-  const orderedCategories=taxonomyItems
-    .filter(item=>usedPaths.some(path=>path===item.path||path.startsWith(`${item.path} / `)))
-    .sort((a,b)=>treePosition(a.id,taxonomy)-treePosition(b.id,taxonomy));
-  const orphanCategories=usedPaths.filter(path=>!taxonomyPaths.has(path)).map((path,index)=>({id:`orphan-${index}`,name:path.split(" / ").at(-1)??path,slug:"",parentId:null,sortOrder:1000+index,path,depth:Math.max(0,path.split(" / ").length-1)}));
-  const categories=[...orderedCategories,...orphanCategories].map(item=>({
-    ...item,
-    count:posts.filter(post=>post.category===item.path||post.category.startsWith(`${item.path} / `)).length,
-  }));
-  const validCategoryPaths=new Set(categories.map(item=>item.path));
-  const selectedCategory=query.category&&validCategoryPaths.has(query.category)?query.category:null;
-  const visiblePosts=selectedCategory?posts.filter(post=>post.category===selectedCategory||post.category.startsWith(`${selectedCategory} / `)):posts;
-  const featured=selectedCategory?null:(visiblePosts.find(post=>post.featured)??visiblePosts[0]??null);
+  const posts=await listPublishedBlogPosts(locale,100);
+  const requestedTopic=topics.find(topic=>topic.key===query.category)?.key??null;
+  const classified=posts.map(post=>({...post,editorialTopic:classifyTopic(`${post.title} ${post.excerpt} ${post.category}`)}));
+  const topicCounts=new Map<TopicKey,number>();
+  for(const post of classified) topicCounts.set(post.editorialTopic,(topicCounts.get(post.editorialTopic)??0)+1);
+  const visiblePosts=requestedTopic?classified.filter(post=>post.editorialTopic===requestedTopic):classified;
+  const featured=requestedTopic?null:(visiblePosts.find(post=>post.featured)??visiblePosts[0]??null);
   const rest=featured?visiblePosts.filter(post=>post.id!==featured.id):visiblePosts;
-  const topCategories=categories.filter(category=>category.depth===0);
-  const selectedRoot=selectedCategory?.split(" / ")[0]??null;
-  const subcategories=selectedRoot?categories.filter(category=>category.depth>0&&category.path.startsWith(`${selectedRoot} / `)):[];
+  const currentTopic=requestedTopic?topics.find(topic=>topic.key===requestedTopic)??null:null;
   const structuredData={"@context":"https://schema.org","@type":"Blog",name:c.eyebrow,description:c.description,url:siteUrl(`/blog/${locale}`),inLanguage:locale,publisher:{"@type":"Organization",name:"HandMeKey",url:siteUrl()}};
 
   return <main className="blogExperience blogPortal" dir={rtl?"rtl":"ltr"} lang={locale}>
     <CustomerHeader/>
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(structuredData)}}/>
-    <section className="blogHero"><div className="shell blogHeroInner"><div><span className="eyebrow"><BookOpen size={16}/>{c.eyebrow}</span><h1>{c.heading}</h1><p>{c.intro}</p><div className="blogHeroLinks"><Link href={`/rewards/${locale}`}>{c.rewards}</Link><Link href="/search">{c.search}</Link></div><p className="blogEditorialNote"><strong>HandMeKey Editorial</strong> · {c.editorial}</p></div><div className="blogLanguageLinks"><Link href="/blog/en" hrefLang="en">English</Link><Link href="/blog/ar" hrefLang="ar">العربية</Link></div></div></section>
+    <section className="blogHero"><div className="shell blogHeroInner"><div><span className="eyebrow"><BookOpen size={16}/>{c.eyebrow}</span><h1>{c.heading}</h1><p>{c.intro}</p><div className="blogHeroLinks"><Link href={`/rewards/${locale}`}>{c.rewards}</Link><Link href="/search">{c.search}</Link></div></div><div className="blogLanguageLinks"><Link href="/blog/en" hrefLang="en">English</Link><Link href="/blog/ar" hrefLang="ar">العربية</Link></div></div></section>
 
-    <section className="shell blogTopicNav"><div className="blogTopicHead"><span><FolderOpen size={17}/>{c.categories}</span>{selectedCategory&&<strong>{blogCategoryBreadcrumb(selectedCategory)}</strong>}</div><div className="blogTopicPills"><Link className={!selectedCategory?"active":""} href={`/blog/${locale}`}>{c.all}<span>{posts.length}</span></Link>{topCategories.map(category=><Link className={selectedRoot===category.path?"active":""} href={`/blog/${locale}?category=${encodeURIComponent(category.path)}`} key={category.id}>{category.name}<span>{category.count}</span></Link>)}</div>{subcategories.length>0&&<div className="blogSubtopics"><span>{c.subtopics}</span>{subcategories.map(category=><Link className={selectedCategory===category.path?"active":""} href={`/blog/${locale}?category=${encodeURIComponent(category.path)}`} key={category.id}>{blogCategoryBreadcrumb(category.path)}</Link>)}</div>}</section>
+    <section className="shell blogTopicNav"><div className="blogTopicHead"><span><FolderOpen size={17}/>{c.categories}</span>{currentTopic&&<strong>{locale==="ar"?currentTopic.ar:currentTopic.en}</strong>}</div><div className="blogTopicPills"><Link className={!requestedTopic?"active":""} href={`/blog/${locale}`}>{c.all}<span>{posts.length}</span></Link>{topics.map(topic=>{const count=topicCounts.get(topic.key)??0;if(!count)return null;return <Link className={requestedTopic===topic.key?"active":""} href={`/blog/${locale}?category=${topic.key}`} key={topic.key}>{locale==="ar"?topic.ar:topic.en}<span>{count}</span></Link>})}</div></section>
 
     <section className="shell blogListing">
-      {visiblePosts.length===0?<div className="blogEmpty"><BookOpen size={34}/><strong>{selectedCategory?c.emptyCategory:c.empty}</strong></div>:<>
-        {featured&&<article className="blogFeatured"><div className="blogFeaturedMarker">01</div><div className="blogFeaturedBody"><span className="blogCategory">{c.featured} · {blogCategoryBreadcrumb(featured.category)}</span><h2><Link href={`/blog/${locale}/${featured.slug}`}>{featured.title}</Link></h2><p>{featured.excerpt}</p><div className="blogFeaturedFooter"><div className="blogMeta"><CalendarDays size={15}/>{formatDate(featured.publishedAt,locale)} · {featured.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${featured.slug}`}>{c.read}<ArrowRight size={16}/></Link></div></div></article>}
-        <div className="blogListHeading"><h2>{selectedCategory?blogCategoryBreadcrumb(selectedCategory):c.latest}</h2><span>{rest.length} {locale==="ar"?"مقال":"guides"}</span></div>
-        <div className="blogGrid">{rest.map((post,index)=><article className="blogCard" key={post.id}><div><div className="blogCardTop"><Link className="blogCategory" href={`/blog/${locale}?category=${encodeURIComponent(post.category)}`}>{blogCategoryBreadcrumb(post.category)}</Link><span className="blogCardIndex">{String(index+(featured?2:1)).padStart(2,"0")}</span></div><h2><Link href={`/blog/${locale}/${post.slug}`}>{post.title}</Link></h2><p>{post.excerpt}</p><div className="blogCardFooter"><div className="blogMeta"><CalendarDays size={14}/>{formatDate(post.publishedAt,locale)} · {post.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${post.slug}`}>{c.read}<ArrowRight size={15}/></Link></div></div></article>)}</div>
+      {visiblePosts.length===0?<div className="blogEmpty"><BookOpen size={34}/><strong>{requestedTopic?c.emptyCategory:c.empty}</strong></div>:<>
+        {featured&&<article className="blogFeatured"><div className="blogFeaturedMarker">01</div><div className="blogFeaturedBody"><span className="blogCategory">{c.featured} · {topicLabel(featured.editorialTopic,locale)}</span><h2><Link href={`/blog/${locale}/${featured.slug}`}>{featured.title}</Link></h2><p>{featured.excerpt}</p><div className="blogFeaturedFooter"><div className="blogMeta"><CalendarDays size={15}/>{formatDate(featured.publishedAt,locale)} · {featured.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${featured.slug}`}>{c.read}<ArrowRight size={16}/></Link></div></div></article>}
+        <div className="blogListHeading"><h2>{currentTopic?(locale==="ar"?currentTopic.ar:currentTopic.en):c.latest}</h2><span>{rest.length} {locale==="ar"?"مقال":"guides"}</span></div>
+        <div className="blogGrid">{rest.map((post,index)=><article className="blogCard" key={post.id}><div><div className="blogCardTop"><Link className="blogCategory" href={`/blog/${locale}?category=${post.editorialTopic}`}>{topicLabel(post.editorialTopic,locale)}</Link><span className="blogCardIndex">{String(index+(featured?2:1)).padStart(2,"0")}</span></div><h2><Link href={`/blog/${locale}/${post.slug}`}>{post.title}</Link></h2><p>{post.excerpt}</p><div className="blogCardFooter"><div className="blogMeta"><CalendarDays size={14}/>{formatDate(post.publishedAt,locale)} · {post.readingMinutes} min</div><Link className="blogReadLink" href={`/blog/${locale}/${post.slug}`}>{c.read}<ArrowRight size={15}/></Link></div></div></article>)}</div>
       </>}
     </section>
   </main>;
 }
 
-function treePosition(id:string,nodes:readonly {id:string;parentId:string|null;sortOrder:number}[]){
-  const byId=new Map(nodes.map(node=>[node.id,node]));const lineage:number[]=[];let current=byId.get(id);while(current){lineage.unshift(current.sortOrder);current=current.parentId?byId.get(current.parentId):undefined;}return lineage.reduce((value,part,index)=>value+part*Math.pow(100,3-index),0)+lineage.length;
+function classifyTopic(text:string):TopicKey{
+  const normalized=text.toLowerCase();
+  let best:TopicKey="planning"; let bestScore=0;
+  for(const topic of topics){let score=0;for(const keyword of topic.keywords){if(normalized.includes(keyword.toLowerCase()))score++;}if(score>bestScore){best=topic.key;bestScore=score;}}
+  return best;
 }
+function topicLabel(key:TopicKey,locale:Locale){const topic=topics.find(item=>item.key===key);return topic?(locale==="ar"?topic.ar:topic.en):"";}
 function formatDate(value:Date|null,locale:Locale){if(!value)return "";return value.toLocaleDateString(locale==="ar"?"ar-JO":"en-US",{year:"numeric",month:"long",day:"numeric"});}
