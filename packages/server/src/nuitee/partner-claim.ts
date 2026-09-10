@@ -97,7 +97,7 @@ export async function resolveClaimedNuiteeHotel(rawProviderHotelId:string):Promi
     where:{id:row.claimedByHotelId},
     select:{id:true,slug:true},
   });
-  return hotel;
+  return hotel?{hotelId:hotel.id,slug:hotel.slug}:null;
 }
 
 function normalizeProviderHotelId(value:string):string{
