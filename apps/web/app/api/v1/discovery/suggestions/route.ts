@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (query.length < 2) return ok(await localPromise);
 
     const providerPromise = searchNuiteeHotelSuggestions(query, Math.min(5, parsed.data.limit)).catch((error) => {
-      console.warn("Nuitee autocomplete unavailable; returning local suggestions", error);
+      console.warn("Hotel supplier autocomplete unavailable; returning local suggestions", error);
       return [];
     });
     const [local, providerHotels] = await Promise.all([localPromise, providerPromise]);
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         id: `nuitee:${hotel.id}`,
         label: hotel.name,
         searchValue: hotel.name,
-        secondary: location || hotel.address || "Nuitee Connect",
+        secondary: location || hotel.address || "Live hotel inventory",
         type: "HOTEL",
         landingPath: `/hotel/nuitee-${hotel.id}`,
       }];

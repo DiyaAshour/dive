@@ -19,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PartnerLandingPage() {
   const locale = await requestLocale();
   const copy = partnerMarketingDictionary(locale);
+  const ar=locale==="ar";
 
   return <main className="partnerMarketingPage" dir={direction(locale)}>
     <header className="partnerMarketingHeader">
@@ -75,6 +76,24 @@ export default async function PartnerLandingPage() {
         <article><CircleDollarSign/><h3>{copy.ratesTitle}</h3><p>{copy.ratesBody}</p></article>
         <article><MessageSquareText/><h3>{copy.messagesTitle}</h3><p>{copy.messagesBody}</p></article>
         <article><BarChart3/><h3>{copy.performanceTitle}</h3><p>{copy.performanceBody}</p></article>
+      </div>
+    </section>
+
+    <section className="shell partnerCommercial">
+      <div className="partnerSectionIntro">
+        <span className="eyebrow">{ar?"قبل أن تبدأ":"Before you start"}</span>
+        <h2>{ar?"كيف تعمل العلاقة التجارية؟":"How does the commercial relationship work?"}</h2>
+        <p>{ar?"الأسئلة التي يحتاج الفندق جوابها قبل التسجيل أو تفعيل البيع.":"The commercial questions a property should understand before listing or going live."}</p>
+      </div>
+      <div className="partnerCommercialGrid">
+        <article><h3>{ar?"هل توجد عمولة؟":"Is there a commission?"}</h3><p>{ar?"أي عمولة أو رسوم تجارية يتم توضيحها في شروط الشريك قبل تفعيل الفندق. لا يفترض هذا الموقع نسبة واحدة لجميع الشركاء ولا يخصم رسماً غير ظاهر في الاتفاق.":"Any commission or commercial fee is disclosed in the partner terms before activation. This page does not assume one universal rate and HandMeKey does not deduct an undisclosed fee."}</p></article>
+        <article><h3>{ar?"هل التسجيل مجاني؟":"Is sign-up free?"}</h3><p>{ar?"يمكن بدء إنشاء الحساب وتجهيز ملف الفندق قبل النشر. إذا انطبق رسم أو خدمة مدفوعة على نموذجك التجاري فسيظهر ذلك قبل الموافقة أو التفعيل.":"You can start account setup and build the property profile before publication. If a fee or paid service applies to your commercial model, it is shown before acceptance or activation."}</p></article>
+        <article><h3>{ar?"متى يستلم الفندق مستحقاته؟":"When does the hotel get paid?"}</h3><p>{ar?"التوقيت يعتمد على نموذج الدفع الخاص بالحجز: دفع أونلاين أو دفع في الفندق أو نموذج يحدده الاتفاق. يجب أن يظهر مسار التحصيل والتسوية في شروط الشريك والحجز نفسه.":"Timing depends on the booking payment model: online collection, pay at property, or another agreed model. Collection and settlement terms are identified in the partner agreement and the reservation."}</p></article>
+        <article><h3>{ar?"من يحصّل الدفع؟":"Who collects payment?"}</h3><p>{ar?"يعتمد على خيار السعر والحجز. HandMeKey توضح للمسافر وللفندق ما إذا كان الدفع يتم أونلاين أو عند الفندق قبل التأكيد.":"It depends on the rate and reservation. HandMeKey identifies whether payment is collected online or at the property before confirmation."}</p></article>
+        <article><h3>{ar?"هل يوجد Channel Manager؟":"Channel-manager connectivity?"}</h3><p>{ar?"إدارة الأسعار والمخزون متاحة من Partner Hub. أي ربط خارجي مع PMS أو channel manager لا يتم الادعاء بدعمه إلا عندما يكون متوفراً ومفعلاً لذلك الفندق.":"Rates and inventory can be managed in Partner Hub. External PMS or channel-manager connectivity is only represented as supported when it is actually available and enabled for that property."}</p></article>
+        <article><h3>{ar?"ما الفرق عن المنصات العالمية؟":"How is this different from global OTAs?"}</h3><p>{ar?"تركيز HandMeKey الحالي هو الأردن أولاً: سعر نهائي أوضح، تحكم مباشر للفندق، وتجربة أخف للمسافر والشريك. لا ندّعي امتلاك تغطية عالمية أوسع من المنصات الكبرى.":"HandMeKey is currently Jordan-first: clearer final pricing, direct property control and a lighter traveler/partner experience. We do not claim broader global inventory than the largest OTAs."}</p></article>
+        <article><h3>{ar?"ما الأسواق المستهدفة؟":"Which markets are targeted?"}</h3><p>{ar?"الأولوية الحالية للفنادق والسفر داخل الأردن، ثم التوسع سوقاً بسوق بعد تثبيت الحجز والدعم والتسوية.":"The current priority is hotels and travel in Jordan, followed by market-by-market expansion after booking, support and settlement operations are proven."}</p></article>
+        <article><h3>{ar?"من يدعم الضيف؟":"Who supports the guest?"}</h3><p>{ar?"HandMeKey هي نقطة التواصل الأولى للضيف في الحجز الذي تم عبر المنصة، مع التنسيق مع الفندق أو مزود التنفيذ عند الحاجة.":"HandMeKey is the traveler's first point of contact for a booking made on the platform, coordinating with the property or fulfillment partner when needed."}</p></article>
       </div>
     </section>
 
