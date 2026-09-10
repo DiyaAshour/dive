@@ -29,16 +29,22 @@ export async function searchStoredNuiteeHotelPreviews(destination:string,country
   return rows.map((row)=>toPreview(row,query));
 }
 
-export async function listDailyStoredNuiteeHotelPreviews(countryCode="JO",limit=6,date=new Date()):Promise<StoredNuiteeHotelPreview[]> {
+export async function listDailyStoredNuiteeHotelPreviews(countryCode="JO",limit=6,date=new Date(),city?:string):Promise<StoredNuiteeHotelPreview[]> {
   const normalizedCountry=countryCode.trim().toUpperCase()||"JO";
+  const normalizedCity=city?.trim()||undefined;
   const take=Math.max(1,Math.min(12,limit));
   const db=database();
-  const where={countryCode:normalizedCountry,claimedByHotelId:null,starRating:5} as const;
+  const where={
+    countryCode:normalizedCountry,
+    claimedByHotelId:null,
+    starRating:5,
+    ...(normalizedCity?{city:{contains:normalizedCity,mode:"insensitive" as const}}:{}),
+  };
   const count=await db.nuiteeContentHotel.count({where});
   if(count===0)return[];
 
   const dayKey=dailyKey(date,normalizedCountry);
-  const seed=hash(`${normalizedCountry}:${dayKey}`);
+  const seed=hash(`${normalizedCountry}:${normalizedCity??"all"}:${dayKey}`);
   const poolSize=Math.min(count,Math.max(take*4,24));
   const maxSkip=Math.max(0,count-poolSize);
   const skip=maxSkip===0?0:seed%(maxSkip+1);
@@ -51,7 +57,7 @@ export async function listDailyStoredNuiteeHotelPreviews(countryCode="JO",limit=
   });
 
   return seededShuffle(rows,seed)
-    .map((row)=>toPreview(row,row.city??""))
+    .map((row)=>toPreview(row,row.city??normalizedCity??""))
     .sort((a,b)=>Number(Boolean(b.coverPhoto))-Number(Boolean(a.coverPhoto)))
     .slice(0,take);
 }
