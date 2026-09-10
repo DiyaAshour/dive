@@ -1,5 +1,5 @@
 import type {NextRequest} from "next/server";
-import {claimNuiteeHotel,getNuiteeHotelClaim,releaseNuiteeHotelClaim} from "@platform/server";
+import {claimNuiteeHotel,getNuiteeHotelClaim,releaseNuiteeHotelClaim,searchClaimableNuiteeHotels} from "@platform/server";
 import {handleApiError,ok} from "@/lib/api";
 import {requestUser} from "@/lib/request-auth";
 
@@ -8,6 +8,8 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{hotelId:
     const {hotelId}=await params;
     const user=await requestUser(request);
     if(!user)return Response.json({data:null,error:{code:"UNAUTHORIZED",message:"Authentication required"}},{status:401});
+    const query=request.nextUrl.searchParams.get("q");
+    if(query!==null)return ok(await searchClaimableNuiteeHotels(user.id,hotelId,query,8));
     return ok(await getNuiteeHotelClaim(user.id,hotelId));
   }catch(error){return handleApiError(error);}
 }
