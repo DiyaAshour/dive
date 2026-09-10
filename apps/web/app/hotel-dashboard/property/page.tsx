@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BedDouble, Building2, CheckCircle2, Images, Plus, Send, ShieldCheck } from "lucide-react";
-import { getHotelPublicContentForManagement, getHotelWorkspace, getNuiteeHotelClaim, getPublishingReadiness, listHotelMediaWithCategories, listUserHotels } from "@platform/server";
+import { getHotelPublicContentForManagement, getHotelWorkspace, getNuiteeHotelClaim, getNuiteeHotelClaimRequest, getNuiteeClaimDocumentStatus, getPublishingReadiness, listHotelMediaWithCategories, listUserHotels } from "@platform/server";
 import { PartnerSidebar } from "@/components/partner-sidebar";
 import { PartnerLanguageBar } from "@/components/partner-language-bar";
 import { currentUser } from "@/lib/server-session";
@@ -26,18 +26,21 @@ export default async function PropertySettingsPage({searchParams}: {searchParams
   const selected = hotels.find((hotel) => hotel.id === query.hotelId) ?? hotels[0];
   if (!selected) redirect("/partner/onboarding");
 
-  const [workspace, publicContent, readiness, media, nuiteeClaim] = await Promise.all([
+  const [workspace, publicContent, readiness, media, nuiteeClaim, nuiteeClaimRequest, nuiteeClaimDocuments] = await Promise.all([
     getHotelWorkspace(user.id, selected.id),
     getHotelPublicContentForManagement(user.id, selected.id),
     getPublishingReadiness(user.id, selected.id),
     listHotelMediaWithCategories(user.id, selected.id),
     getNuiteeHotelClaim(user.id, selected.id),
+    getNuiteeHotelClaimRequest(user.id, selected.id),
+    getNuiteeClaimDocumentStatus(user.id, selected.id),
   ]);
   const ratePlanCount = workspace.roomTypes.reduce((sum, roomType) => sum + roomType.ratePlans.length, 0);
   const serviceRate = Number(workspace.serviceRate) * 100;
   const taxRate = Number(workspace.taxRate) * 100;
   const latestReview = readiness.latestReview ? {...readiness.latestReview, submittedAt: readiness.latestReview.submittedAt.toISOString(), reviewedAt: readiness.latestReview.reviewedAt?.toISOString() ?? null} : null;
   const mediaProps = media.map((item) => ({...item, uploadExpiresAt: item.uploadExpiresAt.toISOString(), uploadedAt: item.uploadedAt?.toISOString() ?? null, createdAt: item.createdAt.toISOString(), document: item.document ? {...item.document, submittedAt: item.document.submittedAt.toISOString(), reviewedAt: item.document.reviewedAt?.toISOString() ?? null} : null}));
+  const claimRequestProp = nuiteeClaimRequest ? {...nuiteeClaimRequest, submittedAt: nuiteeClaimRequest.submittedAt.toISOString(), reviewedAt: nuiteeClaimRequest.reviewedAt?.toISOString() ?? null} : null;
   const readinessDone = readiness.checks.filter((item) => item.passed).length;
   const passed = (code: string) => readiness.checks.find((item) => item.code === code)?.passed ?? false;
   const profileDone = ["DESCRIPTION", "STAR_RATING", "CHECK_TIMES", "AMENITIES"].every(passed);
@@ -66,7 +69,7 @@ export default async function PropertySettingsPage({searchParams}: {searchParams
       <div className="partnerInsightGrid"><div className="partnerInsight"><ShieldCheck size={20}/><div><strong>{copy.reviewGated}</strong><p>{copy.reviewGatedBody}</p></div></div><div className="partnerInsight"><Building2 size={20}/><div><strong>{copy.completeListing}</strong><p>{copy.completeListingBody}</p></div></div></div>
 
       <div className="partnerWorkspaceStack">
-        <NuiteeClaimManager hotelId={workspace.id} hotelName={workspace.name} initialClaim={nuiteeClaim ? {...nuiteeClaim, claimedAt: nuiteeClaim.claimedAt?.toISOString() ?? null} : null} locale={locale}/>
+        <NuiteeClaimManager hotelId={workspace.id} hotelName={workspace.name} initialClaim={nuiteeClaim ? {...nuiteeClaim, claimedAt: nuiteeClaim.claimedAt?.toISOString() ?? null} : null} initialRequest={claimRequestProp} initialDocuments={nuiteeClaimDocuments} locale={locale}/>
         <div id="property-profile" className="dashboardAnchor"><PublicContentManager hotelId={workspace.id} content={{area: publicContent.area, description: publicContent.description, starRating: publicContent.starRating, latitude: publicContent.latitude, longitude: publicContent.longitude, checkInTime: publicContent.checkInTime, checkOutTime: publicContent.checkOutTime, amenities: publicContent.amenities.map((amenity) => ({code: amenity.code, name: amenity.name, category: amenity.category})), translations: publicContent.translations.map((translation) => ({locale: translation.locale, name: translation.name, description: translation.description}))}} locale={locale}/></div>
         <div id="property-photos" className="dashboardAnchor"><MediaManager hotelId={workspace.id} initialMedia={mediaProps} roomTypes={workspace.roomTypes.map((room) => ({id: room.id, name: room.name}))} locale={locale}/></div>
         <div id="rooms-rates" className="dashboardAnchor"><SetupManager hotelId={workspace.id} overbookingEnabled={workspace.overbookingEnabled} roomTypes={workspace.roomTypes.map((roomType) => ({id: roomType.id, name: roomType.name, code: roomType.code, ratePlans: roomType.ratePlans.map((plan) => ({id: plan.id, name: plan.name, code: plan.code, allowPayNow: plan.allowPayNow, allowPayAtHotel: plan.allowPayAtHotel, cancellationPolicy: plan.cancellationPolicy ? {name: plan.cancellationPolicy.name} : null}))}))} locale={locale}/></div>
