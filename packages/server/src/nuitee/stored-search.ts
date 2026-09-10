@@ -19,18 +19,20 @@ export type StoredNuiteeHotelPreviewPage=Readonly<{
   nextOffset:number|null;
 }>;
 
-export async function searchStoredNuiteeHotelPreviews(destination:string,countryCode="JO",limit=20):Promise<StoredNuiteeHotelPreview[]> {
-  return (await searchStoredNuiteeHotelPreviewPage(destination,countryCode,limit,0)).hotels;
+export async function searchStoredNuiteeHotelPreviews(destination:string,countryCode="JO",limit=20,stars:readonly number[]=[]):Promise<StoredNuiteeHotelPreview[]> {
+  return (await searchStoredNuiteeHotelPreviewPage(destination,countryCode,limit,0,stars)).hotels;
 }
 
-export async function searchStoredNuiteeHotelPreviewPage(destination:string,countryCode="JO",limit=20,offset=0):Promise<StoredNuiteeHotelPreviewPage>{
+export async function searchStoredNuiteeHotelPreviewPage(destination:string,countryCode="JO",limit=20,offset=0,stars:readonly number[]=[]):Promise<StoredNuiteeHotelPreviewPage>{
   const query=destination.trim();
   if(!query)return{hotels:[],total:0,nextOffset:null};
   const take=Math.max(1,Math.min(50,limit));
   const skip=Math.max(0,offset);
+  const normalizedStars=[...new Set(stars.map((value)=>Math.round(value)).filter((value)=>value>=1&&value<=5))];
   const where={
     countryCode:countryCode.trim().toUpperCase(),
     claimedByHotelId:null,
+    starRating:normalizedStars.length?{in:normalizedStars}:{gte:1},
     OR:[{city:{contains:query,mode:"insensitive" as const}},{area:{contains:query,mode:"insensitive" as const}},{name:{contains:query,mode:"insensitive" as const}}],
   };
   const db=database();
