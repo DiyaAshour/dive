@@ -100,7 +100,7 @@ function propertyKind(rawValue:unknown,name:string):PropertyKind{
   if(/\bvilla\b/.test(labels))return "VILLA";
   if(/\bresort\b/.test(labels))return "RESORT";
   if(/\bhotel\b/.test(labels))return "HOTEL";
-  if(labels)return "OTHER";
+  if(/\b(hostel|homestay|guest house|guesthouse|holiday home|vacation home|cabin|chalet|camp|tent|bed and breakfast|b&b)\b/.test(labels))return "OTHER";
 
   const normalizedName=name.toLowerCase();
   if(/\b(apartment|apartments|aparthotel|studio|flat|condo|condominium|bedroom|bedrooms|bed room|villa|chalet|hostel|homestay|guest house|guesthouse|holiday home|vacation home|rental|cabin|camp|tent)\b/.test(normalizedName)){
