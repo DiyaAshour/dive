@@ -24,7 +24,7 @@ const articleSchema=z.object({
 
 const publishPayloadSchema=z.object({
   version:z.literal(1),
-  locale:z.enum(["AR","EN"]),
+  locale:z.enum(["AR","EN","ES"]),
   category:z.string().trim().min(2).max(60),
   primaryKeyword:z.string().trim().min(2).max(180),
   searchIntent:z.string().trim().min(2).max(300),
@@ -49,7 +49,7 @@ const updatePayloadSchema=publishPayloadSchema.extend({
 type PublishPayload=z.infer<typeof publishPayloadSchema>;
 type UpdatePayload=z.infer<typeof updatePayloadSchema>;
 type QualityPayload=Pick<PublishPayload,"article"|"sources"|"notes">;
-type ExistingPost=Awaited<ReturnType<typeof listAdminBlogPosts>>[number];
+type BlogLocale=PublishPayload["locale"];
 
 type GitHubIssue={
   number:number;
@@ -61,10 +61,26 @@ type GitHubIssue={
   user?:{login?:string};
 };
 
+type PublishedArticle={
+  issue:number;
+  issueUrl:string;
+  id:string;
+  title:string;
+  slug:string;
+  locale:BlogLocale;
+  category:string;
+  url:string;
+  primaryKeyword:string;
+  searchIntent:string;
+  sourceCount:number;
+};
+
 const PUBLISH_PREFIX="[HMK-SEO-PUBLISH]";
 const UPDATE_PREFIX="[HMK-SEO-UPDATE]";
 const QUEUE_OWNER="DiyaAshour";
 const QUEUE_REPO="dive";
+const MAX_PER_LOCALE=5;
+const MAX_PUBLISH_PER_RUN=15;
 
 export async function GET(request:NextRequest){
   try{
@@ -78,8 +94,8 @@ export async function GET(request:NextRequest){
     const queue=await fetchQueueIssues();
     const rejections:Array<{issue:number;reason:string;details?:string[]}>=[];
 
-    // Search Console-driven refreshes get first priority so strong existing pages
-    // are not starved by the hourly new-article queue.
+    // GSC refreshes remain first priority. One eligible UPDATE is applied before
+    // any new-content batch so existing winners are never starved by scale.
     for(const issue of queue.filter((item)=>item.title.startsWith(UPDATE_PREFIX))){
       const payload=parseUpdatePayload(issue.body);
       if(!payload){
@@ -99,8 +115,6 @@ export async function GET(request:NextRequest){
         continue;
       }
 
-      // Idempotency + stale-update protection: once this article has been changed
-      // after the optimizer generated the issue, never apply that issue again.
       if(new Date(target.updatedAt).getTime()>=generatedAt)continue;
 
       const slug=normalizeSlug(payload.article.slug);
@@ -109,8 +123,8 @@ export async function GET(request:NextRequest){
         continue;
       }
 
-      const otherPosts=posts.filter((post)=>post.locale===payload.locale&&post.id!==target.id);
-      const quality=qualityIssues(payload,otherPosts);
+      const otherTitles=posts.filter((post)=>post.locale===payload.locale&&post.id!==target.id).map((post)=>post.title);
+      const quality=qualityIssues(payload,otherTitles);
       if(quality.length>0){
         rejections.push({issue:issue.number,reason:"Quality gate rejected SEO refresh",details:quality});
         continue;
@@ -139,14 +153,7 @@ export async function GET(request:NextRequest){
 
       const post=await updateAdminBlogPost(owner.id,target.id,parsed.data);
       const publicUrl=`https://handmekey.com/blog/${payload.locale.toLowerCase()}/${post.slug}`;
-      console.info("SEO queue publisher refreshed article",{
-        issue:issue.number,
-        id:post.id,
-        slug:post.slug,
-        primaryKeyword:payload.primaryKeyword,
-        reason:payload.reason,
-        gsc:payload.gsc,
-      });
+      console.info("SEO queue publisher refreshed article",{issue:issue.number,id:post.id,slug:post.slug,primaryKeyword:payload.primaryKeyword,reason:payload.reason,gsc:payload.gsc});
 
       return Response.json({
         ok:true,
@@ -163,24 +170,29 @@ export async function GET(request:NextRequest){
       },{status:200});
     }
 
-    const recentAutomated=posts.find((post)=>post.authorName==="HandMeKey SEO Engine"&&post.status==="PUBLISHED"&&post.publishedAt&&Date.now()-new Date(post.publishedAt).getTime()<50*60*1000);
-    if(recentAutomated){
-      return Response.json({ok:true,skipped:true,reason:"An automated article was already published in the last 50 minutes",article:{id:recentAutomated.id,slug:recentAutomated.slug,title:recentAutomated.title}},{status:200});
-    }
-
     const existingSlugs=new Set(posts.map((post)=>`${post.locale}:${post.slug}`));
+    const knownTitles=new Map<BlogLocale,string[]>([
+      ["AR",posts.filter((post)=>post.locale==="AR").map((post)=>post.title)],
+      ["EN",posts.filter((post)=>post.locale==="EN").map((post)=>post.title)],
+      ["ES",posts.filter((post)=>post.locale==="ES").map((post)=>post.title)],
+    ]);
+    const perLocale:Record<BlogLocale,number>={AR:0,EN:0,ES:0};
+    const published:PublishedArticle[]=[];
+
     for(const issue of queue.filter((item)=>item.title.startsWith(PUBLISH_PREFIX))){
+      if(published.length>=MAX_PUBLISH_PER_RUN)break;
+
       const payload=parsePublishPayload(issue.body);
       if(!payload){
         rejections.push({issue:issue.number,reason:"Invalid publish queue JSON"});
         continue;
       }
+      if(perLocale[payload.locale]>=MAX_PER_LOCALE)continue;
 
       const slug=normalizeSlug(payload.article.slug);
       if(existingSlugs.has(`${payload.locale}:${slug}`))continue;
 
-      const existing=posts.filter((post)=>post.locale===payload.locale);
-      const quality=qualityIssues(payload,existing);
+      const quality=qualityIssues(payload,knownTitles.get(payload.locale)??[]);
       if(quality.length>0){
         rejections.push({issue:issue.number,reason:"Quality gate rejected article",details:quality});
         continue;
@@ -204,42 +216,71 @@ export async function GET(request:NextRequest){
       };
 
       const parsed=blogPostInputSchema.safeParse(candidate);
-      if(!parsed.success)return validationError(parsed.error);
+      if(!parsed.success){
+        rejections.push({issue:issue.number,reason:"CMS schema rejected article",details:parsed.error.issues.map((entry)=>`${entry.path.join(".")}: ${entry.message}`).slice(0,8)});
+        continue;
+      }
 
       const post=await createAdminBlogPost(owner.id,parsed.data);
       const publicUrl=`https://handmekey.com/blog/${payload.locale.toLowerCase()}/${post.slug}`;
-      console.info("SEO queue publisher published article",{issue:issue.number,id:post.id,slug:post.slug,primaryKeyword:payload.primaryKeyword,sourceCount:payload.sources.length});
+      const article:PublishedArticle={
+        issue:issue.number,
+        issueUrl:issue.html_url,
+        id:post.id,
+        title:post.title,
+        slug:post.slug,
+        locale:payload.locale,
+        category:post.category,
+        url:publicUrl,
+        primaryKeyword:payload.primaryKeyword,
+        searchIntent:payload.searchIntent,
+        sourceCount:payload.sources.length,
+      };
+      published.push(article);
+      perLocale[payload.locale]+=1;
+      existingSlugs.add(`${payload.locale}:${slug}`);
+      knownTitles.set(payload.locale,[...(knownTitles.get(payload.locale)??[]),post.title]);
+      console.info("SEO queue publisher published article",{issue:issue.number,id:post.id,slug:post.slug,locale:payload.locale,primaryKeyword:payload.primaryKeyword,sourceCount:payload.sources.length});
+    }
 
+    if(published.length>0){
+      const first=published[0]!;
       return Response.json({
         ok:true,
         published:true,
         updated:false,
-        queueIssue:{number:issue.number,url:issue.html_url},
-        article:{id:post.id,title:post.title,slug:post.slug,locale:post.locale,category:post.category,url:publicUrl},
-        primaryKeyword:payload.primaryKeyword,
-        searchIntent:payload.searchIntent,
-        sourceCount:payload.sources.length,
-        generator:"ChatGPT scheduled task",
+        publishedCount:published.length,
+        perLocale,
+        articles:published,
+        queueIssue:{number:first.issue,url:first.issueUrl},
+        article:{id:first.id,title:first.title,slug:first.slug,locale:first.locale,category:first.category,url:first.url},
+        generator:"ChatGPT scheduled cluster task",
         openAiApiUsed:false,
         deploymentTriggered:false,
+        rejections:rejections.slice(0,12),
       },{status:201});
     }
 
-    return Response.json({ok:true,published:false,updated:false,reason:"No queued SEO action passed the gates",queueCount:queue.length,rejections:rejections.slice(0,8)},{status:200});
+    return Response.json({ok:true,published:false,updated:false,reason:"No queued SEO action passed the gates",queueCount:queue.length,rejections:rejections.slice(0,12)},{status:200});
   }catch(error){return handleApiError(error);}
 }
 
 async function fetchQueueIssues(){
-  const url=new URL(`https://api.github.com/repos/${QUEUE_OWNER}/${QUEUE_REPO}/issues`);
-  url.searchParams.set("state","open");
-  url.searchParams.set("per_page","100");
-  url.searchParams.set("sort","created");
-  url.searchParams.set("direction","asc");
-
-  const response=await fetch(url,{headers:{accept:"application/vnd.github+json","user-agent":"HandMeKey-SEO-Queue/2.0"},signal:AbortSignal.timeout(15_000),cache:"no-store"});
-  if(!response.ok)throw new Error(`GitHub SEO queue request failed with status ${response.status}`);
-  const raw=await response.json() as GitHubIssue[];
-  return raw.filter((issue)=>
+  const issues:GitHubIssue[]=[];
+  for(let page=1;page<=5;page+=1){
+    const url=new URL(`https://api.github.com/repos/${QUEUE_OWNER}/${QUEUE_REPO}/issues`);
+    url.searchParams.set("state","open");
+    url.searchParams.set("per_page","100");
+    url.searchParams.set("page",String(page));
+    url.searchParams.set("sort","created");
+    url.searchParams.set("direction","asc");
+    const response=await fetch(url,{headers:{accept:"application/vnd.github+json","user-agent":"HandMeKey-SEO-Queue/3.0"},signal:AbortSignal.timeout(15_000),cache:"no-store"});
+    if(!response.ok)throw new Error(`GitHub SEO queue request failed with status ${response.status}`);
+    const batch=await response.json() as GitHubIssue[];
+    issues.push(...batch);
+    if(batch.length<100)break;
+  }
+  return issues.filter((issue)=>
     !issue.pull_request&&
     (issue.title.startsWith(PUBLISH_PREFIX)||issue.title.startsWith(UPDATE_PREFIX))&&
     issue.user?.login===QUEUE_OWNER&&
@@ -268,20 +309,22 @@ function parseUpdatePayload(body:string|null):UpdatePayload|null{
   return parsed.success?parsed.data:null;
 }
 
-function qualityIssues(payload:QualityPayload,existing:ExistingPost[]){
+function qualityIssues(payload:QualityPayload,existingTitles:string[]){
   const article=payload.article;
   const issues:string[]=[];
   const words=article.body.trim()?article.body.trim().split(/\s+/).length:0;
   const h2Count=article.body.match(/^##\s+/gm)?.length??0;
-  const faqPresent=/^##\s+.*(?:FAQ|Frequently Asked|الأسئلة الشائعة|أسئلة شائعة).*$/im.test(article.body);
-  const internalLinks=article.body.match(/\]\((?:https:\/\/handmekey\.com)?\/(?:search|cars|blog\/(?:en|ar))(?:[^)]*)\)/gi)?.length??0;
+  const faqPresent=/^##\s+.*(?:FAQ|Frequently Asked|الأسئلة الشائعة|أسئلة شائعة|Preguntas frecuentes).*$/im.test(article.body);
+  const internalLinks=article.body.match(/\]\((?:https:\/\/handmekey\.com)?\/(?:search|cars|blog\/(?:en|ar|es))(?:[^)]*)\)/gi)?.length??0;
+  const hasH1=/^#\s+/m.test(article.body);
   const warningText=payload.notes.join(" ");
-  const warningPresent=/(human review required|needs human review|verify before publishing|cannot verify|unverified|مراجعة بشرية مطلوبة|يجب التحقق قبل النشر|غير مؤكد)/i.test(warningText);
-  const similarity=Math.max(0,...existing.map((post)=>titleSimilarity(article.title,post.title)));
+  const warningPresent=/(human review required|needs human review|verify before publishing|cannot verify|unverified|مراجعة بشرية مطلوبة|يجب التحقق قبل النشر|غير مؤكد|revisión humana|debe verificarse|no verificado)/i.test(warningText);
+  const similarity=Math.max(0,...existingTitles.map((title)=>titleSimilarity(article.title,title)));
 
-  if(words<1100)issues.push(`Article is too shallow (${words} words; minimum 1100)`);
+  if(words<1300||words>2200)issues.push(`Article length must be 1300-2200 useful words (${words} found)`);
   if(h2Count<5)issues.push(`Article needs more useful structure (${h2Count} H2 sections; minimum 5 including FAQ)`);
   if(!faqPresent)issues.push("A concise FAQ section based on follow-up search intent is required");
+  if(hasH1)issues.push("Article body must not contain a Markdown H1");
   if(internalLinks<2)issues.push(`At least 2 valid HandMeKey internal links are required (${internalLinks} found)`);
   if(payload.sources.length<2)issues.push(`Research must include at least 2 web sources (${payload.sources.length} found)`);
   if(article.seoTitle.trim().length<30||article.seoTitle.trim().length>65)issues.push("SEO title must be 30-65 characters");

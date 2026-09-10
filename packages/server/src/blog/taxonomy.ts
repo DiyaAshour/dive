@@ -3,7 +3,7 @@ import {database} from "@platform/database";
 import {ApplicationError} from "../errors";
 import {requirePlatformAdmin} from "../admin/authorization";
 
-export type BlogTaxonomyLocale = "AR" | "EN";
+export type BlogTaxonomyLocale = "AR" | "EN" | "ES";
 export type BlogTaxonomyNode = Readonly<{
   id: string;
   name: string;
@@ -28,8 +28,8 @@ export async function getAdminBlogTaxonomy(actorUserId: string, locale: BlogTaxo
   return readBlogTaxonomy(locale, true);
 }
 
-export async function getPublicBlogTaxonomy(locale: "ar" | "en") {
-  return readBlogTaxonomy(locale === "ar" ? "AR" : "EN", false);
+export async function getPublicBlogTaxonomy(locale: "ar" | "en" | "es") {
+  return readBlogTaxonomy(locale === "ar" ? "AR" : locale === "es" ? "ES" : "EN", false);
 }
 
 export async function saveAdminBlogTaxonomy(actorUserId: string, locale: BlogTaxonomyLocale, rawNodes: BlogTaxonomyNode[]) {

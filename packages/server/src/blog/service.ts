@@ -3,32 +3,32 @@ import { database } from "@platform/database";
 import { ApplicationError, notFound } from "../errors";
 import { requirePlatformAdmin } from "../admin/authorization";
 
-export type PublicBlogLocale = "en" | "ar";
+export type PublicBlogLocale = "en" | "ar" | "es";
 
 const CURATED_BLOG_COVERS = [
   {
     url: "https://images.unsplash.com/photo-1627902011272-7ada906bc4ec?auto=format&fit=crop&w=1600&q=82",
-    keywords: ["wadi rum", "desert", "petra", "aqaba", "road trip", "adventure", "صحراء", "وادي رم", "البتراء", "العقبة", "رحلة برية"],
+    keywords: ["wadi rum", "desert", "petra", "aqaba", "road trip", "adventure", "صحراء", "وادي رم", "البتراء", "العقبة", "رحلة برية", "desierto", "aventura", "ruta"],
   },
   {
     url: "https://images.unsplash.com/photo-1761014586555-947a9555d302?auto=format&fit=crop&w=1600&q=82",
-    keywords: ["key", "keys", "deposit", "insurance", "payment", "credit card", "contract", "booking", "refund", "مفتاح", "تأمين", "عربون", "وديعة", "دفع", "بطاقة", "عقد", "حجز", "استرداد"],
+    keywords: ["key", "keys", "deposit", "insurance", "payment", "credit card", "contract", "booking", "refund", "مفتاح", "تأمين", "عربون", "وديعة", "دفع", "بطاقة", "عقد", "حجز", "استرداد", "reserva", "pago", "tarjeta", "seguro", "depósito", "reembolso"],
   },
   {
     url: "https://images.unsplash.com/photo-1661789165886-9af8842bb073?auto=format&fit=crop&w=1600&q=82",
-    keywords: ["amman", "airport", "queen alia", "downtown", "عمّان", "عمان", "المطار", "مطار الملكة علياء", "وسط البلد"],
+    keywords: ["amman", "airport", "queen alia", "downtown", "عمّان", "عمان", "المطار", "مطار الملكة علياء", "وسط البلد", "amán", "aeropuerto", "reina alia", "centro"],
   },
   {
     url: "https://images.unsplash.com/photo-1560546941-be7b4ac3b40e?auto=format&fit=crop&w=1600&q=82",
-    keywords: ["drive", "driving", "road", "highway", "fuel", "petrol", "gas", "parking", "قيادة", "طريق", "وقود", "بنزين", "مواقف"],
+    keywords: ["drive", "driving", "road", "highway", "fuel", "petrol", "gas", "parking", "قيادة", "طريق", "وقود", "بنزين", "مواقف", "conducir", "carretera", "combustible", "aparcamiento", "alquiler de coche"],
   },
   {
     url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=82",
-    keywords: ["hotel", "stay", "resort", "room", "accommodation", "فندق", "إقامة", "اقامة", "منتجع", "غرفة"],
+    keywords: ["hotel", "stay", "resort", "room", "accommodation", "فندق", "إقامة", "اقامة", "منتجع", "غرفة", "hoteles", "alojamiento", "habitación", "resort"],
   },
   {
     url: "https://images.unsplash.com/photo-1768451673681-7e793a7f4900?auto=format&fit=crop&w=1800&q=88",
-    keywords: ["jordan", "destination", "travel guide", "الأردن", "الاردن", "وجهة", "دليل سفر"],
+    keywords: ["jordan", "destination", "travel guide", "الأردن", "الاردن", "وجهة", "دليل سفر", "jordania", "destino", "guía de viaje", "viaje"],
   },
 ] as const;
 
@@ -58,8 +58,8 @@ const publicArticleSelect = {
   seoDescription: true,
 } as const;
 
-export function databaseBlogLocale(locale: PublicBlogLocale): "EN" | "AR" {
-  return locale === "ar" ? "AR" : "EN";
+export function databaseBlogLocale(locale: PublicBlogLocale): "EN" | "AR" | "ES" {
+  return locale === "ar" ? "AR" : locale === "es" ? "ES" : "EN";
 }
 
 export async function listPublishedBlogPosts(locale: PublicBlogLocale, limit = 24) {
@@ -120,7 +120,7 @@ export async function getPublicBlogAsset(assetId: string) {
 export async function listAdminBlogPosts(actorUserId: string, filters: {query?: string; status?: string; locale?: string; category?: string} = {}) {
   await requirePlatformAdmin(actorUserId);
   const status = validStatus(filters.status) ? filters.status : undefined;
-  const locale = filters.locale === "AR" || filters.locale === "EN" ? filters.locale : undefined;
+  const locale = filters.locale === "AR" || filters.locale === "EN" || filters.locale === "ES" ? filters.locale : undefined;
   const category = filters.category?.trim() || undefined;
   return database().blogPost.findMany({
     where: {
@@ -251,12 +251,12 @@ function normalizeInput(input: BlogPostInput) {
   };
 }
 
-async function ensureSlugAvailable(locale: "EN" | "AR", slug: string, excludingId?: string) {
+async function ensureSlugAvailable(locale: "EN" | "AR" | "ES", slug: string, excludingId?: string) {
   const conflict = await database().blogPost.findFirst({where: {locale, slug, ...(excludingId ? {id: {not: excludingId}} : {})}, select: {id: true}});
   if (conflict) throw new ApplicationError("BLOG_SLUG_TAKEN", "This slug is already used for the selected language", 409);
 }
 
-async function assertPublishedPostResolvable(locale: "EN" | "AR", slug: string) {
+async function assertPublishedPostResolvable(locale: "EN" | "AR" | "ES", slug: string) {
   const published = await database().blogPost.findFirst({
     where: {locale, slug, status: "PUBLISHED", publishedAt: {lte: new Date()}},
     select: {id: true},

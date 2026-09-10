@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const blogLocaleSchema = z.enum(["EN", "AR"]);
+export const blogLocaleSchema = z.enum(["EN", "AR", "ES"]);
 export const blogPostStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);
 
 const slugSchema = z.string().trim().min(3).max(120).regex(/^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u, "Use letters, numbers and hyphens only");

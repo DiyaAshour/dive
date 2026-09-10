@@ -1,6 +1,7 @@
 enum BlogLocale {
   EN
   AR
+  ES
 }
 
 enum BlogPostStatus {
