@@ -33,7 +33,7 @@ export async function listDailyStoredNuiteeHotelPreviews(countryCode="JO",limit=
   const normalizedCountry=countryCode.trim().toUpperCase()||"JO";
   const take=Math.max(1,Math.min(12,limit));
   const db=database();
-  const where={countryCode:normalizedCountry,claimedByHotelId:null} as const;
+  const where={countryCode:normalizedCountry,claimedByHotelId:null,starRating:5} as const;
   const count=await db.nuiteeContentHotel.count({where});
   if(count===0)return[];
 
