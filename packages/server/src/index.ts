@@ -57,6 +57,7 @@ export {resolvePublicHotelIdentifier, listHotelSitemapEntries} from "./discovery
 export * from "./distribution/google-hotels";
 export * from "./connectivity/oracle-ohip";
 export * from "./connectivity/service";
+export * from "./connectivity/native-api";
 export * from "./media/service";
 export * from "./media/photo-gallery";
 export * from "./media/cleanup";
