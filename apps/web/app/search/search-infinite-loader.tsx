@@ -25,6 +25,7 @@ export function SearchInfiniteLoader(){
     const adults=params.get("adults")||"2";
     const children=params.get("children")||"0";
     const childAges=params.getAll("childrenAge");
+    const selectedStars=params.getAll("stars").flatMap((value)=>value.split(",")).map((value)=>value.trim()).filter(Boolean);
     const ar=(document.documentElement.lang||"").toLowerCase().startsWith("ar")||document.documentElement.dir==="rtl";
 
     function existingSlugs(){
@@ -69,6 +70,7 @@ export function SearchInfiniteLoader(){
         let pagesScanned=0;
         while(!state.current.done&&added===0&&pagesScanned<5){
           const q=new URLSearchParams({destination,country:"JO",offset:String(state.current.offset),limit:"20"});
+          selectedStars.forEach((star)=>q.append("stars",star));
           const response=await fetch(`/api/v1/search/stored-hotels?${q.toString()}`,{cache:"no-store"});if(!response.ok)throw new Error(String(response.status));
           const page=await response.json() as Page;
           const seen=existingSlugs();state.current.loaded.forEach((_,slug)=>seen.add(slug));
@@ -80,7 +82,7 @@ export function SearchInfiniteLoader(){
         }
         renderLoaded();
         if(sentinel){
-          if(state.current.done)sentinel.textContent=ar?"تم عرض كل الفنادق المحفوظة لهذه الوجهة":"All stored hotels for this destination are shown";
+          if(state.current.done)sentinel.textContent=ar?"تم عرض كل الفنادق المصنفة لهذه الوجهة":"All rated hotels for this destination are shown";
           else sentinel.textContent=ar?"انزل أكثر لتحميل فنادق إضافية":"Scroll for more hotels";
         }
       }catch(error){console.error("Infinite hotel loading failed",error);if(sentinel)sentinel.textContent=ar?"تعذر تحميل المزيد، حاول النزول مرة أخرى":"Could not load more hotels. Scroll again to retry.";}finally{state.current.loading=false;}
