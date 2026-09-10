@@ -8,6 +8,7 @@ import {requestGuestMarket} from "@/lib/request-guest-market";
 import {defaultStayDates} from "@/lib/stay-dates";
 import {HotelGalleryController} from "../../hotel/[id]/hotel-gallery-controller";
 import {NuiteeHotelPageV2} from "../../hotel/[id]/nuitee-page-v2";
+import {NuiteeReviewJump} from "../../hotel/[id]/nuitee-review-jump";
 import {NuiteeTrustLayer} from "../../hotel/[id]/nuitee-trust-layer";
 
 type SearchParams=Record<string,string|string[]|undefined>;
@@ -76,18 +77,27 @@ export default async function NuiteeHotelRoute({params,searchParams}:{params:Pro
   }
   if(!hotel)return <main className="hotelExperience" lang={market.intlLocale} dir={market.direction}><CustomerHeader/><section className="shell hotelDetailSection"><div className="premiumEmpty"><h3>{market.locale==="ar"?"السعر لم يعد متاحاً":"This Nuitee rate is no longer available"}</h3><p>{market.locale==="ar"?"ارجع إلى البحث واختر سعراً جديداً.":"Return to search and choose a fresh supplier rate."}</p><Link className="resultCta" href="/search">{market.locale==="ar"?"العودة إلى البحث":"Return to search"}</Link></div></section></main>;
   const supplierReviews=await reviewsPromise;
+  const contentOverall=hotel.reviewSummary.overall!==null&&hotel.reviewSummary.overall>0?hotel.reviewSummary.overall:null;
   const reviews={
     ...supplierReviews,
     summary:{
       ...supplierReviews.summary,
       count:Math.max(supplierReviews.summary.count,hotel.reviewSummary.count),
-      overall:supplierReviews.summary.overall??hotel.reviewSummary.overall,
+      overall:supplierReviews.summary.overall??contentOverall,
+    },
+  };
+  const displayHotel={
+    ...hotel,
+    reviewSummary:{
+      count:reviews.summary.count,
+      overall:reviews.summary.overall,
     },
   };
   const gallery=nuiteeGallery(hotel);
   return <>
-    <NuiteeHotelPageV2 hotel={hotel} stay={stay} market={market}/>
-    <section className="hotelExperience" lang={market.intlLocale} dir={market.direction}><div className="shell hotelDetailSection"><NuiteeTrustLayer hotel={hotel} reviews={reviews} locale={market.locale}/></div></section>
+    <NuiteeHotelPageV2 hotel={displayHotel} stay={stay} market={market}/>
+    <NuiteeReviewJump score={reviews.summary.overall} count={reviews.summary.count} locale={market.locale}/>
+    <section className="hotelExperience" lang={market.intlLocale} dir={market.direction}><div className="shell hotelDetailSection"><NuiteeTrustLayer hotel={displayHotel} reviews={reviews} locale={market.locale}/></div></section>
     <HotelGalleryController photos={gallery} hotelName={hotel.name} locale={market.locale}/>
   </>;
 }
