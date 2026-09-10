@@ -18,6 +18,10 @@
     {
       "path": "/api/v1/internal/nuitee-content-sync",
       "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/v1/internal/connectivity-delivery",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
