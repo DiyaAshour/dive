@@ -2,13 +2,14 @@ import type {Metadata} from "next";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {BadgeCheck, Building2, CircleCheck, FileCheck2, ShieldCheck, Users} from "lucide-react";
-import {getAdminNavigationCounts, getPlatformAccessOverview, listPendingHotelDocuments, listPlatformAuditActivity, listPlatformAuditActors, listPlatformHotels, listPropertyReviewQueue} from "@platform/server";
+import {getAdminNavigationCounts, getPlatformAccessOverview, listPendingHotelDocuments, listPendingNuiteeHotelClaimRequests, listPlatformAuditActivity, listPlatformAuditActors, listPlatformHotels, listPropertyReviewQueue} from "@platform/server";
 import {AdminShell} from "@/components/admin-shell";
 import {currentAdminPrincipal} from "@/lib/server-session";
 import {requestLocale} from "@/lib/request-locale";
 import {portalDictionary} from "@/lib/portal-i18n";
 import AuditActivityExplorer from "./audit-activity-explorer";
 import DocumentReviewQueue from "./document-review-queue";
+import NuiteeClaimReviewQueue from "./nuitee-claim-review-queue";
 import ReviewQueue from "./review-queue";
 
 export const metadata: Metadata = {title: "Control Center"};
@@ -21,10 +22,11 @@ export default async function AdminPage() {
   const copy = portalDictionary(locale);
   const admin = copy.admin;
 
-  const [hotels, reviews, documents, access, auditActivity, auditActors, counts] = await Promise.all([
+  const [hotels, reviews, documents, claimRequests, access, auditActivity, auditActors, counts] = await Promise.all([
     listPlatformHotels(principal.user.id),
     listPropertyReviewQueue(principal.user.id),
     listPendingHotelDocuments(principal.user.id),
+    listPendingNuiteeHotelClaimRequests(principal.user.id),
     getPlatformAccessOverview(principal.user.id),
     listPlatformAuditActivity(principal.user.id, 300),
     listPlatformAuditActors(principal.user.id),
@@ -35,8 +37,9 @@ export default async function AdminPage() {
   const suspended = hotels.filter((hotel) => hotel.status === "SUSPENDED").length;
   const reviewProps = reviews.map((item) => ({...item, submittedAt: item.submittedAt.toISOString()}));
   const documentProps = documents.map((item) => ({...item, submittedAt: item.submittedAt.toISOString(), mediaObject: {...item.mediaObject, uploadedAt: item.mediaObject.uploadedAt?.toISOString() ?? null}}));
+  const claimRequestProps = claimRequests.map((item) => ({...item, submittedAt: item.submittedAt.toISOString()}));
   const auditProps = auditActivity.map((entry) => ({...entry, createdAt: entry.createdAt.toISOString()}));
-  const pending = reviews.length + documents.length;
+  const pending = reviews.length + documents.length + claimRequests.length;
 
   return <AdminShell locale={locale} principal={principal} active="overview" counts={counts}>
     <header className="adminTopbar">
@@ -49,6 +52,7 @@ export default async function AdminPage() {
       <div className="adminKpiGrid">
         <article><span><Building2 size={16}/>{admin.properties}</span><strong>{hotels.length}</strong><small>{admin.allProperties}</small></article>
         <article><span><CircleCheck size={16}/>{admin.live}</span><strong>{active}</strong><small>{admin.activeDiscoverable}</small></article>
+        <article><span><BadgeCheck size={16}/>{locale === "ar" ? "طلبات الملكية" : "Ownership claims"}</span><strong>{claimRequests.length}</strong><small>{locale === "ar" ? "بانتظار قرارك" : "waiting for your decision"}</small></article>
         <article><span><BadgeCheck size={16}/>{admin.propertyReviews}</span><strong>{reviews.length}</strong><small>{admin.waitingDecision}</small></article>
         <article><span><FileCheck2 size={16}/>{admin.documents}</span><strong>{documents.length}</strong><small>{admin.privatePending}</small></article>
         <article><span><ShieldCheck size={16}/>{admin.suspended}</span><strong>{suspended}</strong><small>{admin.removedDiscovery}</small></article>
@@ -58,6 +62,7 @@ export default async function AdminPage() {
 
     <section id="verification" className="adminSection adminVerificationSection">
       <div className="adminSectionTitle"><div><span className="eyebrow">{admin.publishingGate}</span><h2>{admin.verificationQueues}</h2><p>{admin.verificationIntro}</p></div></div>
+      <NuiteeClaimReviewQueue requests={claimRequestProps} locale={locale}/>
       <ReviewQueue reviews={reviewProps} locale={locale}/>
       <DocumentReviewQueue documents={documentProps} locale={locale}/>
     </section>
