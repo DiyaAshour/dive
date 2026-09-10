@@ -4,6 +4,7 @@ import {demoSearchFallback} from "../discovery/demo-fallback";
 import {resolveDestinationQuery, type ResolvedDestination} from "../discovery/destinations";
 import {NUITEE_PAYMENT_CURRENCY, searchNuiteeByHotelName, searchNuiteeHotelIds, type NuiteeSearchResult} from "../nuitee/client";
 import {searchNuiteeCatalog} from "../nuitee/catalog";
+import {filterClaimedNuiteeResults} from "../nuitee/partner-claim";
 import {searchHotelsV2WithVisibilityBoost as searchHotelsV2WithVisibilityBoostBase} from "./visibility-search";
 
 type VisibilitySearchContext = Readonly<{travelerCountry?: string | undefined}>;
@@ -83,7 +84,7 @@ async function safeExactNuiteeRows(
 ): Promise<NuiteeSearchResult[]> {
   if (input.children > 0 && input.childrenAges.length !== input.children) return [];
   try {
-    return await searchNuiteeHotelIds({
+    const rows=await searchNuiteeHotelIds({
       hotelIds: [hotelId],
       destination: input.destination,
       arrival: input.arrival,
@@ -101,6 +102,7 @@ async function safeExactNuiteeRows(
       limit: 1,
       maxRatesPerHotel: 1,
     });
+    return await filterClaimedNuiteeResults(rows);
   } catch (error) {
     console.error("Nuitee Connect exact hotel search unavailable", {hotelId, error});
     return [];
@@ -146,10 +148,11 @@ async function addNuiteeHotelNameInventory(base: SearchResult, input: DiscoveryS
       limit: Math.min(input.pageSize, 20),
       maxRatesPerHotel: 1,
     });
-    if (!rows.length) return base;
-    const providerItems = rows.map(nuiteeSearchItem);
+    const visibleRows=await filterClaimedNuiteeResults(rows);
+    if (!visibleRows.length) return base;
+    const providerItems = visibleRows.map(nuiteeSearchItem);
     const combined = dedupeResults([...base.results, ...providerItems]).slice(0, input.pageSize);
-    console.info("Nuitee Connect hotel-name search completed", {query: input.destination, resultCount: rows.length});
+    console.info("Nuitee Connect hotel-name search completed", {query: input.destination, resultCount: visibleRows.length});
     return {
       ...base,
       count: combined.length,
@@ -169,7 +172,7 @@ async function safeNuiteeDestinationRows(
 ): Promise<NuiteeSearchResult[]> {
   if (input.children > 0 && input.childrenAges.length !== input.children) return [];
   try {
-    return await searchNuiteeCatalog({
+    const rows=await searchNuiteeCatalog({
       destination: destination.nameEn,
       countryCode: destination.countryCode,
       arrival: input.arrival,
@@ -187,6 +190,7 @@ async function safeNuiteeDestinationRows(
       limit: Math.min(input.pageSize, 20),
       maxRatesPerHotel: 1,
     });
+    return await filterClaimedNuiteeResults(rows);
   } catch (error) {
     console.error("Nuitee Connect search unavailable; continuing with existing inventory", error);
     return [];
