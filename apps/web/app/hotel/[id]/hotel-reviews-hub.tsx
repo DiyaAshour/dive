@@ -20,12 +20,12 @@ type ReviewSummary = Readonly<{
 type ReviewItem = Readonly<{
   id: string;
   overall: number;
-  cleanliness: number;
-  staff: number;
-  location: number;
-  facilities: number;
-  comfort: number;
-  value: number;
+  cleanliness: number | null;
+  staff: number | null;
+  location: number | null;
+  facilities: number | null;
+  comfort: number | null;
+  value: number | null;
   title: string | null;
   comment: string;
   hotelReply: string | null;
@@ -33,7 +33,7 @@ type ReviewItem = Readonly<{
   stayCompleted: string;
 }>;
 
-type ReviewData = Readonly<{summary: ReviewSummary; reviews: ReviewItem[]}>;
+type ReviewData = Readonly<{summary: ReviewSummary; reviews: readonly ReviewItem[]}>;
 type ExtraCopy = Readonly<{
   kicker:string; title:string; waiting:string; pending:string; open:string; close:string;
   dialogBody:string; pendingBody:string; integrity:string; reviewsKicker:string; reviewsTitle:string;
@@ -52,7 +52,7 @@ const EXTRA: Record<GuestLocale,ExtraCopy> = {
   ja:{kicker:"確認済み宿泊の評価",title:"ゲストレビュー",waiting:"最初の確認済みレビューを待っています",pending:"評価待ち",open:"レビューを見る",close:"レビューを閉じる",dialogBody:"ここに表示される評価とレビューは、宿泊を完了したゲストによるものです。",pendingBody:"この施設にはまだ確認済みレビューがありません。最初の宿泊完了レビューが投稿されると、評価と詳細が自動表示されます。",integrity:"デモ評価や宿泊未完了のレビューは表示しません。",reviewsKicker:"ゲストの声",reviewsTitle:"確認済みレビュー"},
   ko:{kicker:"검증된 숙박 평점",title:"투숙객 후기",waiting:"첫 검증 후기를 기다리는 중",pending:"평가 대기",open:"후기 보기",close:"후기 닫기",dialogBody:"여기에 표시되는 모든 평점과 후기는 숙박을 완료한 투숙객이 작성했습니다.",pendingBody:"아직 검증된 후기가 없습니다. 첫 숙박 완료 후기가 등록되면 평점과 상세 내용이 자동으로 표시됩니다.",integrity:"데모 평점이나 숙박을 완료하지 않은 후기는 표시하지 않습니다.",reviewsKicker:"투숙객 의견",reviewsTitle:"검증된 후기"},
   hi:{kicker:"सत्यापित ठहराव रेटिंग",title:"मेहमान समीक्षाएँ",waiting:"पहली सत्यापित समीक्षा की प्रतीक्षा",pending:"रेटिंग लंबित",open:"समीक्षाएँ देखें",close:"समीक्षाएँ बंद करें",dialogBody:"यहाँ दिखने वाला हर स्कोर और समीक्षा उन मेहमानों से आता है जिन्होंने अपना ठहराव पूरा किया है।",pendingBody:"इस प्रॉपर्टी को अभी सत्यापित समीक्षा नहीं मिली है। पहली पूरी हुई ठहराव समीक्षा के बाद स्कोर और विवरण स्वतः दिखाई देंगे।",integrity:"डेमो स्कोर या अधूरे ठहराव की समीक्षाएँ नहीं दिखाई जातीं।",reviewsKicker:"मेहमानों की राय",reviewsTitle:"सत्यापित समीक्षाएँ"},
-  pt:{kicker:"Notas de estadias verificadas",title:"Avaliações de hóspedes",waiting:"Aguardando a primeira avaliação verificada",pending:"Pendente",open:"Ver avaliações",close:"Fechar avaliações",dialogBody:"Todas as notas e avaliações mostradas aqui vêm de hóspedes que concluíram a estadia.",pendingBody:"Esta propriedade ainda não recebeu uma avaliação verificada. A nota e os detalhes aparecerão automaticamente após a primeira avaliação de uma estadia concluída.",integrity:"Não exibimos notas de demonstração nem avaliações sem estadia concluída.",reviewsKicker:"Voz dos hóspedes",reviewsTitle:"Avaliações verificadas"},
+  pt:{kicker:"Notas de estadias verificadas",title:"Avaliações de hóspedes",waiting:"Aguardando a primeira avaliação verificada",pending:"Pendente",open:"Ver avaliações",close:"Fechar avaliações",dialogBody:"Todas as notas e avaliações mostradas aqui vêm de hóspedes que concluíram a estadia.",pendingBody:"Esta propriedade ainda não recebeu uma avaliação verificada. A nota e os detalhes aparecerão automaticamente após a primeira avaliação de uma estadia concluída.",integrity:"Não exibimos notas de demonstração nem avisos sem estadia concluída.",reviewsKicker:"Voz dos hóspedes",reviewsTitle:"Avaliações verificadas"},
   id:{kicker:"Penilaian dari penginapan terverifikasi",title:"Ulasan tamu",waiting:"Menunggu ulasan terverifikasi pertama",pending:"Menunggu penilaian",open:"Lihat ulasan",close:"Tutup ulasan",dialogBody:"Semua nilai dan ulasan di sini berasal dari tamu yang telah menyelesaikan penginapan.",pendingBody:"Properti ini belum menerima ulasan terverifikasi. Nilai dan detail akan muncul otomatis setelah ulasan pertama dari penginapan yang selesai.",integrity:"Kami tidak menampilkan nilai demo atau ulasan tanpa penginapan yang selesai.",reviewsKicker:"Suara tamu",reviewsTitle:"Ulasan terverifikasi"},
   th:{kicker:"คะแนนจากการเข้าพักที่ตรวจสอบแล้ว",title:"รีวิวจากผู้เข้าพัก",waiting:"รอรีวิวที่ตรวจสอบแล้วรายการแรก",pending:"รอคะแนน",open:"ดูรีวิว",close:"ปิดรีวิว",dialogBody:"คะแนนและรีวิวทั้งหมดที่แสดงมาจากผู้เข้าพักที่เข้าพักเสร็จแล้ว",pendingBody:"ที่พักนี้ยังไม่มีรีวิวที่ตรวจสอบแล้ว เมื่อมีรีวิวแรกจากการเข้าพักที่เสร็จสมบูรณ์ คะแนนและรายละเอียดจะแสดงอัตโนมัติ",integrity:"เราไม่แสดงคะแนนสาธิตหรือรีวิวที่ไม่ได้มาจากการเข้าพักที่เสร็จสมบูรณ์",reviewsKicker:"เสียงจากผู้เข้าพัก",reviewsTitle:"รีวิวที่ตรวจสอบแล้ว"},
 };
@@ -61,8 +61,9 @@ const RATING_LABELS: Record<GuestLocale,readonly [string,string,string,string,st
   en:["Exceptional","Excellent","Very good","Good","Fair"], ar:["استثنائي","رائع","جيد جدًا","جيد","مقبول"], zh:["超赞","很棒","非常好","好","尚可"], fr:["Exceptionnel","Excellent","Très bien","Bien","Correct"], de:["Außergewöhnlich","Hervorragend","Sehr gut","Gut","Ordentlich"], es:["Excepcional","Excelente","Muy bien","Bien","Aceptable"], it:["Eccezionale","Eccellente","Ottimo","Buono","Discreto"], tr:["Olağanüstü","Mükemmel","Çok iyi","İyi","Yeterli"], ru:["Великолепно","Отлично","Очень хорошо","Хорошо","Нормально"], ja:["最高","とても素晴らしい","とても良い","良い","まずまず"], ko:["최고예요","훌륭해요","매우 좋아요","좋아요","보통이에요"], hi:["असाधारण","उत्कृष्ट","बहुत अच्छा","अच्छा","ठीक"], pt:["Excepcional","Excelente","Muito bom","Bom","Razoável"], id:["Luar biasa","Sangat baik","Baik sekali","Baik","Cukup"], th:["ยอดเยี่ยมเป็นพิเศษ","ยอดเยี่ยม","ดีมาก","ดี","พอใช้"],
 };
 
-export function HotelReviewsHub({reviews,locale}:{reviews:ReviewData;locale:GuestLocale}) {
-  const copy=reviewCopy(locale);
+export function HotelReviewsHub({reviews,locale,source="HANDMEKEY"}:{reviews:ReviewData;locale:GuestLocale;source?:"HANDMEKEY"|"PROVIDER"}) {
+  const baseCopy=reviewCopy(locale);
+  const copy=source==="PROVIDER"?providerCopy(locale,baseCopy):baseCopy;
   const [open,setOpen]=useState(false);
   const closeRef=useRef<HTMLButtonElement>(null);
   const titleId=useId();
@@ -152,20 +153,25 @@ function reviewCopy(locale:GuestLocale) {
   };
 }
 
+function providerCopy(locale:GuestLocale,base:ReturnType<typeof reviewCopy>) {
+  if(locale==="ar")return {...base,kicker:"تقييمات ضيوف من مزود الحجز",dialogBody:"نعرض هنا مراجعات الضيوف التي يوفرها مصدر الحجز للفندق. تظهر المراجعات الجديدة تلقائيًا عند توفرها من المصدر.",integrity:"درجات الفئات مثل النظافة والموقع تظهر فقط إذا وفر المصدر درجات منفصلة؛ لا نقوم باختلاق درجات غير موجودة.",reviewsKicker:"آراء الضيوف",reviewsTitle:"مراجعات الفندق",verifiedStay:"مراجعة ضيف"};
+  return {...base,kicker:"Guest ratings from booking supply",dialogBody:"These guest reviews are supplied by the booking source for this property. New reviews appear automatically when the source makes them available.",integrity:"Category scores such as cleanliness and location are shown only when the source provides separate scores; missing scores are never invented.",reviewsKicker:"Guest voice",reviewsTitle:"Property reviews",verifiedStay:"Guest review"};
+}
+
 function reviewCount(locale:GuestLocale,value:number):string {
-  if(locale==="ar") return value===1?"تقييم موثق واحد":`${value} تقييمات موثقة`;
-  if(locale==="zh") return `${value} 条验证评价`;
-  if(locale==="fr") return `${value} avis vérifié${value===1?"":"s"}`;
-  if(locale==="de") return `${value} geprüfte Bewertung${value===1?"":"en"}`;
-  if(locale==="es") return `${value} ${value===1?"opinión verificada":"opiniones verificadas"}`;
-  if(locale==="it") return `${value} ${value===1?"recensione verificata":"recensioni verificate"}`;
-  if(locale==="tr") return `${value} doğrulanmış yorum`;
-  if(locale==="ru") return `${value} проверенных отзывов`;
-  if(locale==="ja") return `確認済みレビュー ${value}件`;
-  if(locale==="ko") return `검증된 후기 ${value}개`;
-  if(locale==="hi") return `${value} सत्यापित समीक्षाएँ`;
-  if(locale==="pt") return `${value} ${value===1?"avaliação verificada":"avaliações verificadas"}`;
-  if(locale==="id") return `${value} ulasan terverifikasi`;
-  if(locale==="th") return `${value} รีวิวที่ตรวจสอบแล้ว`;
-  return `${value} verified ${value===1?"review":"reviews"}`;
+  if(locale==="ar") return value===1?"تقييم واحد":`${value} تقييمات`;
+  if(locale==="zh") return `${value} 条评价`;
+  if(locale==="fr") return `${value} avis`;
+  if(locale==="de") return `${value} Bewertung${value===1?"":"en"}`;
+  if(locale==="es") return `${value} ${value===1?"opinión":"opiniones"}`;
+  if(locale==="it") return `${value} ${value===1?"recensione":"recensioni"}`;
+  if(locale==="tr") return `${value} yorum`;
+  if(locale==="ru") return `${value} отзывов`;
+  if(locale==="ja") return `レビュー ${value}件`;
+  if(locale==="ko") return `후기 ${value}개`;
+  if(locale==="hi") return `${value} समीक्षाएँ`;
+  if(locale==="pt") return `${value} ${value===1?"avaliação":"avaliações"}`;
+  if(locale==="id") return `${value} ulasan`;
+  if(locale==="th") return `${value} รีวิว`;
+  return `${value} ${value===1?"review":"reviews"}`;
 }
