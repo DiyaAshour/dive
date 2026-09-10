@@ -1,5 +1,6 @@
+import Link from "next/link";
 import {redirect} from "next/navigation";
-import {Cable, CheckCircle2, RefreshCcw, ShieldCheck} from "lucide-react";
+import {BookOpen, Cable, CheckCircle2, RefreshCcw, ShieldCheck} from "lucide-react";
 import {getHotelConnectivityWorkspace, listUserHotels} from "@platform/server";
 import {PartnerSidebar} from "@/components/partner-sidebar";
 import {PartnerLanguageBar} from "@/components/partner-language-bar";
@@ -29,8 +30,8 @@ export default async function ConnectivityPage({searchParams}: {searchParams: Pr
     <PartnerSidebar hotelId={selected.id} hotelName={selected.name} city={selected.city} status={selected.status} active="connectivity" locale={locale}/>
     <section className="partnerMain">
       <PartnerLanguageBar locale={locale}/>
-      <div className="partnerTopbar"><div><span className="partnerPageEyebrow">{ar ? "Property systems" : "Property systems"}</span><h1>{ar ? "الاتصالات والتكامل" : "Connectivity & integrations"}</h1><p>{ar ? "اربط نظام الفندق مرة واحدة. بعدها تنتقل الحجوزات والأسعار والمخزون تلقائيًا بين HandMeKey ونظامك." : "Connect your property system once, then keep reservations, rates and inventory synchronized automatically."}</p></div></div>
-      <div className="partnerPageIntro"><strong>{ar ? "مصمم لأي فندق وأي نظام" : "Built for every property system"}</strong><span>{ar ? "Oracle OPERA Cloud هو أول اتصال Enterprise فعلي. نفس الطبقة جاهزة لإضافة SiteMinder وCloudbeds وMews وباقي المزودين بدون تغيير محرك الحجز." : "Oracle OPERA Cloud is the first production enterprise adapter. The same layer is ready for SiteMinder, Cloudbeds, Mews and additional providers without changing the booking engine."}</span></div>
+      <div className="partnerTopbar"><div><span className="partnerPageEyebrow">{ar ? "Property systems" : "Property systems"}</span><h1>{ar ? "الاتصالات والتكامل" : "Connectivity & integrations"}</h1><p>{ar ? "اربط نظام الفندق مرة واحدة. بعدها تنتقل الحجوزات والأسعار والمخزون تلقائيًا بين HandMeKey ونظامك." : "Connect your property system once, then keep reservations, rates and inventory synchronized automatically."}</p></div><div className="partnerTopbarActions"><Link className="partnerSecondaryAction" href={`/hotel-dashboard/connectivity/docs?hotelId=${encodeURIComponent(selected.id)}`}><BookOpen size={16}/>{ar?"دليل API":"API docs"}</Link></div></div>
+      <div className="partnerPageIntro"><strong>{ar ? "مصمم لأي فندق وأي نظام" : "Built for every property system"}</strong><span>{ar ? "HandMeKey Connectivity API متاح الآن لأي PMS أو Channel Manager، وOracle OPERA Cloud مدعوم مباشرة عبر OHIP. نفس الطبقة جاهزة لإضافة SiteMinder وCloudbeds وMews بدون تغيير محرك الحجز." : "HandMeKey Connectivity API is available for any PMS or channel manager, with direct Oracle OPERA Cloud support through OHIP. The same layer is ready for SiteMinder, Cloudbeds and Mews without changing the booking engine."}</span></div>
       <div className="partnerKpiGrid">
         <Metric icon={<Cable size={18}/>} label={ar ? "حالة الاتصال" : "Connection"} value={connection?.status ?? (ar ? "غير مربوط" : "Not connected")}/>
         <Metric icon={<ShieldCheck size={18}/>} label={ar ? "الأسرار" : "Credentials"} value={connection?.credentialsConfigured ? (ar ? "مشفرة" : "Encrypted") : "—"}/>
