@@ -2,10 +2,22 @@ import {database} from "@platform/database";
 import {badRequest, notFound} from "../errors";
 import {requireHotelPermission} from "../hotels/authorization";
 
+type RawRecord=Record<string,unknown>;
+
 export type NuiteeHotelClaim = Readonly<{
   providerHotelId:string;
   providerHotelName:string;
   claimedAt:Date|null;
+}>;
+
+export type NuiteeHotelClaimCandidate=Readonly<{
+  providerHotelId:string;
+  name:string;
+  city:string|null;
+  area:string|null;
+  address:string|null;
+  starRating:number|null;
+  coverPhoto:string|null;
 }>;
 
 export async function getNuiteeHotelClaim(actorUserId:string,hotelId:string):Promise<NuiteeHotelClaim|null>{
@@ -15,6 +27,40 @@ export async function getNuiteeHotelClaim(actorUserId:string,hotelId:string):Pro
     select:{providerHotelId:true,name:true,claimedAt:true},
   });
   return row?{providerHotelId:row.providerHotelId,providerHotelName:row.name,claimedAt:row.claimedAt}:null;
+}
+
+export async function searchClaimableNuiteeHotels(actorUserId:string,hotelId:string,rawQuery:string,limit=8):Promise<NuiteeHotelClaimCandidate[]>{
+  await requireHotelPermission(actorUserId,hotelId,"hotel:view");
+  const query=rawQuery.trim().slice(0,120);
+  if(query.length<2)return[];
+  const tokens=[...new Set(query.split(/\s+/).map((token)=>token.trim()).filter((token)=>token.length>=2))].slice(0,5);
+  if(!tokens.length)return[];
+  const take=Math.max(1,Math.min(12,Math.trunc(limit)||8));
+  const rows=await database().nuiteeContentHotel.findMany({
+    where:{
+      claimedByHotelId:null,
+      AND:tokens.map((token)=>({
+        OR:[
+          {name:{contains:token,mode:"insensitive" as const}},
+          {city:{contains:token,mode:"insensitive" as const}},
+          {area:{contains:token,mode:"insensitive" as const}},
+          {address:{contains:token,mode:"insensitive" as const}},
+        ],
+      })),
+    },
+    orderBy:[{starRating:"desc"},{name:"asc"}],
+    take,
+    select:{providerHotelId:true,name:true,city:true,area:true,address:true,starRating:true,raw:true},
+  });
+  return rows.map((row)=>({
+    providerHotelId:row.providerHotelId,
+    name:row.name,
+    city:row.city,
+    area:row.area,
+    address:row.address,
+    starRating:row.starRating,
+    coverPhoto:providerCoverPhoto(row.raw),
+  }));
 }
 
 export async function claimNuiteeHotel(actorUserId:string,hotelId:string,rawProviderHotelId:string):Promise<NuiteeHotelClaim>{
@@ -98,6 +144,27 @@ export async function resolveClaimedNuiteeHotel(rawProviderHotelId:string):Promi
     select:{id:true,slug:true},
   });
   return hotel?{hotelId:hotel.id,slug:hotel.slug}:null;
+}
+
+function providerCoverPhoto(rawValue:unknown):string|null{
+  const raw=record(rawValue);
+  const main=text(raw.main_photo)??text(raw.mainPhoto);
+  if(main)return main;
+  const images=Array.isArray(raw.hotelImages)?raw.hotelImages:[];
+  for(const image of images){
+    const item=record(image);
+    const url=text(item.urlHd)??text(item.url);
+    if(url)return url;
+  }
+  return null;
+}
+
+function record(value:unknown):RawRecord{
+  return value&&typeof value==="object"&&!Array.isArray(value)?value as RawRecord:{};
+}
+
+function text(value:unknown):string|null{
+  return typeof value==="string"&&value.trim()?value.trim():null;
 }
 
 function normalizeProviderHotelId(value:string):string{
