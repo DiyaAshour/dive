@@ -63,6 +63,19 @@ export async function searchClaimableNuiteeHotels(actorUserId:string,hotelId:str
   }));
 }
 
+export async function filterClaimedNuiteeResults<T extends {providerHotelCode:string}>(rows:readonly T[]):Promise<T[]>{
+  if(!rows.length)return[];
+  const providerHotelIds=[...new Set(rows.map((row)=>normalizeProviderHotelId(row.providerHotelCode)).filter(Boolean))];
+  if(!providerHotelIds.length)return[...rows];
+  const claimed=await database().nuiteeContentHotel.findMany({
+    where:{providerHotelId:{in:providerHotelIds},claimedByHotelId:{not:null}},
+    select:{providerHotelId:true},
+  });
+  if(!claimed.length)return[...rows];
+  const claimedIds=new Set(claimed.map((row)=>row.providerHotelId));
+  return rows.filter((row)=>!claimedIds.has(normalizeProviderHotelId(row.providerHotelCode)));
+}
+
 export async function claimNuiteeHotel(actorUserId:string,hotelId:string,rawProviderHotelId:string):Promise<NuiteeHotelClaim>{
   await requireHotelPermission(actorUserId,hotelId,"hotel:edit");
   const providerHotelId=normalizeProviderHotelId(rawProviderHotelId);
