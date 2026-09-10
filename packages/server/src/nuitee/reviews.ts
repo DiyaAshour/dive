@@ -42,8 +42,9 @@ export async function getNuiteeHotelReviews(hotelId: string, limit = 60): Promis
 
   const params = new URLSearchParams({
     hotelId: clean,
-    limit: String(Math.max(1, Math.min(1000, limit))),
+    limit: String(Math.max(1, Math.min(5000, limit))),
     timeout: "4",
+    getSentiment: "true",
   });
 
   try {
@@ -58,23 +59,22 @@ export async function getNuiteeHotelReviews(hotelId: string, limit = 60): Promis
       return emptyReviews();
     }
     const payload = await response.json() as unknown;
-    const rows = records(record(payload).data);
+    const root = record(payload);
+    const rows = records(root.data);
     const reviews = rows.flatMap((row, index) => normalizeReview(row, clean, index));
-    const scores = reviews.map((review) => review.overall).filter(Number.isFinite);
+    const scores = reviews.map((review) => review.overall).filter((score) => Number.isFinite(score) && score > 0);
     const overall = scores.length ? round1(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null;
+    const sentiment = sentimentScores(root);
     return {
       summary: {
         count: reviews.length,
         overall,
-        // Nuitee's documented hotel-review response currently exposes averageScore
-        // per review, but not a verified category breakdown. Keep category scores
-        // null instead of inventing cleanliness/location/etc. values.
-        cleanliness: null,
-        staff: null,
-        location: null,
-        facilities: null,
-        comfort: null,
-        value: null,
+        cleanliness: sentiment.cleanliness,
+        staff: sentiment.staff,
+        location: sentiment.location,
+        facilities: sentiment.facilities,
+        comfort: sentiment.comfort,
+        value: sentiment.value,
       },
       reviews,
     };
@@ -84,9 +84,32 @@ export async function getNuiteeHotelReviews(hotelId: string, limit = 60): Promis
   }
 }
 
+function sentimentScores(root: RawRecord) {
+  const direct = record(root.sentimentAnalysis);
+  const nested = record(record(root.data).sentimentAnalysis);
+  const sentiment = Object.keys(direct).length ? direct : nested;
+  const categories = records(sentiment.categories);
+  const result = {cleanliness:null,staff:null,location:null,facilities:null,comfort:null,value:null} as {
+    cleanliness:number|null;staff:number|null;location:number|null;facilities:number|null;comfort:number|null;value:number|null;
+  };
+  for (const category of categories) {
+    const name = (text(category.name) ?? "").toLowerCase();
+    const rating = numberValue(category.rating);
+    if (rating === null) continue;
+    const score = round1(Math.max(0, Math.min(10, rating)));
+    if (/clean|hygiene|housekeep/.test(name)) result.cleanliness = score;
+    else if (/service|staff|hospitality/.test(name)) result.staff = score;
+    else if (/location|neighbou?rhood|area/.test(name)) result.location = score;
+    else if (/facilit|amenit|property|food|beverage/.test(name)) result.facilities = score;
+    else if (/comfort|room|sleep|bed/.test(name)) result.comfort = score;
+    else if (/value|price|money/.test(name)) result.value = score;
+  }
+  return result;
+}
+
 function normalizeReview(row: RawRecord, hotelId: string, index: number): NuiteePublicReview[] {
   const score = numberValue(row.averageScore) ?? numberValue(row.score) ?? numberValue(row.rating);
-  if (score === null) return [];
+  if (score === null || score <= 0) return [];
   const overall = Math.max(0, Math.min(10, score));
   const title = text(row.headline) ?? text(row.title);
   const pros = text(row.pros);
