@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Car, CreditCard, MapPin, Search, ShieldCheck } from "lucide-react";
-import { listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
+import { listDailyStoredNuiteeHotelPreviews, listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
 import { CarsHomeHero, CarsHomeShowcase } from "@/components/cars-home-experience";
 import { CustomerHeader } from "@/components/customer-header";
 import { HomeBookingSearch } from "@/components/home-booking-search";
@@ -50,12 +50,17 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
   const params = await searchParams;
   const service = params.service === "cars" ? "cars" : "stays";
   const isCars = service === "cars";
-  const [liveHotels,liveDestinations,market] = await Promise.all([
+  const market = await requestGuestMarket();
+  const visitorCountry = market.countryCode ?? "JO";
+  const [apiHotels,liveHotels,liveDestinations] = await Promise.all([
+    listDailyStoredNuiteeHotelPreviews(visitorCountry,6).catch(() => []),
     listFeaturedHotels(6).catch(() => []),
-    listFeaturedDestinations({countryCode: "JO", limit: 4}).catch(() => []),
-    requestGuestMarket(),
+    listFeaturedDestinations({countryCode: visitorCountry, limit: 4}).catch(() => []),
   ]);
-  const hotels = liveHotels.filter((hotel)=>!hotel.slug.startsWith("demo-"));
+  const usingApiHotels = apiHotels.length > 0;
+  const hotels = usingApiHotels
+    ? apiHotels.map((hotel)=>({...hotel,amenities:[]}))
+    : liveHotels.filter((hotel)=>!hotel.slug.startsWith("demo-"));
   const destinations = liveDestinations.length ? liveDestinations : demoDestinationsFallback(4);
   const locale=market.locale;
   const copy = guestDictionary(locale);
@@ -65,6 +70,18 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
   const destinationCopy = ui.destination;
   const homeEnhancement = ui.destination;
   const regionNames = new Intl.DisplayNames([market.intlLocale], {type: "region"});
+  const localCountryName = regionNames.of(visitorCountry) ?? visitorCountry;
+  const apiShowcaseCopy = locale === "ar" ? {
+    eyebrow: `مختارة اليوم من ${localCountryName}`,
+    title: "فنادق مقترحة لك اليوم.",
+    intro: "فنادق حقيقية من مزود الحجز لدينا، وتتغير الاختيارات تلقائيًا كل يوم حسب بلدك.",
+    pill: "متاح للحجز",
+  } : {
+    eyebrow: `Today's picks in ${localCountryName}`,
+    title: "Hotels picked for you today.",
+    intro: "Real properties from our booking supply, with a fresh selection rotating automatically every day for your country.",
+    pill: "Bookable",
+  };
   const serviceCopy = locale === "ar" ? {
     stays: "الإقامات",
     cars: "السيارات",
@@ -117,8 +134,8 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
     </section>
 
     {!isCars && <>
-      <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">{copy.home.liveEyebrow}</span><h2>{copy.home.liveTitle}</h2><p>{copy.home.liveIntro}</p></div><Link href={`/search?destination=${locale==="ar"?encodeURIComponent("عمّان"):"Amman"}&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>{copy.home.explore} <ArrowRight size={16}/></Link></div>
-        {hotels.length === 0 ? <div className="premiumEmpty"><BadgeCheck size={28}/><h3>{copy.home.noHotels}</h3><p>{copy.home.noHotelsSub}</p></div> : <div className="stayCardGrid" aria-label={copy.home.liveTitle}>{hotels.map((hotel)=><Link prefetch={false} className="stayCard" href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} key={hotel.id}><div className="stayCardMedia">{hotel.coverPhoto ? <img src={hotel.coverPhoto.url} alt={hotel.coverPhoto.alt ?? hotel.name} loading="lazy" decoding="async"/> : <div className="stayCardPlaceholder">{copy.home.photoPending}</div>}<span className="verifiedPill"><BadgeCheck size={14}/>{copy.home.verifiedLabel}</span></div><div className="stayCardBody"><div className="stayCardMeta">{hotel.starRating ? `${hotel.starRating}★ · ` : ""}{hotel.area ? `${hotel.area}, ` : ""}{hotel.city}</div><h3>{hotel.name}</h3>{hotel.reviewSummary.overall !== null && <div className="stayRating"><strong>{hotel.reviewSummary.overall.toFixed(1)}</strong><span>{hotel.reviewSummary.count} {hotel.reviewSummary.count===1?copy.home.review:copy.home.reviews}</span></div>}<div className="stayAmenities">{hotel.amenities.slice(0,3).map((item)=><span key={item.code}>{item.name}</span>)}</div><div className="stayCardCta"><span className="stayCardCtaCopy"><small>{homeEnhancement.clearPrice}</small><strong>{homeEnhancement.seeRooms}</strong></span><span className="stayCardCtaArrow"><ArrowRight size={17}/></span></div></div></Link>)}</div>}
+      <section className="shell discoverySection"><div className="premiumSectionHead"><div><span className="eyebrow">{usingApiHotels ? apiShowcaseCopy.eyebrow : copy.home.liveEyebrow}</span><h2>{usingApiHotels ? apiShowcaseCopy.title : copy.home.liveTitle}</h2><p>{usingApiHotels ? apiShowcaseCopy.intro : copy.home.liveIntro}</p></div><Link href={`/search?destination=${locale==="ar"?encodeURIComponent("عمّان"):"Amman"}&arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`}>{copy.home.explore} <ArrowRight size={16}/></Link></div>
+        {hotels.length === 0 ? <div className="premiumEmpty"><BadgeCheck size={28}/><h3>{copy.home.noHotels}</h3><p>{copy.home.noHotelsSub}</p></div> : <div className="stayCardGrid" aria-label={usingApiHotels ? apiShowcaseCopy.title : copy.home.liveTitle}>{hotels.map((hotel)=><Link prefetch={false} className="stayCard" href={`/hotel/${hotel.slug}?arrival=${stay.arrival}&departure=${stay.departure}&adults=2&children=0`} key={hotel.id}><div className="stayCardMedia">{hotel.coverPhoto ? <img src={hotel.coverPhoto.url} alt={hotel.coverPhoto.alt ?? hotel.name} loading="lazy" decoding="async"/> : <div className="stayCardPlaceholder">{copy.home.photoPending}</div>}<span className="verifiedPill"><BadgeCheck size={14}/>{usingApiHotels ? apiShowcaseCopy.pill : copy.home.verifiedLabel}</span></div><div className="stayCardBody"><div className="stayCardMeta">{hotel.starRating ? `${hotel.starRating}★ · ` : ""}{hotel.area ? `${hotel.area}, ` : ""}{hotel.city}</div><h3>{hotel.name}</h3>{hotel.reviewSummary.overall !== null && <div className="stayRating"><strong>{hotel.reviewSummary.overall.toFixed(1)}</strong><span>{hotel.reviewSummary.count} {hotel.reviewSummary.count===1?copy.home.review:copy.home.reviews}</span></div>}<div className="stayAmenities">{hotel.amenities.slice(0,3).map((item)=><span key={item.code}>{item.name}</span>)}</div><div className="stayCardCta"><span className="stayCardCtaCopy"><small>{homeEnhancement.clearPrice}</small><strong>{homeEnhancement.seeRooms}</strong></span><span className="stayCardCtaArrow"><ArrowRight size={17}/></span></div></div></Link>)}</div>}
       </section>
 
       {destinations.length > 0 && <section className={`shell ${destinationStyles.destinationSection}`}>
