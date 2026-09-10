@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense, type ReactNode } from "react";
 import { getSiteIdentityConfig } from "@platform/server";
+import { GuestSupportDock } from "@/components/guest-support-dock";
 import { HotelContentLocalizer } from "@/components/hotel-content-localizer";
 import { HotelMobileCommerceEnhancer } from "@/components/hotel-mobile-commerce";
+import { PublicSupplierBrandGuard } from "@/components/public-supplier-brand-guard";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteLaunchGate } from "@/components/site-launch-gate";
 import { requestGuestMarket } from "@/lib/request-guest-market";
 import { getSiteLaunchConfig } from "@/lib/site-launch";
@@ -54,6 +57,7 @@ import "./hotel-reviews-hub.css";
 import "./hotel-essentials-compact.css";
 import "./hotel-mobile-head.css";
 import "./brand-identity.css";
+import "./trust-pages.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const identity = await getSiteIdentityConfig();
@@ -100,6 +104,6 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({children}: Readonly<{children: ReactNode}>) {
   const initialNow = Date.now();
-  const [market, launchConfig] = await Promise.all([requestGuestMarket(), getSiteLaunchConfig()]);
-  return <html lang={market.intlLocale} dir={market.direction} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={market.locale} config={launchConfig} initialNow={initialNow}>{children}</SiteLaunchGate><Suspense fallback={null}><HotelMobileCommerceEnhancer/><HotelContentLocalizer/></Suspense></body></html>;
+  const [market, launchConfig, identity] = await Promise.all([requestGuestMarket(), getSiteLaunchConfig(), getSiteIdentityConfig()]);
+  return <html lang={market.intlLocale} dir={market.direction} data-scroll-behavior="smooth"><body><SiteLaunchGate locale={market.locale} config={launchConfig} initialNow={initialNow}><>{children}<SiteFooter locale={market.locale} supportEmail={identity.supportEmail} footerText={identity.footerText} socialLinks={identity.socialLinks}/><GuestSupportDock locale={market.locale} supportEmail={identity.supportEmail}/></></SiteLaunchGate><Suspense fallback={null}><PublicSupplierBrandGuard locale={market.locale}/><HotelMobileCommerceEnhancer/><HotelContentLocalizer/></Suspense></body></html>;
 }
