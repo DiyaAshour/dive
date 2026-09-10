@@ -52,8 +52,9 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
   const isCars = service === "cars";
   const market = await requestGuestMarket();
   const visitorCountry = market.countryCode ?? "JO";
+  const featuredCity = visitorCountry === "JO" ? "Amman" : undefined;
   const [apiHotels,liveHotels,liveDestinations] = await Promise.all([
-    listDailyStoredNuiteeHotelPreviews(visitorCountry,6).catch(() => []),
+    listDailyStoredNuiteeHotelPreviews(visitorCountry,6,new Date(),featuredCity).catch(() => []),
     listFeaturedHotels(6).catch(() => []),
     listFeaturedDestinations({countryCode: visitorCountry, limit: 4}).catch(() => []),
   ]);
@@ -71,15 +72,16 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
   const homeEnhancement = ui.destination;
   const regionNames = new Intl.DisplayNames([market.intlLocale], {type: "region"});
   const localCountryName = regionNames.of(visitorCountry) ?? visitorCountry;
+  const showcaseLocation = featuredCity ? (locale === "ar" ? "عمّان" : "Amman") : localCountryName;
   const apiShowcaseCopy = locale === "ar" ? {
-    eyebrow: `مختارة اليوم من ${localCountryName}`,
-    title: "فنادق مقترحة لك اليوم.",
-    intro: "فنادق حقيقية من مزود الحجز لدينا، وتتغير الاختيارات تلقائيًا كل يوم حسب بلدك.",
+    eyebrow: `مختارة اليوم من ${showcaseLocation}`,
+    title: "فنادق 5 نجوم مقترحة لك اليوم.",
+    intro: `فنادق 5 نجوم حقيقية في ${showcaseLocation} من مزود الحجز لدينا، وتتغير الاختيارات تلقائيًا كل يوم.`,
     pill: "متاح للحجز",
   } : {
-    eyebrow: `Today's picks in ${localCountryName}`,
-    title: "Hotels picked for you today.",
-    intro: "Real properties from our booking supply, with a fresh selection rotating automatically every day for your country.",
+    eyebrow: `Today's picks in ${showcaseLocation}`,
+    title: "Five-star hotels picked for you today.",
+    intro: `Real five-star properties in ${showcaseLocation} from our booking supply, with a fresh selection rotating automatically every day.`,
     pill: "Bookable",
   };
   const serviceCopy = locale === "ar" ? {
