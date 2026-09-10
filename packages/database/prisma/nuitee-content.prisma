@@ -19,6 +19,31 @@ model NuiteeContentHotel {
   @@index([claimedByHotelId])
 }
 
+enum NuiteeClaimRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELED
+}
+
+model NuiteeHotelClaimRequest {
+  id                String                   @id @default(cuid())
+  hotelId           String                   @unique
+  providerHotelId   String                   @db.VarChar(128)
+  status            NuiteeClaimRequestStatus @default(PENDING)
+  submittedByUserId String
+  submittedAt       DateTime                 @default(now())
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  rejectionReason   String?                  @db.Text
+  snapshot          Json?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@index([providerHotelId, status])
+  @@index([status, submittedAt])
+}
+
 model NuiteeContentSyncState {
   id              String   @id @db.VarChar(32)
   countryCode     String   @db.VarChar(2)
