@@ -12,6 +12,7 @@ const DEFAULT_SYNC_CONCURRENCY = 6;
 const DEFAULT_LAZY_FILL_LIMIT = 2;
 const DEFAULT_RATE_CACHE_TTL_MS = 120_000;
 const MAX_RATE_CACHE_ENTRIES = 1500;
+const NUITEE_HOTEL_TYPE_ID = 204;
 
 type RawRecord = Record<string, unknown>;
 type RateCacheEntry = Readonly<{expiresAt: number; value: unknown}>;
@@ -79,6 +80,7 @@ export async function searchNuiteeCatalog(input: NuiteeSearchInput): Promise<Nui
     checkout: input.departure,
     countryCode,
     cityName: input.destination.trim(),
+    hotelTypeIds: [NUITEE_HOTEL_TYPE_ID],
     roomMapping: true,
     includeHotelData: false,
     maxRatesPerHotel: Math.max(1, Math.min(25, input.maxRatesPerHotel ?? 3)),
@@ -108,7 +110,7 @@ export async function syncNuiteeHotelContent(options: SyncOptions = {}): Promise
   const ids: string[] = [];
   let offset = 0;
   while (ids.length < maxHotels) {
-    const params = new URLSearchParams({countryCode, offset: String(offset), limit: String(pageSize)});
+    const params = new URLSearchParams({countryCode, offset: String(offset), limit: String(pageSize), hotelTypeIds: String(NUITEE_HOTEL_TYPE_ID)});
     const payload = await nuiteeRequest(`${API_BASE}/data/hotels?${params.toString()}`, "GET");
     const rows = records(record(payload).data);
     if (!rows.length) break;
