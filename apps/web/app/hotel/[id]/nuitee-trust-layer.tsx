@@ -11,7 +11,7 @@ export function NuiteeTrustLayer({hotel,reviews,locale}:Readonly<{hotel:NuiteeHo
   const hasSupplierReviews=reviews.summary.count>0;
   return <section className="hotelTrustLayer" aria-label={ar?"التقييمات والموقع":"Reviews and location"}>
     <div className="trustOverviewGrid">
-      <HotelReviewsHub reviews={reviews} locale={locale}/>
+      <HotelReviewsHub reviews={reviews} locale={locale} source="PROVIDER"/>
       <aside className="propertyHighlightsPanel">
         <div className="sectionHeading"><span className="sectionKicker">{ar?"معلومات موثوقة":"Useful signals"}</span><h2>{ar?"لماذا هذا الفندق مناسب؟":"Why this property stands out"}</h2></div>
         <div className="propertyHighlightsGrid">
