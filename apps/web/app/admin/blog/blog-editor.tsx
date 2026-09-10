@@ -8,7 +8,7 @@ import type {Locale} from "@/lib/i18n";
 
 type EditorPost={
   id:string|undefined;
-  locale:"EN"|"AR";
+  locale:"EN"|"AR"|"ES";
   slug:string;
   title:string;
   excerpt:string;
@@ -44,17 +44,22 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
   const categoryOptions=useMemo(()=>Array.from(new Set([...categories,post.category].map(value=>value.trim()).filter(Boolean))),[categories,post.category]);
   const words=useMemo(()=>post.body.trim()?post.body.trim().split(/\s+/).length:0,[post.body]);
   const h2Count=post.body.match(/^##\s+/gm)?.length??0;
+  const faqPresent=/^##\s+.*(?:FAQ|Frequently Asked|الأسئلة الشائعة|أسئلة شائعة|Preguntas frecuentes).*$/im.test(post.body);
+  const internalLinks=post.body.match(/\]\((?:https:\/\/handmekey\.com)?\/(?:search|cars|blog\/(?:en|ar|es))(?:[^)]*)\)/gi)?.length??0;
+  const hasH1=/^#\s+/m.test(post.body);
   const cleanTags=useMemo(()=>tagsText.split(",").map(value=>value.trim()).filter(Boolean),[tagsText]);
   const seoChecks=useMemo(()=>[
     post.seoTitle.length>=30&&post.seoTitle.length<=65,
     post.seoDescription.length>=110&&post.seoDescription.length<=165,
-    post.excerpt.length>=70,
-    words>=700,
-    h2Count>=3,
-    cleanTags.length>=3,
-    !post.coverImageUrl||Boolean(post.coverImageAlt?.trim()),
+    post.excerpt.length>=70&&post.excerpt.length<=220,
+    words>=1300&&words<=2200,
+    h2Count>=5,
+    faqPresent,
+    internalLinks>=2,
+    cleanTags.length>=3&&cleanTags.length<=8,
+    !hasH1,
     slugify(post.slug).length>=3&&post.category.trim().length>=2,
-  ],[post,words,h2Count,cleanTags]);
+  ],[post,words,h2Count,faqPresent,internalLinks,cleanTags,hasH1]);
   const seoScore=seoChecks.filter(Boolean).length;
   const dirty=useMemo(()=>{
     if(!persisted)return Boolean(post.title||post.body||post.slug||post.excerpt||post.coverImageUrl||post.category);
@@ -146,11 +151,11 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
       {message&&<div className={`blogEditorNotice blogCmsNotice ${message.tone}`}>{message.text}{message.tone==="success"&&savedLive&&publicHref&&<Link href={publicHref} target="_blank">{ar?" فتح المنشور":" Open article"}</Link>}</div>}
 
       <div className="blogEditorGrid">
-        <label>{ar?"لغة المقال":"Article language"}<select value={post.locale} onChange={event=>patch("locale",event.target.value as "EN"|"AR")}><option value="AR">العربية</option><option value="EN">English</option></select></label>
+        <label>{ar?"لغة المقال":"Article language"}<select value={post.locale} onChange={event=>patch("locale",event.target.value as EditorPost["locale"])}><option value="AR">العربية</option><option value="EN">English</option><option value="ES">Español</option></select></label>
         <label>{ar?"التصنيف":"Category"}<select value={post.category} onChange={event=>patch("category",event.target.value)}><option value="">{ar?"اختر التصنيف":"Choose category"}</option>{categoryOptions.map(category=><option value={category} key={category}>{category.replaceAll(" / "," › ")}</option>)}</select><small>{ar?"يتم ترتيب التصنيفات وإضافة الفروع من صفحة استوديو المحتوى.":"Manage category order and nesting from the Content Studio."}</small></label>
         <div className="span2 blogCategoryPicker"><span>{ar?"مسار المقال":"Article category path"}</span><div>{post.category?<button type="button" className="active"><FolderOpen size={13}/>{post.category.replaceAll(" / "," › ")}</button>:<small>{ar?"لم يتم اختيار تصنيف بعد.":"No category selected yet."}</small>}</div></div>
         <label className="span2">{ar?"عنوان المقال":"Article title"}<input value={post.title} onChange={event=>titleChanged(event.target.value)} maxLength={140}/><small>{post.title.length}/140</small></label>
-        <label>{ar?"الرابط المختصر (Slug)":"URL slug"}<input dir="ltr" value={post.slug} onChange={event=>patch("slug",slugifyDraft(event.target.value))} onBlur={()=>patch("slug",slugify(post.slug))} placeholder={ar?"فنادق البحر الميت":"dead sea hotels"}/><small>{ar?"اكتب بشكل طبيعي؛ المسافة تتحول تلقائيًا إلى -":"Type naturally; spaces become hyphens automatically."} · {post.slug?`/blog/${post.locale==="AR"?"ar":"en"}/${slugify(post.slug)}`:"/blog/..."}</small></label>
+        <label>{ar?"الرابط المختصر (Slug)":"URL slug"}<input dir="ltr" value={post.slug} onChange={event=>patch("slug",slugifyDraft(event.target.value))} onBlur={()=>patch("slug",slugify(post.slug))} placeholder={ar?"فنادق البحر الميت":"dead sea hotels"}/><small>{ar?"اكتب بشكل طبيعي؛ المسافة تتحول تلقائيًا إلى -":"Type naturally; spaces become hyphens automatically."} · {post.slug?`/blog/${localePath(post.locale)}/${slugify(post.slug)}`:"/blog/..."}</small></label>
         <label>{ar?"اسم الكاتب":"Author name"}<input value={post.authorName} onChange={event=>patch("authorName",event.target.value)}/></label>
         <label className="span2">{ar?"المقدمة المختصرة":"Excerpt"}<textarea rows={3} value={post.excerpt} onChange={event=>patch("excerpt",event.target.value)} maxLength={320}/><small>{post.excerpt.length}/320</small></label>
         <label className="span2">{ar?"وسوم البحث (افصل بفاصلة)":"Topic tags (comma separated)"}<input value={tagsText} onChange={event=>setTagsText(event.target.value)} placeholder={ar?"فنادق الأردن، البحر الميت، عطلة نهاية الأسبوع":"Jordan hotels, Dead Sea, weekend stay"}/><small>{cleanTags.length}/12 {ar?"وسم":"tags"}</small></label>
@@ -171,29 +176,32 @@ export function BlogEditor({locale,initial,categories=[]}:{locale:Locale;initial
         <label className="blogEditorCheck span2"><input type="checkbox" checked={post.featured} onChange={event=>patch("featured",event.target.checked)}/><span>{ar?"ثبّت المقال كمقال مميز في أعلى المدونة":"Feature this article on the blog landing page"}</span></label>
       </div>
 
-      <div className="blogBodyEditor"><div><strong>{ar?"محتوى المقال":"Article body"}</strong><small>{ar?"استخدم ## للعناوين الرئيسية، ### للعناوين الفرعية، - للقوائم، و **نص** للتغميق.":"Use ## for section headings, ### for subheadings, - for lists, and **text** for bold."}</small></div><textarea dir={post.locale==="AR"?"rtl":"ltr"} rows={30} value={post.body} onChange={event=>patch("body",event.target.value)} placeholder={ar?"## أفضل منطقة للإقامة\n\nاكتب إجابة أصلية ومفيدة...":"## Where to stay\n\nWrite an original, useful answer..."}/><div className="blogBodyStats"><span>{words.toLocaleString()} {ar?"كلمة":"words"}</span><span>{h2Count} H2</span><span>{cleanTags.length} {ar?"وسوم":"tags"}</span></div></div>
+      <div className="blogBodyEditor"><div><strong>{ar?"محتوى المقال":"Article body"}</strong><small>{ar?"استخدم ## للعناوين الرئيسية، ### للعناوين الفرعية، - للقوائم، و **نص** للتغميق.":"Use ## for section headings, ### for subheadings, - for lists, and **text** for bold."}</small></div><textarea dir={post.locale==="AR"?"rtl":"ltr"} rows={30} value={post.body} onChange={event=>patch("body",event.target.value)} placeholder={ar?"## أفضل منطقة للإقامة\n\nاكتب إجابة أصلية ومفيدة...":"## Where to stay\n\nWrite an original, useful answer..."}/><div className="blogBodyStats"><span>{words.toLocaleString()} {ar?"كلمة":"words"}</span><span>{h2Count} H2</span><span>{internalLinks} internal links</span><span>{cleanTags.length} {ar?"وسوم":"tags"}</span></div></div>
     </section>
 
     <aside className="blogEditorSide">
       <section className="adminPanel blogPublishPanel"><span className="eyebrow"><Globe2 size={15}/>{ar?"النشر":"Publishing"}</span><div className="blogPublishStatus"><strong>{currentStatus}</strong><span>{savedLive?(ar?"النسخة العامة منشورة ومؤكدة في قاعدة البيانات.":"The public version is confirmed as published in the database."):(ar?"لا يوجد رابط عام حتى يتم النشر فعليًا.":"No public link is exposed until publishing succeeds.")}</span></div>{persisted?.publishedAt&&<small>{ar?"نشر في":"Published"}: {new Date(persisted.publishedAt).toLocaleString(ar?"ar-JO":"en-US")}</small>}{savedLive&&publicHref&&<Link className="secondaryButton blogPublishOpen" href={publicHref} target="_blank"><ExternalLink size={14}/>{ar?"فحص الصفحة العامة":"Check public page"}</Link>}{post.id&&currentStatus!=="ARCHIVED"&&<button className="blogArchiveButton" disabled={Boolean(busy)} onClick={()=>void save("ARCHIVED")}><Archive size={14}/>{ar?"أرشفة المقال":"Archive article"}</button>}{post.id&&currentStatus==="ARCHIVED"&&<button className="blogArchiveButton" disabled={Boolean(busy)} onClick={()=>void save("DRAFT")}><Undo2 size={14}/>{ar?"إعادة إلى المسودات":"Restore to draft"}</button>}</section>
 
-      <section className="adminPanel seoPanel"><span className="eyebrow"><Search size={15}/>SEO</span><div className="seoScore"><strong>{seoScore}/8</strong><span>{ar?"جاهزية المحتوى":"content readiness"}</span></div><ul>{[
+      <section className="adminPanel seoPanel"><span className="eyebrow"><Search size={15}/>SEO Quality Gate</span><div className="seoScore"><strong>{seoScore}/10</strong><span>{ar?"جاهزية المحتوى":"content readiness"}</span></div><ul>{[
         ar?"عنوان SEO بين 30 و65 حرفًا":"SEO title is 30–65 characters",
         ar?"وصف SEO بين 110 و165 حرفًا":"SEO description is 110–165 characters",
-        ar?"مقدمة مفيدة 70+ حرفًا":"Useful excerpt is 70+ characters",
-        ar?"المقال 700+ كلمة":"Article is 700+ words",
-        ar?"ثلاثة عناوين H2 على الأقل":"At least three H2 sections",
-        ar?"ثلاثة وسوم موضوعية على الأقل":"At least three topic tags",
-        ar?"كل صورة لها alt text":"Every cover image has alt text",
+        ar?"المقدمة بين 70 و220 حرفًا":"Excerpt is 70–220 characters",
+        ar?"المقال بين 1300 و2200 كلمة":"Article is 1,300–2,200 words",
+        ar?"خمسة عناوين H2 على الأقل":"At least five H2 sections",
+        ar?"قسم أسئلة شائعة واضح":"A clear FAQ section is present",
+        ar?"رابطان داخليان على الأقل":"At least two HandMeKey internal links",
+        ar?"من 3 إلى 8 وسوم موضوعية":"3–8 specific topic tags",
+        ar?"بدون H1 داخل المحتوى":"No Markdown H1 inside the body",
         ar?"الرابط والتصنيف جاهزان":"Slug and category are ready",
       ].map((label,index)=><li className={seoChecks[index]?"pass":""} key={label}><CheckCircle2 size={15}/>{label}</li>)}</ul></section>
 
-      <section className="adminPanel seoFields"><span className="eyebrow"><Sparkles size={15}/>{ar?"مظهر Google":"Search appearance"}</span><label>{ar?"عنوان SEO":"SEO title"}<input value={post.seoTitle} onChange={event=>patch("seoTitle",event.target.value)} maxLength={70}/><small>{post.seoTitle.length}/70</small></label><label>{ar?"وصف SEO":"SEO description"}<textarea rows={5} value={post.seoDescription} onChange={event=>patch("seoDescription",event.target.value)} maxLength={170}/><small>{post.seoDescription.length}/170</small></label><div className="searchPreview"><small>handmekey.com › blog › {post.locale==="AR"?"ar":"en"} › {slugify(post.slug)||"article"}</small><strong>{post.seoTitle||post.title||"SEO title"}</strong><p>{post.seoDescription||post.excerpt||"Search description"}</p></div></section>
+      <section className="adminPanel seoFields"><span className="eyebrow"><Sparkles size={15}/>{ar?"مظهر Google":"Search appearance"}</span><label>{ar?"عنوان SEO":"SEO title"}<input value={post.seoTitle} onChange={event=>patch("seoTitle",event.target.value)} maxLength={70}/><small>{post.seoTitle.length}/70</small></label><label>{ar?"وصف SEO":"SEO description"}<textarea rows={5} value={post.seoDescription} onChange={event=>patch("seoDescription",event.target.value)} maxLength={170}/><small>{post.seoDescription.length}/170</small></label><div className="searchPreview"><small>handmekey.com › blog › {localePath(post.locale)} › {slugify(post.slug)||"article"}</small><strong>{post.seoTitle||post.title||"SEO title"}</strong><p>{post.seoDescription||post.excerpt||"Search description"}</p></div></section>
     </aside>
   </div>;
 }
 
-function liveHref(post:Pick<EditorPost,"locale"|"slug">){return `/blog/${post.locale==="AR"?"ar":"en"}/${slugify(post.slug)}`;}
+function localePath(locale:EditorPost["locale"]){return locale==="AR"?"ar":locale==="ES"?"es":"en";}
+function liveHref(post:Pick<EditorPost,"locale"|"slug">){return `/blog/${localePath(post.locale)}/${slugify(post.slug)}`;}
 function editorSnapshot(post:EditorPost,tags:string[]){return {locale:post.locale,slug:slugify(post.slug),title:post.title,excerpt:post.excerpt,body:post.body,seoTitle:post.seoTitle,seoDescription:post.seoDescription,category:post.category,tags,coverImageUrl:post.coverImageUrl??"",coverImageAlt:post.coverImageAlt??"",featured:post.featured,authorName:post.authorName,status:post.status};}
 function slugifyDraft(value:string){return value.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"-").replace(/^-+/g,"").replace(/-{2,}/g,"-").slice(0,120);}
 function slugify(value:string){return slugifyDraft(value).replace(/-+$/g,"");}
