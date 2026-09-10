@@ -5,6 +5,7 @@ const API_BASE = "https://api.liteapi.travel/v3.0";
 const REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_BATCH_SIZE = 300;
 const DEFAULT_CONCURRENCY = 8;
+const NUITEE_HOTEL_TYPE_ID = 204;
 
 type RawRecord = Record<string, unknown>;
 
@@ -105,7 +106,7 @@ export async function runScheduledNuiteeContentSync(input: Readonly<{
 }
 
 async function listHotels(countryCode: string, offset: number, limit: number): Promise<RawRecord[]> {
-  const params = new URLSearchParams({countryCode, offset: String(offset), limit: String(limit)});
+  const params = new URLSearchParams({countryCode, offset: String(offset), limit: String(limit), hotelTypeIds: String(NUITEE_HOTEL_TYPE_ID)});
   const payload = await request(`${API_BASE}/data/hotels?${params.toString()}`);
   return arrayRecords(record(payload).data);
 }
