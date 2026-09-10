@@ -9,14 +9,14 @@ export function NuiteeTrustLayer({hotel,reviews,locale}:Readonly<{hotel:NuiteeHo
   const ar=locale==="ar";
   const landmarks=nearbyLandmarks(hotel.city,hotel.location).slice(0,5);
   const hasSupplierReviews=reviews.summary.count>0;
-  return <section className="hotelTrustLayer" aria-label={ar?"التقييمات والموقع":"Reviews and location"}>
+  return <section id="guest-reviews" className="hotelTrustLayer" aria-label={ar?"التقييمات والموقع":"Reviews and location"} style={{scrollMarginTop:"96px"}}>
     <div className="trustOverviewGrid">
       <HotelReviewsHub reviews={reviews} locale={locale} source="PROVIDER"/>
       <aside className="propertyHighlightsPanel">
         <div className="sectionHeading"><span className="sectionKicker">{ar?"معلومات موثوقة":"Useful signals"}</span><h2>{ar?"لماذا هذا الفندق مناسب؟":"Why this property stands out"}</h2></div>
         <div className="propertyHighlightsGrid">
           {hotel.starRating&&<article><div className="highlightIcon comfort"><Sparkles size={22}/></div><div><h3>{hotel.starRating} {ar?"نجوم":"star property"}</h3><p>{ar?"تصنيف الفندق كما يرد في بيانات المزود.":"Property class supplied by the hotel data provider."}</p></div></article>}
-          {hotel.reviewSummary.overall!==null&&<article><div className="highlightIcon service"><ShieldCheck size={22}/></div><div><h3>{hotel.reviewSummary.overall.toFixed(1)}/10</h3><p>{hasSupplierReviews?(ar?"تقييمات ضيوف حقيقية يتم تحميلها من مزود الحجز.":"Real guest feedback loaded from the booking provider."):(ar?"درجة الضيوف متاحة في بيانات الفندق، وسيظهر نص المراجعات عند توفره.":"A guest score is available in hotel data; review text appears when supplied.")}</p></div></article>}
+          {reviews.summary.overall!==null&&reviews.summary.overall>0&&<article><div className="highlightIcon service"><ShieldCheck size={22}/></div><div><h3>{reviews.summary.overall.toFixed(1)}/10</h3><p>{hasSupplierReviews?(ar?"تقييمات ضيوف حقيقية يتم تحميلها من مزود الحجز.":"Real guest feedback loaded from the booking provider."):(ar?"درجة الضيوف متاحة في بيانات الفندق، وسيظهر نص المراجعات عند توفره.":"A guest score is available in hotel data; review text appears when supplied.")}</p></div></article>}
           {hotel.location&&<article><div className="highlightIcon location"><MapPin size={22}/></div><div><h3>{hotel.area||hotel.city}</h3><p>{ar?"الموقع والإحداثيات مأخوذة من بيانات الفندق.":"Location and coordinates come from the property data."}</p></div></article>}
         </div>
       </aside>
