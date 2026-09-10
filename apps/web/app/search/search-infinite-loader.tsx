@@ -32,7 +32,6 @@ export function SearchInfiniteLoader(){
       document.querySelectorAll<HTMLAnchorElement>(".searchResultList a[href*='/hotel/nuitee-']").forEach((anchor)=>{
         const match=anchor.getAttribute("href")?.match(/\/hotel\/(nuitee-[^?/#]+)/);if(match?.[1])output.add(match[1]);
       });
-      state.current.loaded.forEach((_,slug)=>output.add(slug));
       return output;
     }
 
@@ -44,7 +43,7 @@ export function SearchInfiniteLoader(){
     function card(hotel:Hotel){
       const article=document.createElement("article");article.className="premiumResultCard";article.dataset.infiniteStoredHotel=hotel.slug;
       const url=href(hotel);const location=[hotel.area,hotel.city].filter(Boolean).join(", ");const rating=hotel.reviewSummary.overall&&hotel.reviewSummary.overall>0?`<div class="resultRating"><strong>${hotel.reviewSummary.overall.toFixed(1)}</strong><span>${hotel.reviewSummary.count} ${ar?"تقييم":"reviews"}</span></div>`:"";
-      article.innerHTML=`<a class="premiumResultMedia" href="${esc(url)}">${hotel.coverPhoto?`<img src="${esc(hotel.coverPhoto.url)}" alt="${esc(hotel.coverPhoto.alt||hotel.name)}" loading="lazy" decoding="async">`:`<div class="stayCardPlaceholder">${ar?"الصورة قيد التحديث":"Photo pending"}</div>`}<span class="verifiedPill">${ar?"متاح للحجز":"Bookable"}</span></a><div class="premiumResultContent"><div class="premiumResultMain"><div class="stayCardMeta">${hotel.starRating?`${hotel.starRating}★ · `:""}${esc(location)}</div><a href="${esc(url)}"><h2>${esc(hotel.name)}</h2></a>${rating}<div class="resultPolicy"><strong>${ar?"تحقق من السعر المباشر":"Check live price"}</strong><span>${ar?"التوفر والسعر يظهران عند فتح الفندق":"Availability and live price appear when you open the hotel"}</span></div></div><div class="premiumResultPrice"><span>${ar?"فندق إضافي في نفس الوجهة":"More hotels in this destination"}</span><strong>${ar?"السعر المباشر عند الفتح":"Live price on open"}</strong><a class="resultCta" href="${esc(url)}">${ar?"عرض الغرف":"See rooms"}</a></div></div>`;
+      article.innerHTML=`<a class="premiumResultMedia" href="${esc(url)}">${hotel.coverPhoto?`<img src="${esc(hotel.coverPhoto.url)}" alt="${esc(hotel.coverPhoto.alt||hotel.name)}" loading="lazy" decoding="async">`:`<div class="stayCardPlaceholder">${ar?"الصورة قيد التحديث":"Photo pending"}</div>`}<span class="verifiedPill">${ar?"متاح للحجز":"Bookable on HandMeKey"}</span></a><div class="premiumResultContent"><div class="premiumResultMain"><div class="stayCardMeta">${hotel.starRating?`${hotel.starRating}★ · `:""}${esc(location)}</div><a href="${esc(url)}"><h2>${esc(hotel.name)}</h2></a>${rating}<div class="resultPolicy"><strong>${ar?"تحقق من السعر المباشر":"Check live price"}</strong><span>${ar?"التوفر والسعر يظهران عند فتح الفندق":"Availability and live price appear when you open the hotel"}</span></div></div><div class="premiumResultPrice"><span>${ar?"فندق إضافي في نفس الوجهة":"More hotels in this destination"}</span><strong>${ar?"السعر المباشر عند الفتح":"Live price on open"}</strong><a class="resultCta" href="${esc(url)}">${ar?"عرض الغرف":"See rooms"}</a></div></div>`;
       return article;
     }
 
@@ -52,7 +51,12 @@ export function SearchInfiniteLoader(){
       const current=document.querySelector<HTMLElement>(".searchResultList");if(!current)return;
       list=current;
       const present=existingSlugs();
-      state.current.loaded.forEach((hotel)=>{if(!current.querySelector(`[data-infinite-stored-hotel="${cssEscape(hotel.slug)}"]`)&&!present.has(hotel.slug))current.appendChild(card(hotel));});
+      state.current.loaded.forEach((hotel)=>{
+        if(!present.has(hotel.slug)&&!current.querySelector(`[data-infinite-stored-hotel="${cssEscape(hotel.slug)}"]`)){
+          current.appendChild(card(hotel));
+          present.add(hotel.slug);
+        }
+      });
       if(sentinel&&sentinel.parentElement!==current.parentElement)current.parentElement?.appendChild(sentinel);
     }
 
@@ -61,13 +65,25 @@ export function SearchInfiniteLoader(){
       const current=document.querySelector<HTMLElement>(".searchResultList");if(!current)return;
       state.current.loading=true;if(sentinel)sentinel.textContent=ar?"جاري تحميل فنادق إضافية…":"Loading more hotels…";
       try{
-        const q=new URLSearchParams({destination,country:"JO",offset:String(state.current.offset),limit:"20"});
-        const response=await fetch(`/api/v1/search/stored-hotels?${q.toString()}`,{cache:"no-store"});if(!response.ok)throw new Error(String(response.status));
-        const page=await response.json() as Page;const seen=existingSlugs();
-        page.hotels.forEach((hotel)=>{if(!seen.has(hotel.slug))state.current.loaded.set(hotel.slug,hotel);});
-        state.current.offset=page.nextOffset??state.current.offset+page.hotels.length;state.current.done=page.nextOffset===null;renderLoaded();
-        if(state.current.done&&sentinel)sentinel.textContent=ar?"تم عرض كل الفنادق المحفوظة لهذه الوجهة":"All stored hotels for this destination are shown";
-      }catch(error){console.error("Infinite hotel loading failed",error);if(sentinel)sentinel.textContent="";}finally{state.current.loading=false;}
+        let added=0;
+        let pagesScanned=0;
+        while(!state.current.done&&added===0&&pagesScanned<5){
+          const q=new URLSearchParams({destination,country:"JO",offset:String(state.current.offset),limit:"20"});
+          const response=await fetch(`/api/v1/search/stored-hotels?${q.toString()}`,{cache:"no-store"});if(!response.ok)throw new Error(String(response.status));
+          const page=await response.json() as Page;
+          const seen=existingSlugs();state.current.loaded.forEach((_,slug)=>seen.add(slug));
+          for(const hotel of page.hotels){if(!seen.has(hotel.slug)){state.current.loaded.set(hotel.slug,hotel);seen.add(hotel.slug);added+=1;}}
+          state.current.offset=page.nextOffset??state.current.offset+page.hotels.length;
+          state.current.done=page.nextOffset===null;
+          pagesScanned+=1;
+          if(page.hotels.length===0){state.current.done=true;break;}
+        }
+        renderLoaded();
+        if(sentinel){
+          if(state.current.done)sentinel.textContent=ar?"تم عرض كل الفنادق المحفوظة لهذه الوجهة":"All stored hotels for this destination are shown";
+          else sentinel.textContent=ar?"انزل أكثر لتحميل فنادق إضافية":"Scroll for more hotels";
+        }
+      }catch(error){console.error("Infinite hotel loading failed",error);if(sentinel)sentinel.textContent=ar?"تعذر تحميل المزيد، حاول النزول مرة أخرى":"Could not load more hotels. Scroll again to retry.";}finally{state.current.loading=false;}
     }
 
     function attach(){
