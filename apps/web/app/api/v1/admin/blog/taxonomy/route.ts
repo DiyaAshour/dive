@@ -4,7 +4,7 @@ import {getAdminBlogTaxonomy, saveAdminBlogTaxonomy} from "@platform/server";
 import {handleApiError, ok, validationError} from "@/lib/api";
 import {requestAdminUser} from "@/lib/request-auth";
 
-const localeSchema=z.enum(["AR","EN"]);
+const localeSchema=z.enum(["AR","EN","ES"]);
 const nodeSchema=z.object({
   id:z.string().trim().min(1).max(100),
   name:z.string().trim().min(2).max(40),
