@@ -17,10 +17,10 @@ export function SiteFooter({locale,supportEmail,footerText,socialLinks}:Props){
   if(hidden)return null;
   const ar=locale==="ar";
   const socials=[
-    ["Instagram",socialLinks.instagram],
-    ["Facebook",socialLinks.facebook],
-    ["X",socialLinks.x],
-    ["LinkedIn",socialLinks.linkedin],
+    ["Instagram",safeSocialUrl(socialLinks.instagram,["instagram.com","www.instagram.com"])],
+    ["Facebook",safeSocialUrl(socialLinks.facebook,["facebook.com","www.facebook.com"])],
+    ["X",safeSocialUrl(socialLinks.x,["x.com","www.x.com","twitter.com","www.twitter.com"])],
+    ["LinkedIn",safeSocialUrl(socialLinks.linkedin,["linkedin.com","www.linkedin.com"])],
   ].filter((item):item is [string,string]=>Boolean(item[1]));
   return <footer className="siteTrustFooter">
     <div className="shell siteTrustFooterGrid">
@@ -46,4 +46,14 @@ export function SiteFooter({locale,supportEmail,footerText,socialLinks}:Props){
     </div>
     <div className="shell siteTrustFooterBottom"><span>© {new Date().getFullYear()} HandMeKey</span><span>{ar?"HandMeKey منصة حجز؛ الفندق يبقى مسؤولاً عن تقديم الإقامة، وقد يشارك مزود مخزون خارجي في تنفيذ بعض الحجوزات.":"HandMeKey is a booking platform; the hotel remains responsible for delivering the stay, and an external inventory partner may participate in fulfillment for some bookings."}</span></div>
   </footer>;
+}
+
+function safeSocialUrl(value:string|null,allowedHosts:readonly string[]):string|null{
+  if(!value)return null;
+  try{
+    const parsed=new URL(value);
+    if(parsed.protocol!=="https:"&&parsed.protocol!=="http:")return null;
+    if(!allowedHosts.includes(parsed.hostname.toLowerCase()))return null;
+    return parsed.toString();
+  }catch{return null;}
 }
