@@ -27,6 +27,8 @@ type ConnectionRow = Readonly<{
   updatedAt: Date;
 }>;
 
+type NativePublicCredentials=Readonly<{apiKeyPrefix?:string;webhookUrl?:string|null}>;
+
 export type OracleConnectionInput = Readonly<{
   environment: "UAT" | "PRODUCTION";
   gatewayUrl: string;
@@ -56,6 +58,7 @@ export async function getHotelConnectivityWorkspace(userId: string, hotelId: str
     connection: connection ? publicConnection(connection) : null,
     rooms: hotel.roomTypes,
     providers: [
+      {id: "HANDMEKEY_API", name: "HandMeKey Connectivity API", mode: "SELF_SERVICE", available: true},
       {id: "ORACLE_OHIP", name: "Oracle OPERA Cloud / OHIP", mode: "ENTERPRISE", available: true},
       {id: "SITEMINDER", name: "SiteMinder", mode: "SELF_SERVICE", available: false},
       {id: "CLOUDBEDS", name: "Cloudbeds", mode: "SELF_SERVICE", available: false},
@@ -90,6 +93,15 @@ export async function saveOracleOhipConnection(userId: string, hotelId: string, 
 export async function testHotelConnectivity(userId: string, hotelId: string) {
   await requireHotelPermission(userId, hotelId, "hotel:edit");
   const connection = await requireConnection(hotelId);
+  if (connection.provider === "HANDMEKEY_API") {
+    await database().$executeRawUnsafe(
+      `UPDATE "HotelConnectivityConnection" SET "status"='CONNECTED', "lastHealthCheckAt"=CURRENT_TIMESTAMP, "lastHealthyAt"=CURRENT_TIMESTAMP,
+       "lastError"=NULL, "connectedAt"=COALESCE("connectedAt", CURRENT_TIMESTAMP), "disconnectedAt"=NULL, "updatedByUserId"=$2, "updatedAt"=CURRENT_TIMESTAMP WHERE "hotelId"=$1`,
+      hotelId, userId,
+    );
+    await audit(userId, hotelId, "HOTEL_CONNECTIVITY_TEST_SUCCEEDED", {provider: connection.provider, mode: "API_KEY"});
+    return {ok: true, provider: connection.provider, tokenExpiresInSeconds: null};
+  }
   if (connection.provider !== "ORACLE_OHIP") throw new ApplicationError("CONNECTIVITY_PROVIDER_UNSUPPORTED", "Connection testing is not available for this provider yet", 400);
   const config = oracleConfig(connection);
   try {
@@ -151,6 +163,7 @@ async function requireConnection(hotelId: string) {
 }
 
 function publicConnection(row: ConnectionRow) {
+  const native=readNativePublicCredentials(row);
   return {
     id: row.id,
     provider: row.provider,
@@ -170,7 +183,14 @@ function publicConnection(row: ConnectionRow) {
     disconnectedAt: row.disconnectedAt?.toISOString() ?? null,
     updatedAt: row.updatedAt.toISOString(),
     credentialsConfigured: Boolean(row.encryptedCredentials),
+    apiKeyPrefix:native?.apiKeyPrefix??null,
+    webhookUrl:native?.webhookUrl??null,
   };
+}
+
+function readNativePublicCredentials(row:ConnectionRow):NativePublicCredentials|null{
+  if(row.provider!=="HANDMEKEY_API"||!row.encryptedCredentials)return null;
+  try{return decryptConnectivitySecret<NativePublicCredentials>(row.encryptedCredentials);}catch{return null;}
 }
 
 function oracleConfig(row: ConnectionRow): OracleOhipConnectionConfig {
