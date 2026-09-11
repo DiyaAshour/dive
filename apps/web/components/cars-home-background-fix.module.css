@@ -358,7 +358,8 @@
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a) {
-  height: 124px !important;
+  height: auto !important;
+  min-height: 176px !important;
   display: flex !important;
   flex-direction: column-reverse !important;
   justify-content: space-between !important;
@@ -379,15 +380,22 @@
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a > div) {
-  height: 88px !important;
+  /* Keep intrinsic image dimensions from expanding the inherited grid track. */
+  display: block !important;
+  flex: 0 0 132px !important;
+  height: 132px !important;
+  min-height: 0 !important;
   background: #fff !important;
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child img) {
   width: 100% !important;
   height: 100% !important;
-  padding: 2px 18px 8px !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  padding: 4px 12px 10px !important;
   object-fit: contain !important;
+  object-position: center !important;
   transform: none !important;
 }
 
