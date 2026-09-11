@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BadgeCheck, BriefcaseBusiness, Car, Fuel, Gauge, Headphones, ShieldCheck, Tag, Users } from "lucide-react";
 import type { LiveCar } from "@/components/cars-live-marketplace";
