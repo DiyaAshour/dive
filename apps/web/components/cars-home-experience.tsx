@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BadgeCheck, BriefcaseBusiness, Car, Fuel, Gauge, Headphones, ShieldCheck, Tag, Users } from "lucide-react";
+import type { LiveCar } from "@/components/cars-live-marketplace";
 import { CarsHomeSearch } from "@/components/cars-home-search";
 import { demoCars } from "@/lib/demo-cars";
 import styles from "./cars-home-experience.module.css";
@@ -11,30 +12,92 @@ import mobileHero from "./cars-home-mobile-hero.module.css";
 
 type Locale = "ar" | "en";
 type HeroProps = Readonly<{locale: Locale; defaultPickupDate: string; defaultReturnDate: string}>;
-type ShowcaseProps = Readonly<{locale: Locale}>;
+type ShowcaseProps = Readonly<{locale: Locale; cars?: readonly LiveCar[]}>;
+type ShowcaseCar = Readonly<{
+  id: string;
+  brand: string;
+  model: string;
+  category: string;
+  transmission: string;
+  fuel: string;
+  seats: number;
+  bags: number;
+  dailyPrice: number;
+  image: string;
+  imageAlt: string;
+}>;
 
 const categoryConfig = [
-  {id: "kia-picanto", ar: "سيارات صغيرة", en: "Small cars"},
-  {id: "toyota-yaris", ar: "سيارات اقتصادية", en: "Economy cars"},
-  {id: "kia-carnival", ar: "سيارات عائلية", en: "Family cars"},
-  {id: "toyota-rav4", ar: "سيارات SUV", en: "SUVs"},
-  {id: "nissan-patrol", ar: "سيارات فاخرة", en: "Luxury cars"},
+  {id: "small", ar: "سيارات صغيرة", en: "Small cars"},
+  {id: "economy", ar: "سيارات اقتصادية", en: "Economy cars"},
+  {id: "family", ar: "سيارات عائلية", en: "Family cars"},
+  {id: "suv", ar: "سيارات SUV", en: "SUVs"},
+  {id: "luxury", ar: "سيارات فاخرة", en: "Luxury cars"},
 ] as const;
 
 const popularIds = ["toyota-corolla", "kia-sportage", "hyundai-elantra", "nissan-xtrail", "toyota-prado"] as const;
 
-function fallbackCarImage(seed: string) {
-  let value = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    value = ((value << 5) - value + seed.charCodeAt(index)) | 0;
-  }
-  return `https://loremflickr.com/1200/800/car?lock=${Math.abs(value)}`;
+function fallbackCarImage() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect width="1200" height="800" fill="#f5f7f9"/><path d="M290 485h620l-66-151c-18-41-55-67-99-67H475c-44 0-83 26-101 67L290 485Z" fill="#dfe6ec"/><path d="M230 498c0-38 31-69 69-69h602c38 0 69 31 69 69v88c0 31-25 56-56 56H286c-31 0-56-25-56-56v-88Z" fill="#17324d"/><circle cx="375" cy="620" r="72" fill="#102840"/><circle cx="825" cy="620" r="72" fill="#102840"/><circle cx="375" cy="620" r="34" fill="#eef2f5"/><circle cx="825" cy="620" r="34" fill="#eef2f5"/><text x="600" y="730" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#8a98a6">HandMeKey Cars</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-function handleCarImageError(event: React.SyntheticEvent<HTMLImageElement>, seed: string) {
+function handleCarImageError(event: React.SyntheticEvent<HTMLImageElement>) {
   const image = event.currentTarget;
   image.onerror = null;
-  image.src = fallbackCarImage(seed);
+  image.src = fallbackCarImage();
+}
+
+function demoShowcaseCar(car: (typeof demoCars)[number]): ShowcaseCar {
+  return {
+    id: car.id,
+    brand: car.brand,
+    model: car.model,
+    category: car.category,
+    transmission: car.transmission,
+    fuel: car.fuel,
+    seats: car.seats,
+    bags: car.bags,
+    dailyPrice: car.dailyPrice,
+    image: car.image,
+    imageAlt: car.imageAlt,
+  };
+}
+
+function liveShowcaseCar(car: LiveCar): ShowcaseCar | null {
+  if (!car.imageUrl) return null;
+  return {
+    id: car.id,
+    brand: car.brand,
+    model: car.model,
+    category: car.category,
+    transmission: car.transmission,
+    fuel: car.fuel,
+    seats: car.seats,
+    bags: car.bags,
+    dailyPrice: car.dailyPrice,
+    image: car.imageUrl,
+    imageAlt: car.imageAlt || `${car.brand} ${car.model}`,
+  };
+}
+
+function categoryMatch(categoryId: (typeof categoryConfig)[number]["id"], car: ShowcaseCar) {
+  const category = car.category.toLowerCase();
+  if (categoryId === "small") return category === "compact" || category === "economy" || car.seats <= 4;
+  if (categoryId === "economy") return category === "economy" || category === "sedan";
+  if (categoryId === "family") return category === "van" || car.seats >= 7;
+  if (categoryId === "suv") return category === "suv";
+  return category === "luxury";
+}
+
+function liveCategoryCards(cars: ShowcaseCar[]) {
+  const used = new Set<string>();
+  return categoryConfig.flatMap((item) => {
+    const car = cars.find((candidate) => !used.has(candidate.id) && categoryMatch(item.id, candidate));
+    if (!car) return [];
+    used.add(car.id);
+    return [{...item, car}];
+  });
 }
 
 export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: HeroProps) {
@@ -105,7 +168,7 @@ export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: Her
   </>;
 }
 
-export function CarsHomeShowcase({locale}: ShowcaseProps) {
+export function CarsHomeShowcase({locale, cars = []}: ShowcaseProps) {
   const ar = locale === "ar";
   const Arrow = ar ? ArrowLeft : ArrowRight;
   const copy = ar ? {
@@ -134,8 +197,21 @@ export function CarsHomeShowcase({locale}: ShowcaseProps) {
     automatic: "Automatic",
   };
 
-  const categories = categoryConfig.map((item) => ({...item, car: demoCars.find((car) => car.id === item.id)})).filter((item) => item.car);
-  const popular = popularIds.map((id) => demoCars.find((car) => car.id === id)).filter(Boolean) as typeof demoCars;
+  const live = cars.map(liveShowcaseCar).filter((car): car is ShowcaseCar => Boolean(car));
+  const useLiveCars = live.length > 0;
+  const demo = demoCars.map(demoShowcaseCar);
+  const categories = useLiveCars
+    ? liveCategoryCards(live)
+    : categoryConfig.map((item) => ({...item, car: demo.find((car) => {
+        if (item.id === "small") return car.id === "kia-picanto";
+        if (item.id === "economy") return car.id === "toyota-yaris";
+        if (item.id === "family") return car.id === "kia-carnival";
+        if (item.id === "suv") return car.id === "toyota-rav4";
+        return car.id === "nissan-patrol";
+      })})).filter((item): item is (typeof categoryConfig)[number] & {car: ShowcaseCar} => Boolean(item.car));
+  const popular = useLiveCars
+    ? live.slice(0, 5)
+    : popularIds.map((id) => demo.find((car) => car.id === id)).filter((car): car is ShowcaseCar => Boolean(car));
 
   return <div className={`${styles.showcase} ${polish.showcase}`}>
     <section className={`${styles.section} ${polish.section}`}>
@@ -144,8 +220,8 @@ export function CarsHomeShowcase({locale}: ShowcaseProps) {
         <Link href="/cars">{copy.allCategories}<Arrow size={17}/></Link>
       </div>
       <div className={`${styles.categoryGrid} ${polish.categoryGrid}`}>
-        {categories.map(({car, ar: arLabel, en: enLabel}) => car && <Link className={`${styles.categoryCard} ${polish.categoryCard}`} key={car.id} href={`/cars?brand=${encodeURIComponent(car.brand)}`}>
-          <div className={`${styles.categoryImage} ${polish.categoryImage}`}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={(event) => handleCarImageError(event, car.id)}/></div>
+        {categories.map(({car, ar: arLabel, en: enLabel}) => <Link className={`${styles.categoryCard} ${polish.categoryCard}`} key={`${car.id}-${enLabel}`} href={`/cars?brand=${encodeURIComponent(car.brand)}`}>
+          <div className={`${styles.categoryImage} ${polish.categoryImage}`}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={handleCarImageError}/></div>
           <strong>{ar ? arLabel : enLabel}</strong>
         </Link>)}
       </div>
@@ -158,13 +234,13 @@ export function CarsHomeShowcase({locale}: ShowcaseProps) {
       </div>
       <div className={`${styles.popularGrid} ${polish.popularGrid}`}>
         {popular.map((car,index) => {
-          const discounted = index === 2;
+          const discounted = !useLiveCars && index === 2;
           const displayedPrice = discounted ? Math.round(car.dailyPrice * .85) : car.dailyPrice;
           return <Link href={`/cars?brand=${encodeURIComponent(car.brand)}`} className={`${styles.carCard} ${polish.carCard}`} key={car.id}>
             <div className={`${styles.carCardMedia} ${polish.carCardMedia}`}>
               {index === 0 || index === 4 ? <span className={styles.featureBadge}>{copy.featured}</span> : null}
               {discounted ? <span className={styles.discountBadge}>{copy.discount}</span> : null}
-              <img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={(event) => handleCarImageError(event, car.id)}/>
+              <img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={handleCarImageError}/>
             </div>
             <div className={styles.carCardBody}>
               <h3>{car.brand} {car.model}</h3>
