@@ -23,6 +23,20 @@ const categoryConfig = [
 
 const popularIds = ["toyota-corolla", "kia-sportage", "hyundai-elantra", "nissan-xtrail", "toyota-prado"] as const;
 
+function fallbackCarImage(seed: string) {
+  let value = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    value = ((value << 5) - value + seed.charCodeAt(index)) | 0;
+  }
+  return `https://loremflickr.com/1200/800/car?lock=${Math.abs(value)}`;
+}
+
+function handleCarImageError(event: React.SyntheticEvent<HTMLImageElement>, seed: string) {
+  const image = event.currentTarget;
+  image.onerror = null;
+  image.src = fallbackCarImage(seed);
+}
+
 export function CarsHomeHero({locale, defaultPickupDate, defaultReturnDate}: HeroProps) {
   const ar = locale === "ar";
   const copy = ar ? {
@@ -131,7 +145,7 @@ export function CarsHomeShowcase({locale}: ShowcaseProps) {
       </div>
       <div className={`${styles.categoryGrid} ${polish.categoryGrid}`}>
         {categories.map(({car, ar: arLabel, en: enLabel}) => car && <Link className={`${styles.categoryCard} ${polish.categoryCard}`} key={car.id} href={`/cars?brand=${encodeURIComponent(car.brand)}`}>
-          <div className={`${styles.categoryImage} ${polish.categoryImage}`}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async"/></div>
+          <div className={`${styles.categoryImage} ${polish.categoryImage}`}><img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={(event) => handleCarImageError(event, car.id)}/></div>
           <strong>{ar ? arLabel : enLabel}</strong>
         </Link>)}
       </div>
@@ -150,7 +164,7 @@ export function CarsHomeShowcase({locale}: ShowcaseProps) {
             <div className={`${styles.carCardMedia} ${polish.carCardMedia}`}>
               {index === 0 || index === 4 ? <span className={styles.featureBadge}>{copy.featured}</span> : null}
               {discounted ? <span className={styles.discountBadge}>{copy.discount}</span> : null}
-              <img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async"/>
+              <img src={car.image} alt={car.imageAlt} loading="lazy" decoding="async" onError={(event) => handleCarImageError(event, car.id)}/>
             </div>
             <div className={styles.carCardBody}>
               <h3>{car.brand} {car.model}</h3>
