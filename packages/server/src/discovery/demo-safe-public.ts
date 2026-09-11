@@ -2,9 +2,18 @@ import { getPublicHotelDetails as getDatabaseHotelDetails } from "./service";
 import { getPublicHotelSeoDetails as getDatabaseHotelSeoDetails } from "./seo";
 import { getPublicHotelReviews as getDatabaseHotelReviews } from "../reviews/service";
 import { getPublicHotelGallery as getDatabaseHotelGallery } from "../media/public-gallery";
+import { ApplicationError } from "../errors";
 import { getDemoHotelDetails, getDemoHotelGallery, getDemoHotelReviews, getDemoHotelSeoDetails } from "./demo-hotel-fallback";
 
 type StayInput = Readonly<{arrival:string;departure:string;adults:number;children:number}>;
+
+function reportDemoFallback(message:string,error:unknown) {
+  if (error instanceof ApplicationError && error.code === "NOT_FOUND") {
+    console.info(message);
+    return;
+  }
+  console.error(message,error);
+}
 
 export async function getPublicHotelDetails(hotelId:string,stayInput:StayInput,options:Readonly<{trackView?:boolean}>={}) {
   if (hotelId.startsWith("demo-")) {
@@ -13,7 +22,7 @@ export async function getPublicHotelDetails(hotelId:string,stayInput:StayInput,o
     } catch (error) {
       const demo=getDemoHotelDetails(hotelId,stayInput);
       if (demo) {
-        console.error("Production demo hotel data unavailable; serving built-in demo details",error);
+        reportDemoFallback("Production demo hotel data unavailable; serving built-in demo details",error);
         return demo;
       }
       throw error;
@@ -29,7 +38,7 @@ export async function getPublicHotelReviews(hotelId:string,limit=20) {
     } catch (error) {
       const demo=getDemoHotelReviews(hotelId);
       if (demo) {
-        console.error("Production demo reviews unavailable; serving empty verified-review state",error);
+        reportDemoFallback("Production demo reviews unavailable; serving empty verified-review state",error);
         return demo;
       }
       throw error;
@@ -45,7 +54,7 @@ export async function getPublicHotelSeoDetails(identifier:string) {
     } catch (error) {
       const demo=getDemoHotelSeoDetails(identifier);
       if (demo) {
-        console.error("Production demo SEO data unavailable; serving built-in demo metadata",error);
+        reportDemoFallback("Production demo SEO data unavailable; serving built-in demo metadata",error);
         return demo;
       }
       throw error;
@@ -61,7 +70,7 @@ export async function getPublicHotelGallery(identifier:string) {
     } catch (error) {
       const demo=getDemoHotelGallery(identifier);
       if (demo) {
-        console.error("Production demo gallery unavailable; serving built-in demo gallery",error);
+        reportDemoFallback("Production demo gallery unavailable; serving built-in demo gallery",error);
         return demo;
       }
       throw error;
