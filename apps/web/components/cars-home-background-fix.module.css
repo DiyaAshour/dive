@@ -358,11 +358,11 @@
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a) {
-  height: auto !important;
-  min-height: 176px !important;
+  height: 184px !important;
+  min-height: 184px !important;
   display: flex !important;
-  flex-direction: column-reverse !important;
-  justify-content: space-between !important;
+  flex-direction: column !important;
+  justify-content: stretch !important;
   overflow: hidden !important;
   border: 1px solid #e0e6ec !important;
   border-radius: 14px !important;
@@ -371,8 +371,12 @@
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a > strong) {
-  display: block !important;
-  padding: 9px 12px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 42px !important;
+  padding: 8px 12px 10px !important;
+  border-top: 1px solid #eef2f5 !important;
   color: #17324d !important;
   font-size: 13px !important;
   line-height: 1.2 !important;
@@ -380,12 +384,13 @@
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child > a > div) {
-  /* Keep intrinsic image dimensions from expanding the inherited grid track. */
-  display: block !important;
-  flex: 0 0 132px !important;
-  height: 132px !important;
-  min-height: 0 !important;
-  background: #fff !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 1 1 auto !important;
+  height: 142px !important;
+  min-height: 142px !important;
+  overflow: hidden !important;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%) !important;
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:first-child > div:last-child img) {
@@ -393,10 +398,11 @@
   height: 100% !important;
   min-height: 0 !important;
   max-height: 100% !important;
-  padding: 4px 12px 10px !important;
+  padding: 8px 16px 4px !important;
   object-fit: contain !important;
   object-position: center !important;
-  transform: none !important;
+  transform: scale(1.12) !important;
+  transform-origin: center !important;
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2)) {
@@ -450,16 +456,21 @@
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a > div:first-child) {
-  height: 104px !important;
-  background: #fff !important;
+  display: grid !important;
+  place-items: center !important;
+  height: 112px !important;
+  overflow: hidden !important;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%) !important;
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a > div:first-child img) {
   width: 100% !important;
   height: 100% !important;
-  padding: 4px 14px 0 !important;
+  padding: 7px 15px 2px !important;
   object-fit: contain !important;
-  transform: none !important;
+  object-position: center !important;
+  transform: scale(1.06) !important;
+  transform-origin: center !important;
 }
 
 :global(body:has([data-cars-reference="true"]) .premiumHero + div > section:nth-child(2) > div:last-child > a > div:last-child) {
