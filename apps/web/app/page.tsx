@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Car, CreditCard, MapPin, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Car, CreditCard, MapPin, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { listDailyStoredNuiteeHotelPreviews, listFeaturedDestinations, listFeaturedHotels, listPublicCarVehicles } from "@platform/server";
 import { CarsHomeHero, CarsHomeShowcase } from "@/components/cars-home-experience";
 import { CustomerHeader } from "@/components/customer-header";
@@ -149,6 +149,11 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
               search: copy.home.search,
             }}
           />
+          <div style={{display:"flex",justifyContent:"center",width:"100%",margin:"14px auto 0",position:"relative",zIndex:12}}>
+            <Link href="/ai" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,width:"min(620px,100%)",minHeight:56,padding:"12px 22px",border:"1px solid rgba(16,40,64,.16)",borderRadius:18,background:"linear-gradient(135deg,#102840,#173c5d)",color:"#fff",fontSize:15,fontWeight:850,boxShadow:"0 12px 28px rgba(16,40,64,.14)",textDecoration:"none"}}>
+              <Sparkles size={19}/><span>{locale === "ar" ? "ابحث بالذكاء الاصطناعي" : "Search with AI"}</span><ArrowRight size={18}/>
+            </Link>
+          </div>
         </div>
       </> : <CarsHomeHero locale={market.baseLocale} defaultPickupDate={stay.arrival} defaultReturnDate={stay.departure}/>} 
     </section>
