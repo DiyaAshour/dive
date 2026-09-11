@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Car, CreditCard, MapPin, Search, ShieldCheck } from "lucide-react";
-import { listDailyStoredNuiteeHotelPreviews, listFeaturedDestinations, listFeaturedHotels } from "@platform/server";
+import { listDailyStoredNuiteeHotelPreviews, listFeaturedDestinations, listFeaturedHotels, listPublicCarVehicles } from "@platform/server";
 import { CarsHomeHero, CarsHomeShowcase } from "@/components/cars-home-experience";
 import { CustomerHeader } from "@/components/customer-header";
 import { HomeBookingSearch } from "@/components/home-booking-search";
@@ -14,6 +14,8 @@ import destinationStyles from "./city-discovery.module.css";
 import serviceStyles from "./home-service-switch.module.css";
 
 export const dynamic = "force-dynamic";
+
+const TOYOTA_COROLLA_2026_HERO = "https://yv9ln4lvskxepm5o.public.blob.vercel-storage.com/Cars%20images%20/Toyota%20Corolla%20Sedan%202026/280%20image%20car.png";
 
 const CURATED_DESTINATION_PHOTOS = {
   amman: {
@@ -53,11 +55,27 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
   const market = await requestGuestMarket();
   const visitorCountry = market.countryCode ?? "JO";
   const featuredCity = visitorCountry === "JO" ? "Amman" : undefined;
-  const [apiHotels,liveHotels,liveDestinations] = await Promise.all([
+  const [apiHotels,liveHotels,liveDestinations,liveCars] = await Promise.all([
     listDailyStoredNuiteeHotelPreviews(visitorCountry,6,new Date(),featuredCity).catch(() => []),
     listFeaturedHotels(6).catch(() => []),
     listFeaturedDestinations({countryCode: visitorCountry, limit: 4}).catch(() => []),
+    isCars ? listPublicCarVehicles().catch(() => []) : Promise.resolve([]),
   ]);
+  const homeCars = liveCars.map((car) => {
+    const isHandMeKeyCatalogCar = car.visualProvider === "HANDMEKEY";
+    const fullImage = isHandMeKeyCatalogCar && car.imageUrl?.endsWith("/view-280.webp")
+      ? car.imageUrl.replace(/\/view-280\.webp$/, "/front.webp")
+      : car.imageUrl;
+    const isCorolla2026 = car.id === "toyota-corolla" || (
+      car.brand?.trim().toLowerCase() === "toyota" &&
+      car.model?.trim().toLowerCase() === "corolla" &&
+      car.year === 2026
+    );
+    if (isCorolla2026) {
+      return {...car, imageUrl: TOYOTA_COROLLA_2026_HERO, imageAlt: "Toyota Corolla Sedan 2026"};
+    }
+    return {...car, imageUrl: fullImage};
+  });
   const usingApiHotels = apiHotels.length > 0;
   const hotels = usingApiHotels
     ? apiHotels.map((hotel)=>({...hotel,amenities:[]}))
@@ -159,7 +177,7 @@ export default async function HomePage({searchParams}: {searchParams: Promise<{s
       <section className="valueSection"><div className="shell"><div className="premiumSectionHead light"><div><span className="eyebrow">{copy.home.valueEyebrow}</span><h2>{copy.home.valueTitle}</h2></div></div><HomeValueCarousel finalTitle={copy.home.finalTitle} finalBody={copy.home.finalBody} policyTitle={copy.home.policyTitle} policyBody={copy.home.policyBody} watchTitle={copy.home.watchTitle} watchBody={copy.home.watchBody}/></div></section>
     </>}
 
-    {isCars && <CarsHomeShowcase locale={market.baseLocale}/>} 
+    {isCars && <CarsHomeShowcase locale={market.baseLocale} cars={homeCars}/>} 
 
     <section className="shell partnerBridge"><div><span className="eyebrow">{isCars ? serviceCopy.partnerEyebrow : copy.home.partnerEyebrow}</span><h2>{isCars ? serviceCopy.partnerTitle : copy.home.partnerTitle}</h2><p>{isCars ? serviceCopy.partnerBody : copy.home.partnerBody}</p></div><Link href="/partner">{isCars ? serviceCopy.partnerCta : copy.home.partnerCta} <ArrowRight size={18}/></Link></section>
   </main>;
